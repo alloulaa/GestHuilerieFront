@@ -22,7 +22,7 @@ export interface StockMovement {
   referenceId: number;
   quantite: number;
   commentaire: string;
-  dateDernierMouvement: string;
+  dateMouvement: string;
   typeMouvement: 'ARRIVAL' | 'DEPARTURE' | 'TRANSFER' | 'ADJUSTMENT';
 }
 
@@ -72,7 +72,7 @@ export const EXAMPLE_STOCK_MOVEMENT_JSON: StockMovement[] = [
     typeMouvement: 'ARRIVAL',
     referenceId: 31,
     quantite: 11000,
-    dateDernierMouvement: '2026-03-12T09:20:00',
+    dateMouvement: '2026-03-12T09:20:00',
     commentaire: 'Reception lot OL-031',
   },
 ];
