@@ -111,13 +111,13 @@ export class ReceptionFormComponent implements OnInit {
       newLotDetails:
         raw.lotMode === 'new'
           ? {
-              maturite: String(raw.maturite ?? ''),
-              dateRecolte: String(raw.dateRecolte ?? ''),
-              dateReception: String(raw.dateReception ?? ''),
-              dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
-              matierePremiereId: Number(raw.matierePremiereId),
-              campagneId: Number(raw.campagneId),
-            }
+            maturite: String(raw.maturite ?? ''),
+            dateRecolte: String(raw.dateRecolte ?? ''),
+            dateReception: String(raw.dateReception ?? ''),
+            dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
+            matierePremiereId: Number(raw.matierePremiereId),
+            campagneId: Number(raw.campagneId),
+          }
           : undefined,
     };
 
