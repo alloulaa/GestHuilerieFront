@@ -43,6 +43,8 @@
         <button mat-raised-button color="primary" type="submit">Enregistrer</button>
         <a mat-stroked-button [routerLink]="['/pages/stock']">Retour liste</a>
       </div>
+
+      <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
     </form>
   </mat-card-content>
 </mat-card>

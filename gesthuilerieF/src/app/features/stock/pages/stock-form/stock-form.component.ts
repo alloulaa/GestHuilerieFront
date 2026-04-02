@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { StockMovement } from '../../models/stock.models';
 import { StockManagementService } from '../../services/stock-management.service';
-import { switchMap } from 'rxjs';
+import { EMPTY, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-stock-form',
@@ -55,15 +55,32 @@ export class StockFormComponent {
     }
 
     const raw = this.form.getRawValue();
-
-    this.stockManagementService.createMovement({
+    const payload = {
       huilerieId: Number(raw.huilerieId),
       referenceId: Number(raw.referenceId),
       quantite: Number(raw.quantite),
       dateMouvement: raw.dateMouvement ?? new Date().toISOString(),
       commentaire: raw.commentaire ?? '',
       typeMouvement: (raw.typeMouvement as StockMovement['typeMouvement']) ?? 'ARRIVAL',
-    }).subscribe({
+    };
+
+    this.stockManagementService.loadInitialData().pipe(
+      switchMap(() => {
+        if (payload.typeMouvement === 'DEPARTURE') {
+          const quantiteDisponible = this.stockManagementService.getAvailableQuantity(
+            payload.huilerieId,
+            payload.referenceId,
+          );
+
+          if (payload.quantite > quantiteDisponible) {
+            this.errorMessage = 'La quantite en stock est insuffisante.';
+            return EMPTY;
+          }
+        }
+
+        return this.stockManagementService.createMovement(payload);
+      }),
+    ).subscribe({
       next: () => {
         this.router.navigateByUrl('/pages/stock');
       },

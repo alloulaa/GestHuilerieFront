@@ -61,7 +61,8 @@
         <button nbButton status="primary" type="submit">
           {{ editingLotId ? 'Mettre a jour lot' : 'Creer lot' }}
         </button>
-        <button *ngIf="editingLotId" nbButton status="basic" outline type="button" (click)="resetLotForm()">Annuler</button>
+        <button *ngIf="editingLotId" nbButton status="basic" outline type="button"
+          (click)="resetLotForm()">Annuler</button>
       </div>
     </form>
 
@@ -89,13 +90,16 @@
             <td>{{ lot.quantiteInitiale }} kg</td>
             <td>{{ lot.quantiteRestante }} kg</td>
             <td class="actions">
-              <button nbButton ghost status="primary" size="small" type="button" (click)="editLot(lot)">
+              <button nbButton ghost status="primary" size="small" type="button" (click)="editLot(lot)"
+                title="Modifier lot" aria-label="Modifier lot">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
-              <button nbButton ghost status="danger" size="small" type="button" (click)="deleteLot(lot)">
+              <button nbButton ghost status="danger" size="small" type="button" (click)="deleteLot(lot)"
+                title="Supprimer lot" aria-label="Supprimer lot">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>
-              <button nbButton ghost type="button" size="small" (click)="loadAnalysesForLot(lot.idLot)">Analyses</button>
+              <button nbButton ghost type="button" size="small"
+                (click)="loadAnalysesForLot(lot.idLot)">Analyses</button>
             </td>
           </tr>
         </tbody>
@@ -132,7 +136,8 @@
         <button nbButton status="primary" type="submit">
           {{ editingAnalysisId ? 'Mettre a jour analyse' : 'Ajouter analyse' }}
         </button>
-        <button *ngIf="editingAnalysisId" nbButton status="basic" outline type="button" (click)="resetAnalysisForm()">Annuler</button>
+        <button *ngIf="editingAnalysisId" nbButton status="basic" outline type="button"
+          (click)="resetAnalysisForm()">Annuler</button>
       </div>
     </form>
 
@@ -164,10 +169,12 @@
             </td>
             <td>{{ analysis.dateAnalyse }}</td>
             <td class="actions">
-              <button nbButton ghost status="primary" size="small" type="button" (click)="editAnalysis(analysis)">
+              <button nbButton ghost status="primary" size="small" type="button" (click)="editAnalysis(analysis)"
+                title="Modifier analyse" aria-label="Modifier analyse">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
-              <button nbButton ghost status="danger" size="small" type="button" (click)="deleteAnalysis(analysis)">
+              <button nbButton ghost status="danger" size="small" type="button" (click)="deleteAnalysis(analysis)"
+                title="Supprimer analyse" aria-label="Supprimer analyse">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>
             </td>

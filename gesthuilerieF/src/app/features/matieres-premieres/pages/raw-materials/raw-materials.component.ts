@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NbCardModule, NbInputModule, NbButtonModule, NbIconModule } from '@nebular/theme';
 import { MatierePremiere } from '../../models/raw-material.models';
 import { RawMaterialService } from '../../services/raw-material.service';
@@ -22,6 +23,8 @@ import { RawMaterialService } from '../../services/raw-material.service';
 export class RawMaterialsComponent implements OnInit {
   rawMaterials: MatierePremiere[] = [];
   editingId: number | null = null;
+  pendingRawMaterialDeletion: MatierePremiere | null = null;
+  deleteErrorMessage = '';
 
   readonly rawMaterialForm;
 
@@ -85,12 +88,35 @@ export class RawMaterialsComponent implements OnInit {
     });
   }
 
-  remove(item: MatierePremiere): void {
-    this.rawMaterialService.delete(item.idMatierePremiere).subscribe(() => {
-      this.rawMaterials = this.rawMaterials.filter(current => current.idMatierePremiere !== item.idMatierePremiere);
-      if (this.editingId === item.idMatierePremiere) {
-        this.resetForm();
-      }
+  askRemove(item: MatierePremiere): void {
+    this.pendingRawMaterialDeletion = item;
+    this.deleteErrorMessage = '';
+  }
+
+  cancelRemove(): void {
+    this.pendingRawMaterialDeletion = null;
+    this.deleteErrorMessage = '';
+  }
+
+  confirmRemove(): void {
+    if (!this.pendingRawMaterialDeletion) {
+      return;
+    }
+
+    const rawMaterialToDelete = this.pendingRawMaterialDeletion;
+    this.deleteErrorMessage = '';
+
+    this.rawMaterialService.delete(rawMaterialToDelete.idMatierePremiere).subscribe({
+      next: () => {
+        this.rawMaterials = this.rawMaterials.filter(current => current.idMatierePremiere !== rawMaterialToDelete.idMatierePremiere);
+        if (this.editingId === rawMaterialToDelete.idMatierePremiere) {
+          this.resetForm();
+        }
+        this.pendingRawMaterialDeletion = null;
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleteErrorMessage = this.getDeleteErrorMessage(error);
+      },
     });
   }
 
@@ -102,6 +128,50 @@ export class RawMaterialsComponent implements OnInit {
       uniteMesure: 'kg',
       description: '',
     });
+  }
+
+  isFieldInvalid(fieldName: string): boolean {
+    const control = this.rawMaterialForm.get(fieldName);
+    return !!control && control.invalid && control.touched;
+  }
+
+  private getDeleteErrorMessage(error: HttpErrorResponse): string {
+    const serverMessage = this.extractServerMessage(error);
+    const normalizedMessage = serverMessage.toLowerCase();
+
+    if (
+      error.status === 409
+      || normalizedMessage.includes('constraint')
+      || normalizedMessage.includes('foreign key')
+      || normalizedMessage.includes('utilis')
+      || normalizedMessage.includes('stock')
+      || normalizedMessage.includes('mouvement')
+      || normalizedMessage.includes('reference')
+    ) {
+      return 'Cette matiere premiere est utilisee dans le systeme et ne peut pas etre supprimee.';
+    }
+
+    if (error.status === 0) {
+      return 'Connexion backend impossible. Verifiez que le backend est demarre.';
+    }
+
+    return serverMessage || 'Suppression impossible pour le moment. Veuillez reessayer.';
+  }
+
+  private extractServerMessage(error: HttpErrorResponse): string {
+    if (typeof error.error === 'string' && error.error.trim().length > 0) {
+      return error.error.trim();
+    }
+
+    if (error.error?.message) {
+      return String(error.error.message).trim();
+    }
+
+    if (error.error?.error) {
+      return String(error.error.error).trim();
+    }
+
+    return '';
   }
 
 }

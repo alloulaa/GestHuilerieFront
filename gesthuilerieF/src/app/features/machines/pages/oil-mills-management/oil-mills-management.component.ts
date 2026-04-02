@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NbCardModule, NbInputModule, NbButtonModule, NbIconModule, NbSelectModule } from '@nebular/theme';
 import { Huilerie, Machine } from '../../models/enterprise.models';
@@ -21,15 +21,25 @@ import { catchError } from 'rxjs/operators';
     NbIconModule,
     NbSelectModule,
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
   ],
 })
 export class OilMillsManagementComponent implements OnInit {
+  allHuileries: Huilerie[] = [];
+  allMachines: Machine[] = [];
   huileries: Huilerie[] = [];
   machines: Machine[] = [];
+  huilerieErrorMessage = '';
+  huilerieFilterMessage = '';
+  machineFilterMessage = '';
+  huilerieSearchNom = '';
+  machineSearchHuilerieNom = '';
 
   editingHuilerieId: number | null = null;
+  editingHuilerieStatus: boolean = true;
   editingMachineId: number | null = null;
+  pendingMachineDeletion: Machine | null = null;
 
   readonly huilerieForm;
   readonly machineForm;
@@ -61,6 +71,8 @@ export class OilMillsManagementComponent implements OnInit {
   }
 
   submitHuilerie(): void {
+    this.huilerieErrorMessage = '';
+
     if (this.huilerieForm.invalid) {
       this.huilerieForm.markAllAsTouched();
       return;
@@ -70,10 +82,7 @@ export class OilMillsManagementComponent implements OnInit {
       const payload = this.buildHuilerieUpdatePayload(this.editingHuilerieId);
 
       this.huilerieService.update(this.editingHuilerieId, payload).subscribe({
-        next: (updated) => {
-          this.huileries = this.huileries.map((h) =>
-            h.idHuilerie === this.editingHuilerieId ? updated : h,
-          );
+        next: () => {
           this.resetHuilerieForm();
           this.loadData();
         },
@@ -84,16 +93,26 @@ export class OilMillsManagementComponent implements OnInit {
     } else {
       const payload = this.buildHuilerieCreatePayload();
 
+      const duplicatedName = this.allHuileries.some(
+        (h) => h.nom.trim().toLowerCase() === payload.nom.trim().toLowerCase(),
+      );
+      if (duplicatedName) {
+        this.huilerieErrorMessage = 'L\'huilerie avec ce nom existe deja.';
+        return;
+      }
+
       this.huilerieService.create(payload).subscribe({
-        next: (created) => {
-          if (created?.idHuilerie) {
-            this.huileries = [...this.huileries, created];
-          }
+        next: () => {
           this.resetHuilerieForm();
           this.loadData();
         },
         error: (error: HttpErrorResponse) => {
-          alert(this.getHttpErrorMessage(error, 'Echec de creation de l\'huilerie.'));
+          const backendMessage = this.getHttpErrorMessage(error, 'Echec de creation de l\'huilerie.');
+          if (backendMessage.toLowerCase().includes('existe')) {
+            this.huilerieErrorMessage = 'L\'huilerie avec ce nom existe deja.';
+            return;
+          }
+          alert(backendMessage);
         },
       });
     }
@@ -101,6 +120,7 @@ export class OilMillsManagementComponent implements OnInit {
 
   editHuilerie(item: Huilerie): void {
     this.editingHuilerieId = item.idHuilerie;
+    this.editingHuilerieStatus = item.active;
     this.huilerieForm.patchValue({
       nom: item.nom,
       localisation: item.localisation,
@@ -114,11 +134,7 @@ export class OilMillsManagementComponent implements OnInit {
   toggleHuilerieStatus(item: Huilerie): void {
     this.huilerieService.toggleStatus(item.idHuilerie, !item.active).subscribe({
       next: () => {
-        this.huileries = this.huileries.map((h) =>
-          h.idHuilerie === item.idHuilerie
-            ? { ...h, active: !item.active }
-            : h,
-        );
+        this.loadData();
       },
       error: (error: HttpErrorResponse) => {
         alert(this.getHttpErrorMessage(error, 'Echec de changement du statut de l\'huilerie.'));
@@ -128,6 +144,8 @@ export class OilMillsManagementComponent implements OnInit {
 
   resetHuilerieForm(): void {
     this.editingHuilerieId = null;
+    this.editingHuilerieStatus = true;
+    this.huilerieErrorMessage = '';
     this.huilerieForm.reset({
       nom: '',
       localisation: '',
@@ -139,6 +157,8 @@ export class OilMillsManagementComponent implements OnInit {
   }
 
   submitMachine(): void {
+    this.machineFilterMessage = '';
+
     if (this.machineForm.invalid) {
       this.machineForm.markAllAsTouched();
       return;
@@ -148,11 +168,9 @@ export class OilMillsManagementComponent implements OnInit {
 
     if (this.editingMachineId !== null) {
       this.machineService.update(this.editingMachineId, payload).subscribe({
-        next: (updated) => {
-          this.machines = this.machines.map((m) =>
-            m.idMachine === this.editingMachineId ? updated : m,
-          );
+        next: () => {
           this.resetMachineForm();
+          this.loadData();
         },
         error: (error: HttpErrorResponse) => {
           alert(this.getHttpErrorMessage(error, 'Echec de mise a jour de la machine.'));
@@ -160,13 +178,9 @@ export class OilMillsManagementComponent implements OnInit {
       });
     } else {
       this.machineService.create(payload).subscribe({
-        next: (created) => {
-          if (created?.idMachine) {
-            this.machines = [...this.machines, created];
-          } else {
-            this.loadData();
-          }
+        next: () => {
           this.resetMachineForm();
+          this.loadData();
         },
         error: (error: HttpErrorResponse) => {
           alert(this.getHttpErrorMessage(error, 'Echec de creation de la machine.'));
@@ -186,15 +200,31 @@ export class OilMillsManagementComponent implements OnInit {
     });
   }
 
-  deleteMachine(item: Machine): void {
-    this.machineService.delete(item.idMachine).subscribe({
+  askDeleteMachine(item: Machine): void {
+    this.pendingMachineDeletion = item;
+  }
+
+  cancelMachineDeletion(): void {
+    this.pendingMachineDeletion = null;
+  }
+
+  confirmMachineDeletion(): void {
+    if (!this.pendingMachineDeletion) {
+      return;
+    }
+
+    const machineToDelete = this.pendingMachineDeletion;
+
+    this.machineService.delete(machineToDelete.idMachine).subscribe({
       next: () => {
-        this.machines = this.machines.filter((m) => m.idMachine !== item.idMachine);
-        if (this.editingMachineId === item.idMachine) {
+        if (this.editingMachineId === machineToDelete.idMachine) {
           this.resetMachineForm();
         }
+        this.pendingMachineDeletion = null;
+        this.loadData();
       },
       error: (error: HttpErrorResponse) => {
+        this.pendingMachineDeletion = null;
         alert(this.getHttpErrorMessage(error, 'Echec de suppression de la machine.'));
       },
     });
@@ -207,12 +237,70 @@ export class OilMillsManagementComponent implements OnInit {
       typeMachine: '',
       etatMachine: 'EN_SERVICE',
       capacite: 0,
-      huilerieId: this.huileries[0]?.idHuilerie ?? 0,
+      huilerieId: this.allHuileries[0]?.idHuilerie ?? 0,
     });
   }
 
+  searchHuilerieByNom(): void {
+    const nom = this.cleanSearchTerm(this.huilerieSearchNom);
+
+    this.huilerieFilterMessage = '';
+
+    if (!nom) {
+      this.loadData();
+      return;
+    }
+
+    const filtered = this.allHuileries.filter((h) =>
+      this.cleanSearchTerm(h.nom).includes(nom),
+    );
+
+    this.huileries = filtered;
+
+    if (filtered.length === 0) {
+      this.huilerieFilterMessage = 'Aucune huilerie trouvee pour ce nom.';
+    }
+  }
+
+  resetHuilerieFilter(): void {
+    this.huilerieSearchNom = '';
+    this.huilerieFilterMessage = '';
+    this.loadData();
+  }
+
+  searchMachinesByHuilerie(): void {
+    const huilerieNom = this.cleanSearchTerm(this.machineSearchHuilerieNom);
+
+    this.machineFilterMessage = '';
+
+    if (!huilerieNom) {
+      this.loadData();
+      return;
+    }
+
+    const matchingHuilerieIds = this.allHuileries
+      .filter((h) => this.cleanSearchTerm(h.nom).includes(huilerieNom))
+      .map((h) => h.idHuilerie);
+
+    const filtered = this.allMachines.filter((machine) =>
+      matchingHuilerieIds.includes(machine.huilerieId),
+    );
+
+    this.machines = filtered;
+
+    if (filtered.length === 0) {
+      this.machineFilterMessage = 'Aucune machine trouvee pour cette huilerie.';
+    }
+  }
+
+  resetMachineFilter(): void {
+    this.machineSearchHuilerieNom = '';
+    this.machineFilterMessage = '';
+    this.loadData();
+  }
+
   getHuilerieName(huilerieId: number): string {
-    return this.huileries.find((h) => h.idHuilerie === huilerieId)?.nom ?? '-';
+    return this.allHuileries.find((h) => h.idHuilerie === huilerieId)?.nom ?? '-';
   }
 
   getMachineStatusLabel(value: string): string {
@@ -230,18 +318,52 @@ export class OilMillsManagementComponent implements OnInit {
     return item.idMachine;
   }
 
+  isHuilerieFieldInvalid(fieldName: string): boolean {
+    const control = this.huilerieForm.get(fieldName);
+    return !!control && control.invalid && control.touched;
+  }
+
+  isMachineFieldInvalid(fieldName: string): boolean {
+    const control = this.machineForm.get(fieldName);
+    return !!control && control.invalid && control.touched;
+  }
+
+  get isEditingInactiveHuilerie(): boolean {
+    return this.editingHuilerieId !== null && !this.editingHuilerieStatus;
+  }
+
   private loadData(): void {
     forkJoin({
       huileries: this.huilerieService.getAll().pipe(catchError(() => of([] as Huilerie[]))),
       machines: this.machineService.getAll().pipe(catchError(() => of([] as Machine[]))),
     }).subscribe(({ huileries, machines }) => {
+      this.allHuileries = huileries;
+      this.allMachines = machines;
       this.huileries = huileries;
       this.machines = machines;
+      this.huilerieFilterMessage = '';
+      this.machineFilterMessage = '';
       const firstHuilerieId = this.huileries[0]?.idHuilerie;
       if (firstHuilerieId && !this.editingMachineId && Number(this.machineForm.value.huilerieId) <= 0) {
         this.machineForm.patchValue({ huilerieId: firstHuilerieId });
       }
     });
+  }
+
+  private cleanSearchTerm(value: string): string {
+    return (value ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private normalizeSearchTerm(value: string): string {
+    return (value ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[ - ]/g, '');
   }
 
   private buildHuilerieCreatePayload(): Huilerie {
@@ -260,7 +382,7 @@ export class OilMillsManagementComponent implements OnInit {
 
   private buildHuilerieUpdatePayload(idHuilerie: number): Huilerie {
     const raw = this.huilerieForm.getRawValue();
-    const current = this.huileries.find((h) => h.idHuilerie === idHuilerie);
+    const current = this.allHuileries.find((h) => h.idHuilerie === idHuilerie);
 
     return {
       idHuilerie,

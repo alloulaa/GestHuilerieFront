@@ -3,15 +3,39 @@
     <mat-card-title>Reception</mat-card-title>
   </mat-card-header>
   <mat-card-content>
-    <div class="actions top-actions">
+    <div class="toolbar">
+      <div class="toolbar-copy">
+        <h3>Historique des receptions</h3>
+        <p>Consultez l'ensemble des pesees et filtrez rapidement par lot.</p>
+
+        <div class="meta-row">
+          <span class="chip">Total: {{ allPesees.length }}</span>
+          <span class="chip" *ngIf="lotSearchValue">Resultat filtre: {{ pesees.length }}</span>
+        </div>
+      </div>
+
       <a mat-raised-button color="primary" [routerLink]="['/pages/reception/form']">Nouvelle reception</a>
     </div>
+
+    <div class="filters-panel">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Filtrer par lot</mat-label>
+        <input matInput type="number" [(ngModel)]="lotSearchValue" name="lotSearchValue" placeholder="Ex: 12" />
+      </mat-form-field>
+
+      <div class="filter-actions">
+        <button mat-raised-button color="primary" type="button" (click)="filterByLot()">Filtrer</button>
+        <button mat-stroked-button type="button" (click)="resetFilter()">Reset</button>
+      </div>
+    </div>
+
+    <p class="empty" *ngIf="filterMessage">{{ filterMessage }}</p>
 
     <div class="summary" *ngIf="lastReception as r; else emptyState">
       <h3>Derniere reception</h3>
       <div class="grid">
         <div class="item"><span>ID</span><strong>{{ r.idPesee }}</strong></div>
-        <div class="item"><span>Date</span><strong>{{ r.datePesee }}</strong></div>
+        <div class="item"><span>Date</span><strong>{{ r.datePesee | date:'dd/MM/yyyy HH:mm' }}</strong></div>
         <div class="item"><span>Lot</span><strong>{{ r.lotId }}</strong></div>
         <div class="item"><span>Poids net</span><strong>{{ r.poidsNet }} kg</strong></div>
       </div>
@@ -20,5 +44,33 @@
     <ng-template #emptyState>
       <p class="empty">Aucune reception disponible.</p>
     </ng-template>
+
+    <div class="table-wrap">
+      <table class="crud-table reception-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Lot</th>
+            <th>Brut</th>
+            <th>Tare</th>
+            <th>Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="pesees.length === 0">
+            <td colspan="6" class="table-empty">Aucune reception a afficher.</td>
+          </tr>
+          <tr *ngFor="let pesee of pesees">
+            <td>{{ pesee.idPesee }}</td>
+            <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ pesee.lotId }}</td>
+            <td>{{ pesee.poidsBrut }} kg</td>
+            <td>{{ pesee.poidsTare }} kg</td>
+            <td>{{ pesee.poidsNet }} kg</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </mat-card-content>
 </mat-card>

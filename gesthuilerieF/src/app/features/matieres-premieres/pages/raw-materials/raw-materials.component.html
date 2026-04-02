@@ -4,22 +4,26 @@
     <form class="entity-form" [formGroup]="rawMaterialForm" (ngSubmit)="submit()">
       <div class="form-group">
         <label class="form-label">Nom *</label>
-        <input nbInput fullWidth formControlName="nom" placeholder="Nom" />
+        <input nbInput fullWidth formControlName="nom" placeholder="Nom"
+          [status]="isFieldInvalid('nom') ? 'danger' : 'basic'" />
       </div>
 
       <div class="form-group">
         <label class="form-label">Type *</label>
-        <input nbInput fullWidth formControlName="type" placeholder="Type" />
+        <input nbInput fullWidth formControlName="type" placeholder="Type"
+          [status]="isFieldInvalid('type') ? 'danger' : 'basic'" />
       </div>
 
       <div class="form-group">
         <label class="form-label">Unite de mesure *</label>
-        <input nbInput fullWidth formControlName="uniteMesure" placeholder="kg, litre..." />
+        <input nbInput fullWidth formControlName="uniteMesure" placeholder="kg, litre..."
+          [status]="isFieldInvalid('uniteMesure') ? 'danger' : 'basic'" />
       </div>
 
       <div class="form-group description-field">
         <label class="form-label">Description *</label>
-        <input nbInput fullWidth formControlName="description" placeholder="Description" />
+        <input nbInput fullWidth formControlName="description" placeholder="Description"
+          [status]="isFieldInvalid('description') ? 'danger' : 'basic'" />
       </div>
 
       <div class="form-actions">
@@ -54,8 +58,8 @@
                 aria-label="Modifier">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
-              <button nbButton ghost status="danger" size="small" type="button" (click)="remove(item)" title="Supprimer"
-                aria-label="Supprimer">
+              <button nbButton ghost status="danger" size="small" type="button" (click)="askRemove(item)"
+                title="Supprimer" aria-label="Supprimer">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>
             </td>
@@ -67,3 +71,20 @@
 
   </nb-card-body>
 </nb-card>
+
+<div class="confirm-overlay" *ngIf="pendingRawMaterialDeletion" (click)="cancelRemove()">
+  <nb-card class="confirm-card" (click)="$event.stopPropagation()">
+    <nb-card-header class="confirm-title">Confirmer la suppression</nb-card-header>
+    <nb-card-body>
+      <p>
+        Voulez-vous vraiment supprimer la matiere premiere
+        <strong>{{ pendingRawMaterialDeletion.nom }}</strong> ?
+      </p>
+      <p class="confirm-error" *ngIf="deleteErrorMessage">{{ deleteErrorMessage }}</p>
+    </nb-card-body>
+    <nb-card-footer class="confirm-actions">
+      <button nbButton status="basic" outline type="button" (click)="cancelRemove()">Annuler</button>
+      <button nbButton status="danger" type="button" (click)="confirmRemove()">Supprimer</button>
+    </nb-card-footer>
+  </nb-card>
+</div>

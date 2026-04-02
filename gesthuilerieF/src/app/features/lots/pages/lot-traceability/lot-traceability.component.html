@@ -4,14 +4,8 @@
     <div class="lots-panel">
       <div class="search-row">
         <label class="form-label" for="lotSearch">Recherche lot</label>
-        <input
-          id="lotSearch"
-          nbInput
-          fullWidth
-          [value]="lotSearch"
-          (input)="lotSearch = $any($event.target).value"
-          placeholder="ID, variete ou origine"
-        />
+        <input id="lotSearch" nbInput fullWidth [value]="lotSearch" (input)="lotSearch = $any($event.target).value"
+          placeholder="ID, variete ou origine" />
       </div>
 
       <div class="table-wrap">
@@ -23,6 +17,7 @@
               <th>Origine</th>
               <th>Qte Initiale</th>
               <th>Qte Restante</th>
+              <th>Produits finaux</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -34,8 +29,18 @@
               <td>{{ lot.quantiteInitiale }} kg</td>
               <td>{{ lot.quantiteRestante }} kg</td>
               <td>
-                <a nbButton status="primary" size="small" class="lot-details-btn" [routerLink]="['/pages/lots', lot.idLot]">Voir details</a>
-                <button nbButton status="basic" size="small" class="add-analysis-btn" type="button" (click)="openAddAnalysis(lot)">Ajouter analyse</button>
+                <ng-container *ngIf="getFinalProducts(lot.idLot).length > 0; else noFinalProduct">
+                  <div *ngFor="let productEvent of getFinalProducts(lot.idLot)">
+                    {{ productEvent.description }}
+                  </div>
+                </ng-container>
+                <ng-template #noFinalProduct>Aucun</ng-template>
+              </td>
+              <td>
+                <a nbButton status="primary" size="small" class="lot-details-btn"
+                  [routerLink]="['/pages/lots', lot.idLot]">Voir details</a>
+                <button nbButton status="basic" size="small" class="add-analysis-btn" type="button"
+                  (click)="openAddAnalysis(lot)">Ajouter analyse</button>
               </td>
             </tr>
           </tbody>

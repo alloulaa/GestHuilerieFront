@@ -32,6 +32,10 @@ export class HuilerieService {
     return this.http.get<Huilerie>(`${this.apiUrl}/${idHuilerie}`);
   }
 
+  findByNom(nom: string): Observable<Huilerie> {
+    return this.http.get<Huilerie>(`${this.apiUrl}/nom/${encodeURIComponent(nom)}`);
+  }
+
   activate(idHuilerie: number): Observable<void> {
     return this.http.patch<void>(`${this.apiUrl}/${idHuilerie}/activate`, {});
   }

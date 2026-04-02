@@ -15,6 +15,29 @@
   gap: 0.6rem;
 }
 
+.error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.warning-message {
+  grid-column: 1 / -1;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.8rem;
+  background-color: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 4px;
+  color: #92400e;
+  font-size: 0.9rem;
+  line-height: 1.5;
+
+  strong {
+    font-weight: 600;
+  }
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -88,4 +111,38 @@
   text-transform: uppercase;
   opacity: 0.7;
   font-weight: 600;
+}
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.confirm-card {
+  width: min(460px, 100%);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(2, 6, 23, 0.3);
+}
+
+.confirm-title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.confirm-subtitle {
+  margin: 0.35rem 0 0;
+  color: #9e3a3a;
+  font-size: 0.9rem;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }

@@ -7,23 +7,13 @@
       <a mat-raised-button color="primary" [routerLink]="['/pages/stock/form']">Nouveau mouvement</a>
     </div>
 
-    <form class="filters" [formGroup]="filterForm">
-      <mat-form-field appearance="outline">
-        <mat-label>Type</mat-label>
-        <mat-select formControlName="type">
-          <mat-option value="ALL">Tous</mat-option>
-          <mat-option value="ARRIVAL">Entree</mat-option>
-          <mat-option value="DEPARTURE">Sortie</mat-option>
-          <mat-option value="TRANSFER">Transfert</mat-option>
-          <mat-option value="ADJUSTMENT">Ajustement</mat-option>
-        </mat-select>
-      </mat-form-field>
+    <div class="filter-bar">
+      <input type="number" [(ngModel)]="lotIdFilter" name="lotIdFilter" placeholder="Filtrer par Lot ID" />
+      <button mat-raised-button color="primary" type="button" (click)="filterByLotId()">Filtrer</button>
+      <button mat-stroked-button type="button" (click)="resetLotFilter()">Reset</button>
+    </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Reference lot</mat-label>
-        <input matInput type="number" formControlName="referenceId" />
-      </mat-form-field>
-    </form>
+    <p class="filter-message" *ngIf="filterMessage">{{ filterMessage }}</p>
 
     <div class="table-wrap">
       <table>
@@ -38,6 +28,9 @@
           </tr>
         </thead>
         <tbody>
+          <tr *ngIf="movements.length === 0">
+            <td colspan="6" class="empty-row">Aucun mouvement a afficher.</td>
+          </tr>
           <tr *ngFor="let m of movements">
             <td>{{ m.id }}</td>
             <td><span class="badge" [ngClass]="movementClass(m.typeMouvement)">{{ movementLabel(m.typeMouvement)

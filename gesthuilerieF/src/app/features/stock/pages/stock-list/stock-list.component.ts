@@ -1,12 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { StockMovement } from '../../models/stock.models';
 import { StockManagementService } from '../../services/stock-management.service';
 
@@ -18,34 +15,38 @@ import { StockManagementService } from '../../services/stock-management.service'
   imports: [
     CommonModule,
     RouterModule,
-    ReactiveFormsModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
   ],
 })
 export class StockListComponent implements OnInit {
+  allMovements: StockMovement[] = [];
   movements: StockMovement[] = [];
-
-  readonly filterForm;
+  lotIdFilter = '';
+  filterMessage = '';
 
   constructor(
     private stockManagementService: StockManagementService,
-    private formBuilder: FormBuilder,
-  ) {
-    this.filterForm = this.formBuilder.group({
-      type: ['ALL'],
-      referenceId: [''],
-    });
-  }
+  ) {}
 
   ngOnInit(): void {
     this.stockManagementService.loadInitialData().subscribe(() => {
-      this.applyFilter();
-      this.filterForm.valueChanges.subscribe(() => this.applyFilter());
+      this.stockManagementService.movements$.subscribe(data => {
+        this.allMovements = data;
+        this.applyLotFilter();
+      });
     });
+  }
+
+  filterByLotId(): void {
+    this.applyLotFilter();
+  }
+
+  resetLotFilter(): void {
+    this.lotIdFilter = '';
+    this.filterMessage = '';
+    this.movements = this.allMovements;
   }
 
   movementLabel(type: StockMovement['typeMouvement']): string {
@@ -74,13 +75,28 @@ export class StockListComponent implements OnInit {
     return 'muted';
   }
 
-  private applyFilter(): void {
-    const raw = this.filterForm.getRawValue();
-    const type = raw.type as StockMovement['typeMouvement'] | 'ALL';
-    const referenceId = raw.referenceId ? Number(raw.referenceId) : null;
+  private applyLotFilter(): void {
+    const search = String(this.lotIdFilter ?? '').trim();
+    this.filterMessage = '';
 
-    this.stockManagementService.getFilteredMovements({ type, referenceId }).subscribe(data => {
-      this.movements = data;
-    });
+    if (!search) {
+      this.movements = this.allMovements;
+      return;
+    }
+
+    const lotId = Number(search);
+    if (Number.isNaN(lotId) || lotId <= 0) {
+      this.filterMessage = 'Veuillez saisir un lot ID valide.';
+      this.movements = this.allMovements;
+      return;
+    }
+
+    const filtered = this.allMovements.filter((movement) => Number(movement.referenceId) === lotId);
+    this.movements = filtered;
+
+    if (filtered.length === 0) {
+      this.filterMessage = 'Aucun mouvement trouve pour ce lot.';
+    }
   }
+
 }

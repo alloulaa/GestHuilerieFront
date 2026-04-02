@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { LotOlives } from '../../../lots/models/lot.models';
 import { CreatePeseeInput, LotManagementService } from '../../../lots/services/lot-management.service';
 import { Pesee } from '../../../stock/models/stock.models';
+import { WeighingService } from '../../../stock/services/weighing.service';
 
 @Component({
   selector: 'app-reception-form',
@@ -38,6 +39,7 @@ export class ReceptionFormComponent implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private lotManagementService: LotManagementService,
+    private weighingService: WeighingService,
     private router: Router,
   ) {
     this.form = this.formBuilder.group({
@@ -154,7 +156,7 @@ export class ReceptionFormComponent implements OnInit {
 
   onPopupGeneratePdf(): void {
     if (this.savedReception) {
-      this.generateReceptionPdf(this.savedReception);
+      this.generateReceptionPdf(this.savedReception.idPesee);
     }
     this.closePopupAndGoToList();
   }
@@ -168,39 +170,27 @@ export class ReceptionFormComponent implements OnInit {
     this.router.navigateByUrl('/pages/reception');
   }
 
-  private generateReceptionPdf(reception: Pesee): void {
-    const html = `
-        <html>
-        <head>
-          <title>Reception ${reception.idPesee}</title>
-          <style>
-            body { font-family: sans-serif; padding: 24px; }
-  h1 { margin: 0 0 12px; }
-            .line { margin: 6px 0; }
-          </style>
-        </head>
-        <body>
-          <h1>Fiche Reception</h1>
-          <div class="line">ID reception: ${reception.idPesee}</div>
-          <div class="line">Date: ${reception.datePesee}</div>
-          <div class="line">Lot: ${reception.lotId}</div>
-          <div class="line">Poids brut: ${reception.poidsBrut} kg</div>
-          <div class="line">Poids tare: ${reception.poidsTare} kg</div>
-          <div class="line">Poids net: ${reception.poidsNet} kg</div>
-        </body>
-        </html>
-      `;
+  private generateReceptionPdf(peseeId: number): void {
+    this.weighingService.generateBonPeseePdf(peseeId).subscribe({
+      next: blob => {
+        const pdfUrl = window.URL.createObjectURL(blob);
+        const popup = window.open(pdfUrl, '_blank');
 
-    const popup = window.open('', '_blank', 'width=900,height=700');
-    if (!popup) {
-      return;
-    }
+        if (!popup) {
+          window.URL.revokeObjectURL(pdfUrl);
+          return;
+        }
 
-    popup.document.open();
-    popup.document.write(html);
-    popup.document.close();
-    popup.focus();
-    popup.print();
+        popup.addEventListener('load', () => {
+          popup.focus();
+          popup.print();
+          window.URL.revokeObjectURL(pdfUrl);
+        });
+      },
+      error: () => {
+        this.errorMessage = 'Impossible de generer le PDF.';
+      },
+    });
   }
 
   private applyLotModeValidation(mode: 'existing' | 'new'): void {

@@ -53,6 +53,21 @@ export class StockManagementService {
     );
   }
 
+  getAvailableQuantity(huilerieId: number, referenceId: number): number {
+    return this.movementsSubject.value
+      .filter(
+        movement =>
+          movement.huilerieId === huilerieId &&
+          movement.referenceId === referenceId,
+      )
+      .reduce((total, movement) => {
+        if (movement.typeMouvement === 'DEPARTURE') {
+          return total - movement.quantite;
+        }
+        return total + movement.quantite;
+      }, 0);
+  }
+
   updateMovementType(id: number, typeMouvement: StockMovement['typeMouvement'], quantite: number): Observable<StockMovement> {
     return this.stockMovementService.updateTypeMouvement(id, typeMouvement, quantite).pipe(
       tap(updated => {

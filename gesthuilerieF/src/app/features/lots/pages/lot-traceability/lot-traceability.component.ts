@@ -2,37 +2,42 @@ import { Component, OnInit } from '@angular/core';
 import { NbCardModule, NbInputModule, NbButtonModule } from '@nebular/theme';
 import { NgFor, NgIf } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LotOlives } from '../../models/lot.models';
+import { LotOlives, TraceabilityEvent } from '../../models/lot.models';
 import { LotManagementService } from '../../services/lot-management.service';
 import { RouterModule } from '@angular/router';
 import { AnalyseLaboratoireService } from '../../services/analyse-laboratoire.service';
+import { TraceabilityService } from '../../services/traceability.service';
+import { catchError } from 'rxjs/operators';
+import { forkJoin, map, of } from 'rxjs';
 
 @Component({
-    selector: 'app-lot-traceability',
-    templateUrl: './lot-traceability.component.html',
-    styleUrls: ['./lot-traceability.component.scss'],
-    standalone: true,
-    imports: [
-        NbCardModule,
-        NbInputModule,
-        NbButtonModule,
-        NgFor,
-        NgIf,
-        ReactiveFormsModule,
-        RouterModule,
-    ],
+  selector: 'app-lot-traceability',
+  templateUrl: './lot-traceability.component.html',
+  styleUrls: ['./lot-traceability.component.scss'],
+  standalone: true,
+  imports: [
+    NbCardModule,
+    NbInputModule,
+    NbButtonModule,
+    NgFor,
+    NgIf,
+    ReactiveFormsModule,
+    RouterModule,
+  ],
 })
 export class LotTraceabilityComponent implements OnInit {
   lots: LotOlives[] = [];
   lotSearch = '';
   selectedLotForAnalysis: LotOlives | null = null;
   analysisSaveError = '';
+  finalProductsByLot: Record<number, TraceabilityEvent[]> = {};
 
   readonly analysisForm;
 
   constructor(
     private lotManagementService: LotManagementService,
     private analyseLaboratoireService: AnalyseLaboratoireService,
+    private traceabilityService: TraceabilityService,
     private formBuilder: FormBuilder,
   ) {
     this.analysisForm = this.formBuilder.group({
@@ -47,8 +52,13 @@ export class LotTraceabilityComponent implements OnInit {
     this.lotManagementService.loadInitialData().subscribe(() => {
       this.lotManagementService.lots$.subscribe(data => {
         this.lots = data;
+        this.loadFinalProducts(data);
       });
     });
+  }
+
+  getFinalProducts(lotId: number): TraceabilityEvent[] {
+    return this.finalProductsByLot[lotId] ?? [];
   }
 
   filteredLots(): LotOlives[] {
@@ -106,6 +116,28 @@ export class LotTraceabilityComponent implements OnInit {
       error: () => {
         this.analysisSaveError = 'Impossible d\'enregistrer l\'analyse.';
       },
+    });
+  }
+
+  private loadFinalProducts(lots: LotOlives[]): void {
+    if (lots.length === 0) {
+      this.finalProductsByLot = {};
+      return;
+    }
+
+    const requests = lots.map(lot =>
+      this.traceabilityService.getLotLifecycle(lot.idLot).pipe(
+        map(events => events.filter(event => event.etape === 'PRODUIT_FINAL')),
+        catchError(() => of([] as TraceabilityEvent[])),
+      ),
+    );
+
+    forkJoin(requests).subscribe(resultByLot => {
+      const byLot: Record<number, TraceabilityEvent[]> = {};
+      lots.forEach((lot, index) => {
+        byLot[lot.idLot] = resultByLot[index] ?? [];
+      });
+      this.finalProductsByLot = byLot;
     });
   }
 
