@@ -1,5 +1,6 @@
 export interface LotOlives {
   idLot: number;
+  reference?: string;
   varieteOlive: string;
   maturite: string;
   origine: string;

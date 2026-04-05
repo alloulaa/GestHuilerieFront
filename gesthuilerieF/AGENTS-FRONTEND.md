@@ -113,8 +113,8 @@ This project supports both light and dark themes.
 
 - All HTTP calls go through dedicated service files in shared/services/
 - Never make HTTP calls directly inside components
-- The base API URL is http://localhost:8069
-- The AI service URL is http://localhost:8000
+- The base API URL is http://localhost:8000
+
 - Always handle errors in service files — never let uncaught HTTP errors reach the component
 
 ---

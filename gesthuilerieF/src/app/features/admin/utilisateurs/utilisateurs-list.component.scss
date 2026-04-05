@@ -1,0 +1,188 @@
+/* c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\features\admin\utilisateurs\utilisateurs-list.component.scss */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:host {
+  --primary: var(--admin-primary, #3f6a2a);
+  --surface: var(--admin-surface, #ffffff);
+  --text-primary: var(--admin-text-primary, #1f2a1f);
+  --text-secondary: var(--admin-text-secondary, #5e6d5f);
+  --border: var(--admin-border, #d9e1d6);
+  --danger: var(--admin-danger, #b3261e);
+  --success: var(--admin-success, #1f7a3a);
+  --warning: var(--admin-warning, #a37400);
+  --success-text: var(--admin-success-text, #ffffff);
+  --danger-text: var(--admin-danger-text, #ffffff);
+
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-primary);
+}
+
+:host-context(.dark-theme) {
+  --primary: var(--admin-primary-dark, #89b86a);
+  --surface: var(--admin-surface-dark, #1f2720);
+  --text-primary: var(--admin-text-primary-dark, #ecf5e9);
+  --text-secondary: var(--admin-text-secondary-dark, #b9c9b8);
+  --border: var(--admin-border-dark, #3a4a3b);
+  --danger: var(--admin-danger-dark, #ff6b63);
+  --success: var(--admin-success-dark, #4dd07a);
+  --warning: var(--admin-warning-dark, #ffca57);
+  --success-text: var(--admin-success-text-dark, #152318);
+  --danger-text: var(--admin-danger-text-dark, #2d1313);
+}
+
+.admin-page {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.page-header,
+.filters,
+.actions,
+.row-actions,
+.pagination {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.page-header {
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.filters {
+  margin-bottom: 1rem;
+}
+
+.form-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+}
+
+input,
+textarea,
+select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 0.75rem;
+}
+
+tbody tr:hover {
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+
+.badge-actif {
+  background: var(--success);
+  color: var(--success-text);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.badge-inactif {
+  background: var(--danger);
+  color: var(--danger-text);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.switch {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.switch:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary,
+.btn-danger,
+.btn-ghost,
+.btn-sm {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--surface);
+  padding: 0.55rem 0.9rem;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: var(--danger-text);
+  padding: 0.55rem 0.9rem;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border);
+  padding: 0.55rem 0.9rem;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.7rem;
+}
+
+.message {
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.message-success {
+  background: color-mix(in srgb, var(--success) 18%, var(--surface));
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.message-error {
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.pagination {
+  justify-content: flex-end;
+}

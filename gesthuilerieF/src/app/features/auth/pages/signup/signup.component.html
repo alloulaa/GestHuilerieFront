@@ -127,9 +127,9 @@
       <p>Configurez votre acces pour structurer la gestion de la production, de la qualite et des flux de votre huilerie.</p>
     </header>
 
-    <form class="auth-form" [formGroup]="signupForm" novalidate>
+    <form class="auth-form" [formGroup]="signupForm" (ngSubmit)="submit()" novalidate>
       <label>
-        Nom complet
+        Nom
         <span class="input-shell">
           <span class="input-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
@@ -137,21 +137,20 @@
               <path d="M5 20a7 7 0 0 1 14 0" />
             </svg>
           </span>
-          <input type="text" formControlName="fullName" placeholder="Ahmed Ben Salah" />
+          <input type="text" formControlName="nom" placeholder="Ben Salah" />
         </span>
       </label>
 
       <label>
-        Nom de l'huilerie
+        Prenom
         <span class="input-shell">
           <span class="input-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
-              <path d="M4 19h16" />
-              <path d="M6 19V9l6-4 6 4v10" />
-              <path d="M9 19v-4h6v4" />
+              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+              <path d="M5 20a7 7 0 0 1 14 0" />
             </svg>
           </span>
-          <input type="text" formControlName="companyName" placeholder="Huilerie Atlas" />
+          <input type="text" formControlName="prenom" placeholder="Ahmed" />
         </span>
       </label>
 
@@ -169,6 +168,18 @@
       </label>
 
       <label>
+        Telephone
+        <span class="input-shell">
+          <span class="input-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M6.5 3h3L11 7.5 8.5 9A15 15 0 0 0 15 15.5l1.5-2.5L21 14.5v3A2.5 2.5 0 0 1 18.5 20C10.49 20 4 13.51 4 5.5A2.5 2.5 0 0 1 6.5 3Z" />
+            </svg>
+          </span>
+          <input type="text" formControlName="telephone" placeholder="0612345678" />
+        </span>
+      </label>
+
+      <label>
         Mot de passe
         <span class="input-shell">
           <span class="input-icon" aria-hidden="true">
@@ -178,7 +189,7 @@
               <path d="M12 13.2v3.2" />
             </svg>
           </span>
-          <input type="password" formControlName="password" placeholder="Minimum 8 caracteres" />
+          <input type="password" formControlName="motDePasse" placeholder="Minimum 8 caracteres" />
         </span>
       </label>
 
@@ -187,7 +198,12 @@
         J'accepte les conditions d'utilisation et la politique de confidentialite.
       </label>
 
-      <button type="submit">Creer mon compte</button>
+      <p class="error-message" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+      <button type="submit" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Creer mon compte</span>
+        <span *ngIf="isLoading">Creation en cours...</span>
+      </button>
     </form>
 
     <div class="panel-footer-note">

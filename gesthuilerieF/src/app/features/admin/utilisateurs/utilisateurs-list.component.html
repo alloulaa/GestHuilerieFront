@@ -1,0 +1,90 @@
+<!-- c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\features\admin\utilisateurs\utilisateurs-list.component.html -->
+<section class="admin-page">
+  <header class="page-header">
+    <h1>Utilisateurs</h1>
+    <button class="btn-primary" type="button" (click)="onNewUser()">Nouvel utilisateur</button>
+  </header>
+
+  <div class="message" *ngIf="message" [class.message-success]="message.type === 'success'" [class.message-error]="message.type === 'error'">
+    {{ message.text }}
+  </div>
+
+  <section class="filters">
+    <input type="text" [(ngModel)]="filterText" placeholder="Rechercher nom ou email" />
+    <select [(ngModel)]="filterProfilId">
+      <option [ngValue]="null">Tous les profils</option>
+      <option *ngFor="let p of profils" [ngValue]="p.idProfil">{{ p.nom }}</option>
+    </select>
+  </section>
+
+  <form class="form-card" *ngIf="showForm" [formGroup]="userForm" (ngSubmit)="onSubmit()">
+    <label>
+      Nom
+      <input type="text" formControlName="nom" />
+    </label>
+    <label>
+      Prenom
+      <input type="text" formControlName="prenom" />
+    </label>
+    <label>
+      Email
+      <input type="email" formControlName="email" />
+    </label>
+    <label>
+      Telephone
+      <input type="text" formControlName="telephone" />
+    </label>
+    <label>
+      Profil
+      <select formControlName="profilId">
+        <option [ngValue]="null">Selectionner</option>
+        <option *ngFor="let p of profils" [ngValue]="p.idProfil">{{ p.nom }}</option>
+      </select>
+    </label>
+    <label>
+      Huilierie ID
+      <input type="number" formControlName="huilierieId" />
+    </label>
+    <div class="actions">
+      <button class="btn-primary" type="submit" [disabled]="isSaving">{{ isSaving ? 'Enregistrement...' : 'Soumettre' }}</button>
+      <button class="btn-ghost" type="button" (click)="showForm = false">Annuler</button>
+    </div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Prenom</th>
+          <th>Email</th>
+          <th>Profil</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of paginatedUtilisateurs">
+          <td>{{ user.nom }}</td>
+          <td>{{ user.prenom }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.profil?.nom || '-' }}</td>
+          <td>
+            <span [class]="user.actif ? 'badge-actif' : 'badge-inactif'">{{ user.actif ? 'Actif' : 'Inactif' }}</span>
+          </td>
+          <td class="row-actions">
+            <button type="button" class="switch" (click)="onToggleActif(user)">{{ user.actif ? 'Desactiver' : 'Activer' }}</button>
+            <button class="btn-sm btn-primary" type="button" (click)="onEdit(user)">Modifier</button>
+            <button class="btn-sm btn-danger" type="button" (click)="onDelete(user.idUtilisateur)">Supprimer</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="pagination">
+    <button class="btn-ghost" type="button" [disabled]="currentPage <= 1" (click)="onPageChange(currentPage - 1)">Precedent</button>
+    <span>Page {{ currentPage }} / {{ totalPages }}</span>
+    <button class="btn-ghost" type="button" [disabled]="currentPage >= totalPages" (click)="onPageChange(currentPage + 1)">Suivant</button>
+  </footer>
+</section>

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { SidebarComponent } from './@theme/components/sidebar/sidebar.component';
+import { AuthGuard } from './core/auth/auth.guard';
 
 export const APP_ROUTES: Routes = [
   {
@@ -11,8 +12,17 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./features/auth/pages/signup/signup.component').then(c => c.SignupComponent),
   },
   {
+    path: 'reset-password',
+    loadComponent: () => import('./features/auth/reset-password/reset-password-request.component').then(c => c.ResetPasswordRequestComponent),
+  },
+  {
+    path: 'reset-password/confirm',
+    loadComponent: () => import('./features/auth/reset-password/reset-password-confirm.component').then(c => c.ResetPasswordConfirmComponent),
+  },
+  {
     path: 'pages',
     component: SidebarComponent,
+    canActivate: [AuthGuard],
     children: [
       // Dashboard
       {
@@ -95,6 +105,10 @@ export const APP_ROUTES: Routes = [
         path: 'users',
         loadComponent: () => import('./features/users/pages/user-accounts/user-accounts.component').then(c => c.UserAccountsComponent),
       },
+      {
+        path: 'mon-profil',
+        loadComponent: () => import('./features/auth/profile/mon-profil.component').then(c => c.MonProfilComponent),
+      },
       { path: 'dashboard', redirectTo: 'dashboard/production', pathMatch: 'full' },
       { path: 'production', redirectTo: 'production/guides', pathMatch: 'full' },
       { path: 'machines/state', redirectTo: 'machines', pathMatch: 'full' },
@@ -106,6 +120,7 @@ export const APP_ROUTES: Routes = [
   { path: 'stock', redirectTo: 'pages/stock', pathMatch: 'full' },
   { path: 'lots', redirectTo: 'pages/lots', pathMatch: 'full' },
   { path: 'matieres-premieres', redirectTo: 'pages/matieres-premieres', pathMatch: 'full' },
+  { path: 'admin', loadChildren: () => import('./features/admin/admin.routes').then(m => m.adminRoutes) },
   { path: '', redirectTo: 'pages', pathMatch: 'full' },
   { path: '**', redirectTo: 'pages' },
 ];

@@ -56,8 +56,13 @@ export const MENU_ITEMS: NbMenuItem[] = [
     link: '/pages/machines/management',
   },
   {
-    title: 'Comptes / Profils / Privilèges',
+    title: 'Gestion Acces',
     icon: 'people-outline',
-    link: '/pages/users',
+    link: '/admin/profils',
+  },
+  {
+    title: 'Affectation Utilisateurs',
+    icon: 'person-done-outline',
+    link: '/admin/utilisateurs',
   },
 ];

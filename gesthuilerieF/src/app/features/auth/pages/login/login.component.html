@@ -139,7 +139,7 @@
       <p>Accedez a votre espace de pilotage pour suivre la production d'huile, la qualite et les performances de votre huilerie.</p>
     </header>
 
-    <form class="auth-form" [formGroup]="loginForm" novalidate>
+    <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
       <label>
         Adresse e-mail
         <span class="input-shell">
@@ -172,10 +172,15 @@
           <input type="checkbox" formControlName="rememberMe" />
           Rester connecte
         </label>
-        <button type="button" class="text-action" aria-label="Mot de passe oublie">Mot de passe oublie ?</button>
+        <button type="button" class="text-action" aria-label="Mot de passe oublie" routerLink="/reset-password">Mot de passe oublie ?</button>
       </div>
 
-      <button type="submit">Se connecter</button>
+      <p class="error-message" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+      <button type="submit" [disabled]="isLoading || loginForm.invalid">
+        <span *ngIf="!isLoading">Se connecter</span>
+        <span *ngIf="isLoading">Connexion...</span>
+      </button>
     </form>
 
     <div class="panel-footer-note">

@@ -1,12 +1,420 @@
-<nb-card>
-  <nb-card-header>Exécution des Guides de Production</nb-card-header>
-  <nb-card-body>
-    <div class="step" *ngFor="let s of steps">
-      <div>
-        <div class="name">{{ s.step }}</div>
-        <div class="desc">{{ s.desc }}</div>
-      </div>
-      <span class="status">{{ s.status }}</span>
+<div class="production-page">
+    <section class="hero-panel">
+        <div>
+            <p class="eyebrow">Production</p>
+            <h1>Guide de production et exécution</h1>
+            <p class="hero-copy">
+                Crée des guides structurés, lance des exécutions traçables et affecte la matière première à la machine
+                sans sortir du même écran.
+            </p>
+        </div>
+
+        <div class="hero-stats">
+            <article>
+                <strong>{{ guideCount }}</strong>
+                <span>Guides</span>
+            </article>
+            <article>
+                <strong>{{ executionCount }}</strong>
+                <span>Exécutions</span>
+            </article>
+            <article>
+                <strong>{{ etapeCount }}</strong>
+                <span>Étapes</span>
+            </article>
+            <article>
+                <strong>{{ parameterCount }}</strong>
+                <span>Paramètres</span>
+            </article>
+        </div>
+    </section>
+
+    <div class="layout-columns">
+        <div class="layout-column layout-column--left">
+            <nb-card class="panel panel--execution-create">
+                <nb-card-header>Créer un guide de production</nb-card-header>
+                <nb-card-body>
+                    <p class="panel-hint">Le guide suit exactement le modèle backend : guide, étapes, paramètres.</p>
+
+                    <form class="stack-form" [formGroup]="guideForm" (ngSubmit)="submitGuide()">
+                        <div class="form-grid">
+                            <label class="field">
+                                <span>Nom *</span>
+                                <input nbInput fullWidth formControlName="nom"
+                                    placeholder="Guide extraction campagne 2026" />
+                            </label>
+
+                            <label class="field field-wide">
+                                <span>Description *</span>
+                                <textarea nbInput fullWidth rows="3" formControlName="description"
+                                    placeholder="Guide standard d'extraction"></textarea>
+                            </label>
+
+                            <label class="field">
+                                <span>Date de création *</span>
+                                <input nbInput fullWidth type="date" formControlName="dateCreation" />
+                            </label>
+
+                            <label class="field">
+                                <span>Huilerie *</span>
+                                <nb-select fullWidth formControlName="huilerieId" placeholder="Sélectionner">
+                                    <nb-option *ngFor="let huilerie of huileries" [value]="huilerie.idHuilerie">
+                                        {{ huilerie.nom }}
+                                    </nb-option>
+                                </nb-select>
+                            </label>
+                        </div>
+
+                        <div formArrayName="etapes" class="steps-stack">
+                            <div class="step-card" *ngFor="let etape of etapes.controls; let etapeIndex = index"
+                                [formGroupName]="etapeIndex">
+                                <div class="step-card__header">
+                                    <div>
+                                        <h3>Étape {{ etapeIndex + 1 }}</h3>
+                                        <p>Nom, ordre et paramètres associés</p>
+                                    </div>
+
+                                    <button nbButton status="danger" outline size="small" type="button"
+                                        (click)="removeEtape(etapeIndex)" [disabled]="etapes.length <= 1">
+                                        Supprimer
+                                    </button>
+                                </div>
+
+                                <div class="form-grid form-grid--step">
+                                    <label class="field">
+                                        <span>Nom *</span>
+                                        <input nbInput fullWidth formControlName="nom" placeholder="Réception" />
+                                    </label>
+
+                                    <label class="field">
+                                        <span>Ordre *</span>
+                                        <input nbInput fullWidth type="number" formControlName="ordre" min="1" />
+                                    </label>
+
+                                    <label class="field field-wide">
+                                        <span>Description *</span>
+                                        <textarea nbInput fullWidth rows="2" formControlName="description"
+                                            placeholder="Contrôle initial"></textarea>
+                                    </label>
+                                </div>
+
+                                <div class="parameters-box" formArrayName="parametres">
+                                    <div class="parameter-row"
+                                        *ngFor="let parametre of getParametres(etapeIndex).controls; let parametreIndex = index"
+                                        [formGroupName]="parametreIndex">
+                                        <div class="parameter-row__grid">
+                                            <label class="field">
+                                                <span>Paramètre *</span>
+                                                <input nbInput fullWidth formControlName="nom"
+                                                    placeholder="Température" />
+                                            </label>
+
+                                            <label class="field">
+                                                <span>Unité *</span>
+                                                <input nbInput fullWidth formControlName="uniteMesure"
+                                                    placeholder="C" />
+                                            </label>
+
+                                            <label class="field">
+                                                <span>Valeur *</span>
+                                                <input nbInput fullWidth formControlName="valeur" placeholder="25" />
+                                            </label>
+
+                                            <label class="field field-wide">
+                                                <span>Description *</span>
+                                                <input nbInput fullWidth formControlName="description"
+                                                    placeholder="Température de réception" />
+                                            </label>
+                                        </div>
+
+                                        <div class="parameter-row__actions">
+                                            <button nbButton size="tiny" status="danger" ghost type="button"
+                                                (click)="removeParametre(etapeIndex, parametreIndex)"
+                                                [disabled]="getParametres(etapeIndex).length <= 1">
+                                                Retirer
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button nbButton status="info" outline size="small" type="button"
+                                        (click)="addParametre(etapeIndex)">
+                                        Ajouter un paramètre
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button nbButton status="primary" outline type="button" (click)="addEtape()">
+                                Ajouter une étape
+                            </button>
+                        </div>
+
+                        <div class="feedback success" *ngIf="guideMessage">{{ guideMessage }}</div>
+                        <div class="feedback error" *ngIf="guideError">{{ guideError }}</div>
+
+                        <div class="actions-row">
+                            <button nbButton status="primary" type="submit" [disabled]="submittingGuide">
+                                {{ submittingGuide ? 'Création...' : 'Créer le guide' }}
+                            </button>
+                        </div>
+                    </form>
+                </nb-card-body>
+            </nb-card>
+
+            <nb-card class="panel panel--list">
+                <nb-card-header>Guides enregistrés</nb-card-header>
+                <nb-card-body>
+                    <div class="list-card" *ngIf="selectedGuide as guide">
+                        <div class="list-card__header">
+                            <div>
+                                <h3>{{ guide.nom }}</h3>
+                                <p>{{ guide.reference }} · {{ guide.description }}</p>
+                            </div>
+                            <span class="pill">{{ stepSummary(guide) }}</span>
+                        </div>
+
+                        <div class="guide-flow">
+                            <div class="guide-step" *ngFor="let etape of guide.etapes">
+                                <div class="guide-step__head">
+                                    <strong>{{ etape.ordre }}. {{ etape.nom }}</strong>
+                                    <span>{{ etape.description }}</span>
+                                </div>
+
+                                <div class="guide-params">
+                                    <span class="param-pill" *ngFor="let parametre of etape.parametres">
+                                        {{ parametre.nom }} · {{ parametre.valeur }} {{ parametre.uniteMesure }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Référence</th>
+                                    <th>Nom</th>
+                                    <th>Création</th>
+                                    <th>Huilerie</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let guide of guides"
+                                    [class.is-selected]="guide.idGuideProduction === selectedGuideId">
+                                    <td>{{ guide.reference }}</td>
+                                    <td>{{ guide.nom }}</td>
+                                    <td>{{ guide.dateCreation }}</td>
+                                    <td>{{ guide.huilerieId }}</td>
+                                    <td class="table-actions">
+                                        <button nbButton size="small" outline type="button"
+                                            (click)="selectGuide(guide)">Voir</button>
+                                        <button nbButton size="small" status="basic" outline type="button"
+                                            (click)="closeGuideDetails()">Fermer</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </nb-card-body>
+            </nb-card>
+        </div>
+
+        <div class="layout-column layout-column--right">
+            <nb-card class="panel">
+                <nb-card-header>Créer une exécution de production</nb-card-header>
+                <nb-card-body>
+                  <p class="panel-hint">L’exécution envoie le lot, la machine et les valeurs réelles au backend.</p>
+
+                    <form class="stack-form" [formGroup]="executionForm" (ngSubmit)="submitExecution()">
+                        <div class="form-grid">
+                            <label class="field">
+                                <span>Guide *</span>
+                                <nb-select fullWidth formControlName="guideProductionId" placeholder="Sélectionner"
+                                    (selectedChange)="onGuideSelectionChange($event)">
+                                    <nb-option *ngFor="let guide of guides" [value]="guide.idGuideProduction">
+                                        {{ guide.reference }} - {{ guide.nom }}
+                                    </nb-option>
+                                </nb-select>
+                            </label>
+
+                            <label class="field">
+                                <span>Date début *</span>
+                                <input nbInput fullWidth type="date" formControlName="dateDebut" />
+                            </label>
+
+                            <label class="field">
+                                <span>Date fin prévue *</span>
+                                <input nbInput fullWidth type="date" formControlName="dateFinPrevue" />
+                            </label>
+
+                            <label class="field">
+                                <span>Date fin réelle</span>
+                                <input nbInput fullWidth type="date" formControlName="dateFinReelle" />
+                            </label>
+
+                            <label class="field">
+                                <span>Statut *</span>
+                                <nb-select fullWidth formControlName="statut">
+                                    <nb-option value="EN_COURS">En cours</nb-option>
+                                    <nb-option value="TERMINEE">Terminée</nb-option>
+                                    <nb-option value="ANNULEE">Annulée</nb-option>
+                                    <nb-option value="PLANIFIEE">Planifiée</nb-option>
+                                </nb-select>
+                            </label>
+
+                            <label class="field">
+                                <span>Rendement *</span>
+                                <input nbInput fullWidth type="number" step="0.01" min="0" formControlName="rendement"
+                                    placeholder="0.0" />
+                            </label>
+
+                            <label class="field">
+                                <span>Machine *</span>
+                                <nb-select fullWidth formControlName="machineId" placeholder="Sélectionner">
+                                    <nb-option *ngFor="let machine of machines" [value]="machine.idMachine">
+                                        {{ machine.nomMachine }}
+                                    </nb-option>
+                                </nb-select>
+                            </label>
+
+                            <label class="field">
+                                <span>Lot d'olives *</span>
+                                <nb-select fullWidth formControlName="lotOlivesId" placeholder="Sélectionner">
+                                    <nb-option *ngFor="let lot of lots" [value]="lot.idLot">
+                                        {{ lotDisplayLabel(lot) }}
+                                    </nb-option>
+                                </nb-select>
+                            </label>
+
+                            <label class="field">
+                                <span>Matière première liée au lot</span>
+                                <input nbInput fullWidth [value]="selectedLotMatierePremiereNom" readonly />
+                            </label>
+
+                            <label class="field field-wide">
+                                <span>Observations</span>
+                                <textarea nbInput fullWidth rows="3" formControlName="observations"
+                                    placeholder="Première exécution"></textarea>
+                            </label>
+                        </div>
+
+                        <div class="values-box" *ngIf="executionValueRows.length > 0; else noGuideSelected">
+                            <div class="values-box__header">
+                                <div>
+                                    <h3>Valeurs réelles</h3>
+                                    <p>{{ selectedGuideParameterCount }} paramètre(s) rattaché(s) au guide sélectionné
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="value-item" formArrayName="valeursReelles"
+                                *ngFor="let row of executionValueRows; let valueIndex = index">
+                                <div class="value-item__meta">
+                                    <strong>{{ row.stepName }}</strong>
+                                    <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
+                                </div>
+                                <div [formGroupName]="valueIndex" class="value-item__input">
+                                    <input nbInput fullWidth formControlName="valeurReelle"
+                                        placeholder="Valeur réelle" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <ng-template #noGuideSelected>
+                            <div class="empty-state">Sélectionne un guide pour générer les paramètres réels attendus.
+                            </div>
+                        </ng-template>
+
+                        <div class="feedback success" *ngIf="executionMessage">{{ executionMessage }}</div>
+                        <div class="feedback error" *ngIf="executionError">{{ executionError }}</div>
+
+                        <div class="actions-row">
+                            <button nbButton status="primary" type="submit" [disabled]="submittingExecution">
+                                {{ submittingExecution ? 'Démarrage...' : 'Commencer exécution' }}
+                            </button>
+                        </div>
+                    </form>
+                </nb-card-body>
+            </nb-card>
+
+            <nb-card class="panel panel--list panel--execution-list">
+                <nb-card-header>Exécutions enregistrées</nb-card-header>
+                <nb-card-body>
+                    <div class="list-card" *ngIf="selectedExecution as execution">
+                        <div class="list-card__header">
+                            <div>
+                                <h3>{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</h3>
+                                <p>{{ execution.dateDebut }} → {{ execution.dateFinPrevue }}</p>
+                            </div>
+                            <span class="pill" [ngClass]="statusClass(execution.statut)">{{
+                                statusLabel(execution.statut) }}</span>
+                        </div>
+
+                        <div class="execution-meta">
+                            <div>
+                                <span>Guide</span>
+                                <strong>{{ execution.guideProductionReference || ('#' + execution.guideProductionId)
+                                    }}</strong>
+                            </div>
+                            <div>
+                                <span>Machine</span>
+                                <strong>{{ execution.machineNom || ('#' + execution.machineId) }}</strong>
+                            </div>
+                            <div>
+                                <span>Lot olives</span>
+                                <strong>{{ execution.lotOlivesReference || execution.lotOlivesVariete || ('#' +
+                                    execution.lotOlivesId) }}</strong>
+                            </div><span>Produit final</span>
+                                <strong>{{ execution.produitFinalCode || execution.produitFinalNomProduit || '-'
+                                    }}</strong></div>
+
+                        <div class="value-summary" *ngIf="execution.valeursReelles.length > 0">
+                            <div class="value-summary__row" *ngFor="let valeur of execution.valeursReelles">
+                                <span>{{ valeur.parametreEtapeNom || ('Paramètre #' + valeur.parametreEtapeId) }}</span>
+                                <strong>{{ valeur.valeurReelle }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Référence exécution</th>
+                                    <th>Réf. guide</th>
+                                    <th>Machine</th>
+                                    <th>Statut</th>
+                                    <th>Rendement</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let execution of executions"
+                                    [class.is-selected]="execution.idExecutionProduction === selectedExecutionId">
+                                    <td>{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</td>
+                                    <td>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}
+                                    </td>
+                                    <td>{{ execution.machineNom || ('#' + execution.machineId) }}</td>
+                                    <td><span class="pill" [ngClass]="statusClass(execution.statut)">{{
+                                            statusLabel(execution.statut) }}</span></td>
+                                    <td>{{ execution.rendement }}</td>
+                                    <td class="table-actions">
+                                        <button nbButton size="small" outline type="button"
+                                            (click)="selectExecution(execution)">Voir</button>
+                                        <button nbButton size="small" status="success" outline type="button"
+                                            (click)="createProduitFinal(execution)" [disabled]="creatingProduitFinal">
+                                            {{ creatingProduitFinal ? 'Génération...' : 'Terminer' }}
+                                        </button>
+                                        <button nbButton size="small" status="basic" outline type="button"
+                                            (click)="closeExecutionDetails()">Fermer</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </nb-card-body>
+            </nb-card>
+        </div>
     </div>
-  </nb-card-body>
-</nb-card>
+</div>

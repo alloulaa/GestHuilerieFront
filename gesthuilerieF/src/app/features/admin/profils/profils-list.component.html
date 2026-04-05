@@ -1,0 +1,126 @@
+<!-- c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\features\admin\profils\profils-list.component.html -->
+<section class="admin-page">
+  <div class="management-card">
+    <header class="page-header">
+      <div class="header-copy">
+        <p class="eyebrow">Administration</p>
+        <h2>Profils et Permissions</h2>
+        <p>Crée des profils, ajuste les accès modules et assigne les droits métier.</p>
+      </div>
+
+      <div class="header-tools">
+        <button class="icon-btn" type="button" title="Actualiser" (click)="loadProfils()">⟳</button>
+        <button class="icon-btn" type="button" title="Ajouter" (click)="showCreateForm = !showCreateForm">＋</button>
+
+        <div class="search-wrap">
+          <input
+            type="text"
+            [(ngModel)]="searchText"
+            (input)="onSearchChange()"
+            placeholder="Rechercher un profil"
+          />
+          <span class="search-icon">⌕</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="summary-pills">
+      <div class="pill">
+        <span>Total</span>
+        <strong>{{ profils.length }}</strong>
+      </div>
+      <div class="pill">
+        <span>Filtrés</span>
+        <strong>{{ filteredProfils.length }}</strong>
+      </div>
+      <div class="pill">
+        <span>Pagination</span>
+        <strong>{{ currentPage }} / {{ totalPages }}</strong>
+      </div>
+    </div>
+
+    <div class="message" *ngIf="message" [class.message-success]="message.type === 'success'" [class.message-error]="message.type === 'error'">
+      {{ message.text }}
+    </div>
+
+    <form class="form-card" *ngIf="showCreateForm" [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
+      <h3>Créer un profil</h3>
+      <label>
+        Nom
+        <input type="text" formControlName="nom" />
+      </label>
+      <label>
+        Description
+        <textarea rows="3" formControlName="description"></textarea>
+      </label>
+      <div class="actions">
+        <button class="btn-primary" type="submit">Enregistrer</button>
+        <button class="btn-ghost" type="button" (click)="showCreateForm = false">Annuler</button>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Profil</th>
+            <th>Description</th>
+            <th>Créé le</th>
+            <th class="text-center">Permissions</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let profil of paginatedProfils">
+            <td>
+              <span class="profile-chip">{{ profil.nom }}</span>
+            </td>
+            <td>{{ profil.description || '-' }}</td>
+            <td>{{ profil.createdAt || profil.dateCreation || '-' }}</td>
+            <td class="text-center">
+              <button class="btn-icon" type="button" title="Gérer permissions" (click)="onViewPermissions(profil.idProfil)">🔐</button>
+            </td>
+            <td class="row-actions text-center">
+              <button class="btn-sm btn-primary" type="button" (click)="onEdit(profil)">Modifier</button>
+              <button class="btn-sm btn-danger" type="button" (click)="onDelete(profil.idProfil)">Supprimer</button>
+            </td>
+          </tr>
+          <tr *ngIf="!isLoading && paginatedProfils.length === 0">
+            <td colspan="5">Aucun profil trouvé.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="paginator-footer">
+      <div class="page-size">
+        <label for="page-size">Lignes</label>
+        <select id="page-size" [value]="pageSize" (change)="onPageSizeChange($any($event.target).value)">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+        </select>
+      </div>
+
+      <div class="pager-controls">
+        <button class="btn-ghost" type="button" [disabled]="currentPage <= 1" (click)="onPageChange(currentPage - 1)">Précédent</button>
+        <span>Page {{ currentPage }} / {{ totalPages }}</span>
+        <button class="btn-ghost" type="button" [disabled]="currentPage >= totalPages" (click)="onPageChange(currentPage + 1)">Suivant</button>
+      </div>
+    </footer>
+  </div>
+
+  <form class="form-card" *ngIf="showEditForm" [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
+    <h3>Modifier le profil</h3>
+    <label>
+      Nom
+      <input type="text" formControlName="nom" />
+    </label>
+    <label>
+      Description
+      <textarea rows="3" formControlName="description"></textarea>
+    </label>
+    <div class="actions">
+      <button class="btn-primary" type="submit">Enregistrer</button>
+      <button class="btn-ghost" type="button" (click)="showEditForm = false">Annuler</button>
+    </div>
+  </form>
+</section>

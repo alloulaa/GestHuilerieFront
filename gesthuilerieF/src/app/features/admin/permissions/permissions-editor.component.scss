@@ -1,0 +1,231 @@
+/* c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\features\admin\permissions\permissions-editor.component.scss */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:host {
+  --primary: var(--admin-primary, #3f6a2a);
+  --surface: var(--admin-surface, #ffffff);
+  --text-primary: var(--admin-text-primary, #1f2a1f);
+  --text-secondary: var(--admin-text-secondary, #5e6d5f);
+  --border: var(--admin-border, #d9e1d6);
+  --danger: var(--admin-danger, #b3261e);
+  --success: var(--admin-success, #1f7a3a);
+  --dirty-row-bg: var(--admin-dirty-row-bg, rgba(255, 193, 7, 0.12));
+
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-primary);
+}
+
+:host-context(.dark-theme) {
+  --primary: var(--admin-primary-dark, #89b86a);
+  --surface: var(--admin-surface-dark, #1f2720);
+  --text-primary: var(--admin-text-primary-dark, #ecf5e9);
+  --text-secondary: var(--admin-text-secondary-dark, #b9c9b8);
+  --border: var(--admin-border-dark, #3a4a3b);
+  --danger: var(--admin-danger-dark, #ff6b63);
+  --success: var(--admin-success-dark, #4dd07a);
+  --dirty-row-bg: var(--admin-dirty-row-bg-dark, rgba(255, 193, 7, 0.08));
+}
+
+.admin-page {
+  padding: 0.7rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 70%, #e9efe1), color-mix(in srgb, var(--surface) 92%, #f6f8f2));
+}
+
+.management-card {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, var(--primary));
+  border-radius: 22px;
+  box-shadow: 0 18px 36px rgba(16, 24, 40, 0.1);
+  overflow: hidden;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 1.25rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, var(--primary));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 76%, #eef3e6), color-mix(in srgb, var(--surface) 90%, #dce8cf));
+}
+
+.eyebrow {
+  margin: 0 0 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--primary) 78%, #334155);
+}
+
+.header-copy h2 {
+  margin: 0;
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+}
+
+.header-copy p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.summary-pills {
+  margin: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.pill {
+  border: 1px solid color-mix(in srgb, var(--border) 70%, var(--primary));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 88%, #eff4e7);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pill span {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.pill strong {
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
+.message {
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  margin: 0 1rem 1rem;
+}
+
+.message-success {
+  background: color-mix(in srgb, var(--success) 18%, var(--surface));
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.message-error {
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.permission-grid {
+  display: grid;
+  gap: 0.95rem;
+  padding: 0 1rem 1rem;
+}
+
+.permission-module {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, var(--primary));
+  border-radius: 14px;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--surface) 90%, #f2f6ec);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.permission-module:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+.permission-module h3 {
+  margin: 0 0 0.8rem;
+  font-size: 1.08rem;
+}
+
+.row-dirty {
+  background-color: var(--dirty-row-bg);
+}
+
+.switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.switch-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--surface);
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.switch-item:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
+input[type='checkbox'] {
+  cursor: pointer;
+  width: 17px;
+  height: 17px;
+}
+
+.btn-primary,
+.btn-ghost {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0.58rem 0.95rem;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--surface);
+  transition: filter 160ms ease, transform 160ms ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border);
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.btn-ghost:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 760px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .summary-pills {
+    grid-template-columns: 1fr;
+  }
+}

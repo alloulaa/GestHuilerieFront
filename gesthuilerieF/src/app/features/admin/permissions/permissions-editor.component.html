@@ -1,0 +1,74 @@
+<!-- c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\features\admin\permissions\permissions-editor.component.html -->
+<section class="admin-page">
+  <div class="management-card">
+    <header class="page-header">
+      <div class="header-copy">
+        <p class="eyebrow">Administration</p>
+        <h2>Attribution des Permissions</h2>
+        <p>Profil: {{ profilNom || ('Profil #' + profilId) }}</p>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn-ghost" (click)="onBack()">Retour profils</button>
+        <button class="btn-primary" type="button" [disabled]="isSaving" (click)="onSave()">
+          <span *ngIf="isSaving">Enregistrement...</span>
+          <span *ngIf="!isSaving">Enregistrer</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="summary-pills">
+      <div class="pill">
+        <span>Modules</span>
+        <strong>{{ permissionRows.length }}</strong>
+      </div>
+      <div class="pill">
+        <span>Modifiés</span>
+        <strong>{{ dirtyCount }}</strong>
+      </div>
+      <div class="pill">
+        <span>Prêts à sauvegarder</span>
+        <strong>{{ hasPendingChanges ? 'Oui' : 'Non' }}</strong>
+      </div>
+    </div>
+
+    <div class="message" *ngIf="message" [class.message-success]="message.type === 'success'" [class.message-error]="message.type === 'error'">
+      {{ message.text }}
+    </div>
+
+    <div class="permission-grid">
+      <article class="permission-module" [class.row-dirty]="row.dirty" *ngFor="let row of permissionRows">
+        <h3>{{ row.moduleNom }}</h3>
+
+        <div class="switch-row">
+          <label class="switch-item">
+            <input type="checkbox" [(ngModel)]="row.canCreate" (change)="onCheckboxChange(row)" />
+            <span>Créer</span>
+          </label>
+
+          <label class="switch-item">
+            <input type="checkbox" [(ngModel)]="row.canRead" (change)="onCheckboxChange(row)" />
+            <span>Voir</span>
+          </label>
+
+          <label class="switch-item">
+            <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="onCheckboxChange(row)" />
+            <span>Modifier</span>
+          </label>
+
+          <label class="switch-item">
+            <input type="checkbox" [(ngModel)]="row.canDelete" (change)="onCheckboxChange(row)" />
+            <span>Supprimer</span>
+          </label>
+
+          <label class="switch-item">
+            <input type="checkbox" [(ngModel)]="row.canExecuted" (change)="onCheckboxChange(row)" />
+            <span>Exécuter</span>
+          </label>
+        </div>
+      </article>
+
+      <p class="empty" *ngIf="!isLoading && permissionRows.length === 0">Aucun module trouvé.</p>
+    </div>
+  </div>
+</section>

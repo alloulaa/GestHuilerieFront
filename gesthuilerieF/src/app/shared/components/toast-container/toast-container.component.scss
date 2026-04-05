@@ -1,0 +1,107 @@
+/* c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\shared\components\toast-container\toast-container.component.scss */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+
+:host {
+  --success-color: var(--toast-success, #1f7a3a);
+  --error-color: var(--toast-error, #b3261e);
+  --info-color: var(--toast-info, #2196f3);
+  --surface: var(--toast-surface, #ffffff);
+  --text: var(--toast-text, #1f2a1f);
+
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+:host-context(.dark-theme) {
+  --success-color: var(--toast-success-dark, #4dd07a);
+  --error-color: var(--toast-error-dark, #ff6b63);
+  --info-color: var(--toast-info-dark, #4fc3f7);
+  --surface: var(--toast-surface-dark, #2c3e3d);
+  --text: var(--toast-text-dark, #ecf5e9);
+}
+
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+  max-width: 400px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  pointer-events: all;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.toast-success {
+  border-left: 4px solid var(--success-color);
+  color: var(--text);
+}
+
+.toast-error {
+  border-left: 4px solid var(--error-color);
+  color: var(--text);
+}
+
+.toast-info {
+  border-left: 4px solid var(--info-color);
+  color: var(--text);
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toast-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.toast-success .toast-icon {
+  color: var(--success-color);
+}
+
+.toast-error .toast-icon {
+  color: var(--error-color);
+}
+
+.toast-info .toast-icon {
+  color: var(--info-color);
+}
+
+.toast-message {
+  flex: 1;
+  word-wrap: break-word;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
