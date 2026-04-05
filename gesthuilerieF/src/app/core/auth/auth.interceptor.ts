@@ -5,12 +5,10 @@ import { AuthService } from './auth.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const isApiCall =
-      request.url.startsWith('/api/') ||
-      request.url.startsWith('http://localhost:8000/api/');
+    const isApiCall = request.url.includes('/api/');
 
     if (!isApiCall) {
       return next.handle(request);
@@ -22,9 +20,8 @@ export class AuthInterceptor implements HttpInterceptor {
     if (isPublicAuthRequest) {
       return next.handle(request);
     }
-
-    // Add authorization header with token if available
     const token = this.authService.getToken();
+
     if (token) {
       request = request.clone({
         setHeaders: {

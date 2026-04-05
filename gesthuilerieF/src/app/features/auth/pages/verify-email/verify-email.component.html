@@ -1,0 +1,28 @@
+<main class="verify-email-shell">
+    <section class="verify-container">
+        <!-- État de vérification en cours -->
+        <div class="verify-card" *ngIf="isVerifying">
+            <div class="spinner"></div>
+            <h1>Vérification en cours...</h1>
+            <p>Nous vérifions votre adresse email. Veuillez patienter.</p>
+        </div>
+
+        <!-- État de succès -->
+        <div class="verify-card success" *ngIf="isSuccess">
+            <div class="check-icon">✓</div>
+            <h1>Email vérifié avec succès !</h1>
+            <p>Votre compte est maintenant activé. Redirection vers la connexion...</p>
+        </div>
+
+        <!-- État d'erreur -->
+        <div class="verify-card error" *ngIf="isError">
+            <div class="error-icon">✕</div>
+            <h1>Erreur de vérification</h1>
+            <p>{{ errorMessage }}</p>
+            <div class="error-actions">
+                <a href="/signup" class="button-secondary">Créer un nouveau compte</a>
+                <a href="/login" class="button-primary">Retour à la connexion</a>
+            </div>
+        </div>
+    </section>
+</main>

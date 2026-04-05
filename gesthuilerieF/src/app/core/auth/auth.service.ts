@@ -93,9 +93,13 @@ export class AuthService {
       },
     });
 
-    return this.http.post<any>(`${this.apiUrl}/signup`, signupPayload).pipe(
-      tap((response) => this.persistAuthResponse(response))
-    );
+    return this.http.post<any>(`${this.apiUrl}/signup`, signupPayload);
+  }
+
+  verifyEmail(token: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/verify-email`, {
+      params: { token }
+    });
   }
 
   logout(): void {
@@ -134,7 +138,8 @@ export class AuthService {
   resetPasswordConfirm(token: string, newPassword: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/reset-password/confirm`, {
       token,
-      newPassword
+      newPassword,
+      nouveauMotDePasse: newPassword
     });
   }
 

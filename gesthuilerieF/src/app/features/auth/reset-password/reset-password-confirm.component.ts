@@ -28,7 +28,7 @@ export class ResetPasswordConfirmComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private toastService: ToastService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.token = this.route.snapshot.queryParamMap.get('token');
@@ -91,11 +91,11 @@ export class ResetPasswordConfirmComponent implements OnInit {
 
     this.authService.resetPasswordConfirm(this.token, this.form.value.password).subscribe({
       next: () => {
-        this.toastService.success('Mot de passe réinitialisé. Connectez-vous.');
+        this.toastService.success('Mot de passe réinitialisé. Redirection vers le dashboard...');
         this.isLoading = false;
         this.form.reset();
         setTimeout(() => {
-          this.router.navigate(['/login']);
+          this.router.navigate(['/pages/dashboard/production']);
         }, 1500);
       },
       error: (err) => {

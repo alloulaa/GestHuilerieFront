@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -17,15 +18,17 @@ export class LoginComponent {
   readonly loginForm;
   isLoading = false;
   errorMessage: string | null = null;
+  private readonly strictEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
   constructor(
     private formBuilder: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private toastService: ToastService
   ) {
     this.loginForm = this.formBuilder.group({
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.required, Validators.email, Validators.pattern(this.strictEmailPattern)]],
       password: ['', [Validators.required]],
       rememberMe: [true],
     });
@@ -34,6 +37,21 @@ export class LoginComponent {
   submit(): void {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
+      const emailControl = this.loginForm.get('email');
+      const passwordControl = this.loginForm.get('password');
+
+      if (emailControl?.invalid) {
+        this.errorMessage = 'Format email invalide.';
+        this.toastService.show('error', 'Adresse email invalide. Exemple: abcd@gmail.com', 5500);
+        return;
+      }
+
+      if (passwordControl?.invalid) {
+        this.errorMessage = 'Le mot de passe est obligatoire.';
+        this.toastService.show('info', 'Veuillez saisir votre mot de passe pour continuer.', 5000);
+        return;
+      }
+
       return;
     }
 
@@ -48,6 +66,7 @@ export class LoginComponent {
         next: () => {
           if (!this.authService.isAuthenticated()) {
             this.errorMessage = 'Connexion etablie, mais token manquant. Verifiez la reponse API login.';
+            this.toastService.show('error', this.errorMessage ?? 'Erreur de connexion, reessayez', 6500);
             return;
           }
 
@@ -60,14 +79,30 @@ export class LoginComponent {
               returnUrl = rawReturnUrl;
             }
           }
+          this.toastService.show('success', 'Connexion reussie. Bienvenue !', 3500);
           this.router.navigateByUrl(returnUrl);
         },
         error: (error) => {
-          if (error?.status === 401) {
-            this.errorMessage = 'Email ou mot de passe incorrect';
+          const backendMessage = String(error?.error?.message ?? error?.error?.error ?? '').toLowerCase();
+
+          if (
+            error?.status === 401
+            || backendMessage.includes('mot de passe invalide')
+            || backendMessage.includes('email ou mot de passe invalide')
+          ) {
+            this.errorMessage = 'Email ou mot de passe incorrect.';
+            this.toastService.show('error', 'Identifiants invalides. Verifiez votre email et votre mot de passe.', 7000);
             return;
           }
+
+          if (error?.status === 403 || backendMessage.includes('verifier votre email')) {
+            this.errorMessage = 'Votre email n\'est pas encore verifie.';
+            this.toastService.show('info', 'Compte non verifie. Verifiez votre boite mail puis reessayez.', 7000);
+            return;
+          }
+
           this.errorMessage = 'Erreur de connexion, reessayez';
+          this.toastService.show('error', this.errorMessage ?? 'Erreur de connexion, reessayez', 6000);
         },
       });
   }

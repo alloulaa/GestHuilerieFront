@@ -20,6 +20,10 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./features/auth/reset-password/reset-password-confirm.component').then(c => c.ResetPasswordConfirmComponent),
   },
   {
+    path: 'verify-email',
+    loadComponent: () => import('./features/auth/pages/verify-email/verify-email.component').then(c => c.VerifyEmailComponent),
+  },
+  {
     path: 'pages',
     component: SidebarComponent,
     canActivate: [AuthGuard],
@@ -121,6 +125,6 @@ export const APP_ROUTES: Routes = [
   { path: 'lots', redirectTo: 'pages/lots', pathMatch: 'full' },
   { path: 'matieres-premieres', redirectTo: 'pages/matieres-premieres', pathMatch: 'full' },
   { path: 'admin', loadChildren: () => import('./features/admin/admin.routes').then(m => m.adminRoutes) },
-  { path: '', redirectTo: 'pages', pathMatch: 'full' },
+  { path: '', redirectTo: 'signup', pathMatch: 'full' },
   { path: '**', redirectTo: 'pages' },
 ];

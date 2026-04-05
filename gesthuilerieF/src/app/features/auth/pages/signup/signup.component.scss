@@ -89,7 +89,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
   gap: 1.6rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .auth-branding,
@@ -257,6 +257,7 @@ h1,
 }
 
 .auth-panel {
+  align-self: start;
   padding: 2.2rem;
   display: grid;
   align-content: center;
@@ -382,6 +383,21 @@ h1,
   }
 }
 
+.input-shell-invalid {
+  border-color: rgba(184, 38, 30, 0.5);
+  box-shadow:
+    0 0 0 3px rgba(184, 38, 30, 0.1),
+    0 16px 34px -30px var(--auth-shadow);
+}
+
+.field-error {
+  margin-top: 0.15rem;
+  color: #b8261e;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .input-icon {
   display: inline-flex;
   align-items: center;
@@ -480,11 +496,159 @@ h1,
   }
 }
 
+.signup-success {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.15rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid var(--auth-border);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(255, 248, 234, 0.82)),
+    rgba(255, 252, 247, 0.72);
+  box-shadow:
+    0 22px 42px -30px var(--auth-shadow-strong),
+    inset 0 1px 0 rgba(255, 255, 255, 0.66);
+
+  h3 {
+    margin: 0;
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.28rem, 1.1rem + 0.4vw, 1.6rem);
+    letter-spacing: -0.02em;
+    color: var(--auth-primary-strong);
+  }
+
+  p {
+    margin: 0;
+    line-height: 1.62;
+    color: var(--auth-muted);
+    font-size: 0.93rem;
+  }
+
+  strong {
+    color: var(--auth-text);
+    font-weight: 800;
+  }
+}
+
+.success-icon {
+  width: 2.55rem;
+  height: 2.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #89a34b, #5f7430 68%);
+  box-shadow: 0 12px 22px -12px rgba(80, 100, 37, 0.62);
+
+  svg {
+    width: 1.4rem;
+    height: 1.4rem;
+    fill: none;
+    stroke: #f8fbf2;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.success-eyebrow {
+  margin: 0;
+  color: var(--auth-primary-strong) !important;
+  font-weight: 800;
+  font-size: 0.76rem !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.success-note {
+  padding: 0.68rem 0.78rem;
+  border-radius: 14px;
+  border: 1px dashed rgba(103, 127, 50, 0.36);
+  background: rgba(255, 249, 239, 0.78);
+}
+
+.mail-preview {
+  display: grid;
+  gap: 0.52rem;
+  margin-top: 0.2rem;
+  padding: 0.82rem 0.84rem;
+  border-radius: 14px;
+  border: 1px solid rgba(103, 127, 50, 0.26);
+  background:
+    linear-gradient(165deg, rgba(255, 252, 245, 0.94), rgba(245, 239, 224, 0.82));
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-family: 'Fraunces', serif;
+    color: #4f6324;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+}
+
+.mail-preview-eyebrow {
+  margin: 0;
+  font-size: 0.7rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #667f32 !important;
+  font-weight: 800;
+}
+
+.mail-preview-cta {
+  justify-self: start;
+  margin-top: 0.15rem;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.48rem 0.78rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, #556a29 0%, #70893d 100%);
+  cursor: pointer;
+  transition: transform 160ms ease, filter 160ms ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+  }
+}
+
+.success-cta {
+  margin-top: 0.25rem;
+  border: 0;
+  border-radius: 14px;
+  padding: 0.78rem 0.94rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #faf8f2;
+  background: linear-gradient(135deg, #4f6324 0%, #687f33 68%, #82994a 100%);
+  box-shadow:
+    0 14px 28px -20px rgba(80, 100, 37, 0.66),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform 180ms ease, filter 180ms ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.05);
+  }
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -492,10 +656,12 @@ h1,
 }
 
 @keyframes chip-float {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-8px);
   }
