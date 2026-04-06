@@ -2,17 +2,64 @@
   margin-bottom: 1rem;
 }
 
+.polished-card {
+  border: 1px solid rgba(118, 132, 87, 0.2);
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 245, 237, 0.95));
+  box-shadow: 0 18px 38px rgba(40, 50, 24, 0.08);
+}
+
+.section-heading {
+  display: grid;
+  gap: 0.28rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #263320;
+  }
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #7a875f;
+  font-weight: 700;
+}
+
+.subhead {
+  margin: 0;
+  color: #6b745a;
+  font-size: 0.9rem;
+}
+
+.panel-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
 .entity-form {
   display: grid;
   gap: 0.8rem;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   margin-bottom: 1rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(118, 132, 87, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .form-actions {
   grid-column: 1 / -1;
   display: flex;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .error {
@@ -40,6 +87,9 @@
 
 .table-wrap {
   overflow-x: auto;
+  border: 1px solid rgba(118, 132, 87, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .crud-table {
@@ -49,17 +99,27 @@
   th,
   td {
     text-align: left;
-    padding: 0.6rem 0.45rem;
+    padding: 0.72rem 0.65rem;
     border-bottom: 1px solid var(--separator);
     white-space: nowrap;
   }
 
   th {
-    font-size: 0.76rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    opacity: 0.72;
+    color: #5e6c44;
+    font-weight: 600;
+    background: rgba(118, 132, 87, 0.08);
   }
+}
+
+.crud-table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.crud-table tbody tr:hover {
+  background: rgba(118, 132, 87, 0.07);
 }
 
 .status {
@@ -94,25 +154,6 @@
   opacity: 0.85;
 }
 
-.table {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 1.3fr 1.2fr 1fr 0.8fr;
-  padding: 0.5rem 0.2rem;
-  border-bottom: 1px solid var(--separator);
-}
-
-.head {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  opacity: 0.7;
-  font-weight: 600;
-}
-
 .confirm-overlay {
   position: fixed;
   inset: 0;
@@ -145,4 +186,14 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
+}
+
+@media (max-width: 920px) {
+  .panel-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-toolbar button {
+    width: 100%;
+  }
 }

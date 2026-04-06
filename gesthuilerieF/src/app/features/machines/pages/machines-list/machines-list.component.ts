@@ -53,4 +53,20 @@ export class MachinesListComponent implements OnInit {
   availabilityClass(value: string): string {
     return value === 'Disponible' ? 'ok' : 'critical';
   }
+
+  get enServiceCount(): number {
+    return this.machines.filter((machine) => machine.etatMachine === 'EN_SERVICE').length;
+  }
+
+  get surveillanceCount(): number {
+    return this.machines.filter((machine) => machine.etatMachine === 'SURVEILLANCE').length;
+  }
+
+  get maintenanceCount(): number {
+    return this.machines.filter((machine) => machine.etatMachine === 'MAINTENANCE').length;
+  }
+
+  get availableCount(): number {
+    return this.machines.filter((machine) => machine.availability === 'Disponible').length;
+  }
 }

@@ -1,11 +1,17 @@
-<nb-card class="section-card">
-  <nb-card-header>Gestion des Huileries</nb-card-header>
+<nb-card class="section-card polished-card">
+  <nb-card-header>
+    <div class="section-heading">
+      <p class="eyebrow">Administration</p>
+      <h3>Gestion des Huileries</h3>
+      <p class="subhead">Centralisez les informations de vos sites de production et leur statut d'activite.</p>
+    </div>
+  </nb-card-header>
   <nb-card-body>
-    <div class="form-actions">
+    <div class="panel-toolbar">
       <input nbInput fullWidth [(ngModel)]="huilerieSearchNom" name="huilerieSearchNom"
         placeholder="Rechercher une huilerie par nom" />
       <button nbButton status="primary" type="button" (click)="searchHuilerieByNom()">Filtrer</button>
-      <button nbButton status="basic" outline type="button" (click)="resetHuilerieFilter()">Reset</button>
+      <button nbButton status="basic" outline type="button" (click)="resetHuilerieFilter()">Reinitialiser</button>
     </div>
 
     <p class="error" *ngIf="huilerieFilterMessage">{{ huilerieFilterMessage }}</p>
@@ -107,16 +113,22 @@
   </nb-card-body>
 </nb-card>
 
-<nb-card class="section-card">
-  <nb-card-header>Gestion des Machines (Admin)</nb-card-header>
+<nb-card class="section-card polished-card">
+  <nb-card-header>
+    <div class="section-heading">
+      <p class="eyebrow">Pilotage</p>
+      <h3>Gestion des Machines</h3>
+      <p class="subhead">Suivez l'etat des equipements et rattachez-les rapidement a chaque huilerie.</p>
+    </div>
+  </nb-card-header>
   <nb-card-body>
-    <div class="form-actions">
+    <div class="panel-toolbar">
       <nb-select fullWidth [(ngModel)]="machineSearchHuilerieNom" name="machineSearchHuilerieNom">
         <nb-option value="">Toutes les huileries</nb-option>
         <nb-option *ngFor="let h of allHuileries" [value]="h.nom">{{ h.nom }}</nb-option>
       </nb-select>
       <button nbButton status="primary" type="button" (click)="searchMachinesByHuilerie()">Filtrer</button>
-      <button nbButton status="basic" outline type="button" (click)="resetMachineFilter()">Reset</button>
+      <button nbButton status="basic" outline type="button" (click)="resetMachineFilter()">Reinitialiser</button>
     </div>
 
     <p class="error" *ngIf="machineFilterMessage">{{ machineFilterMessage }}</p>

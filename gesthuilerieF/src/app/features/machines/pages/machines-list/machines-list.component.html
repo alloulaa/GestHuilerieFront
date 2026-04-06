@@ -1,10 +1,38 @@
-<mat-card class="olive-card">
-  <mat-card-header>
-    <mat-card-title>Machines - Etat et disponibilite</mat-card-title>
+<mat-card class="olive-card machines-dashboard-card">
+  <mat-card-header class="page-head">
+    <div class="title-wrap">
+      <div class="title-line">
+        <p class="eyebrow">Pilotage</p>
+        <mat-card-title>Parc machines</mat-card-title>
+      </div>
+      <p class="subtitle">Suivi en temps reel des etats, disponibilites et capacites de production.</p>
+    </div>
+    <a mat-flat-button color="primary" class="filters-cta" [routerLink]="['/pages/machines/form']">Ouvrir les
+      filtres</a>
   </mat-card-header>
+
   <mat-card-content>
-    <div class="actions">
-      <a mat-stroked-button [routerLink]="['/pages/machines/form']">Filtres</a>
+    <div class="kpi-grid">
+      <article class="kpi-item">
+        <span class="kpi-label">Total machines</span>
+        <strong class="kpi-value">{{ machines.length }}</strong>
+      </article>
+      <article class="kpi-item success">
+        <span class="kpi-label">En service</span>
+        <strong class="kpi-value">{{ enServiceCount }}</strong>
+      </article>
+      <article class="kpi-item watch">
+        <span class="kpi-label">Surveillance</span>
+        <strong class="kpi-value">{{ surveillanceCount }}</strong>
+      </article>
+      <article class="kpi-item danger">
+        <span class="kpi-label">Maintenance</span>
+        <strong class="kpi-value">{{ maintenanceCount }}</strong>
+      </article>
+      <article class="kpi-item soft">
+        <span class="kpi-label">Disponibles</span>
+        <strong class="kpi-value">{{ availableCount }}</strong>
+      </article>
     </div>
 
     <div class="table-wrap">
@@ -13,16 +41,21 @@
           <tr>
             <th>Machine</th>
             <th>Etat</th>
-            <th>Capacite</th>
-            <th>Availability</th>
+            <th>Capacite (kg/j)</th>
+            <th>Disponibilite</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let machine of machines">
-            <td>{{ machine.nomMachine }}</td>
-            <td><span class="badge" [ngClass]="statusClass(machine.etatMachine)">{{ statusLabel(machine.etatMachine) }}</span></td>
+            <td class="machine-name">{{ machine.nomMachine }}</td>
+            <td><span class="badge" [ngClass]="statusClass(machine.etatMachine)">{{ statusLabel(machine.etatMachine)
+                }}</span></td>
             <td>{{ machine.capacite }}</td>
-            <td><span class="badge" [ngClass]="availabilityClass(machine.availability)">{{ machine.availability }}</span></td>
+            <td><span class="badge" [ngClass]="availabilityClass(machine.availability)">{{ machine.availability
+                }}</span></td>
+          </tr>
+          <tr *ngIf="machines.length === 0">
+            <td colspan="4" class="empty-state">Aucune machine disponible pour le moment.</td>
           </tr>
         </tbody>
       </table>

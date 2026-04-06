@@ -1,24 +1,35 @@
 <div class="header-container">
   <div class="left">
-    <button nbButton ghost status="basic" (click)="toggleSidebar()" aria-label="Menu">
-      <nb-icon icon="menu-2-outline"></nb-icon>
-    </button>
     <div class="brand">
       <nb-icon icon="droplet-outline"></nb-icon>
-      <span>Huilerie Smart Production</span>
+      <span>Huileria</span>
     </div>
   </div>
 
   <div class="right">
-    <nb-select size="small" [(selected)]="currentTheme" (selectedChange)="changeTheme($event)">
-      <nb-option value="default">Default</nb-option>
-      <nb-option value="dark">Dark</nb-option>
-      <nb-option value="cosmic">Cosmic</nb-option>
-      <nb-option value="corporate">Corporate</nb-option>
-    </nb-select>
+    <div class="search-shell" [class.active]="searchFocused || searchQuery.length > 0">
+      <nb-icon icon="search-outline" class="search-ico"></nb-icon>
+      <input class="global-search" type="search" [value]="searchQuery" (input)="searchQuery = $any($event.target).value"
+        (focus)="onSearchFocus()" (blur)="onSearchBlur()" (keydown.enter)="onSearchEnter()"
+        placeholder="Rechercher un module, un champ, une info..." aria-label="Recherche globale" />
+      <button *ngIf="searchQuery" type="button" class="clear-search" (click)="clearSearch()"
+        aria-label="Effacer la recherche">
+        <nb-icon icon="close-outline"></nb-icon>
+      </button>
+
+      <div class="search-results" *ngIf="(searchFocused || searchQuery.length > 0) && filteredSearchItems.length > 0">
+        <button type="button" class="search-result" *ngFor="let item of filteredSearchItems"
+          (mousedown)="$event.preventDefault()" (click)="openSearchResult(item)">
+          <nb-icon icon="search-outline"></nb-icon>
+          <div class="result-copy">
+            <span class="result-title">{{ item.label }}</span>
+            <span class="result-description">{{ item.description }}</span>
+          </div>
+        </button>
+      </div>
+    </div>
 
     <nb-actions size="small">
-      <nb-action icon="bell-outline"></nb-action>
       <nb-action icon="person-outline" [nbContextMenu]="userMenu" nbContextMenuTag="user-menu"></nb-action>
     </nb-actions>
   </div>

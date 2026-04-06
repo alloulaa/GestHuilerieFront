@@ -102,6 +102,16 @@ export class AuthService {
     });
   }
 
+  persistSessionFromResponse(response: any): boolean {
+    const token = this.extractToken(response);
+    if (!token) {
+      return false;
+    }
+
+    this.persistAuthResponse(response);
+    return true;
+  }
+
   logout(): void {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('huilerie_token');
@@ -139,6 +149,8 @@ export class AuthService {
     return this.http.post<any>(`${this.apiUrl}/reset-password/confirm`, {
       token,
       newPassword,
+      password: newPassword,
+      motDePasse: newPassword,
       nouveauMotDePasse: newPassword
     });
   }

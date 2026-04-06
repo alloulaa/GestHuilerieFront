@@ -26,7 +26,7 @@ export class VerifyEmailComponent implements OnInit {
 
     ngOnInit(): void {
         this.route.queryParams.subscribe(params => {
-            const token = params['token'];
+            const token = this.normalizeToken(params['token']);
             if (token) {
                 this.verifyEmail(token);
             } else {
@@ -37,13 +37,31 @@ export class VerifyEmailComponent implements OnInit {
         });
     }
 
+    private normalizeToken(rawToken: unknown): string {
+        const token = String(rawToken ?? '').trim();
+        if (!token) {
+            return '';
+        }
+
+        // Some email clients may alter query strings; restore likely '+' chars.
+        return token.replace(/\s+/g, '+');
+    }
+
     verifyEmail(token: string): void {
         // Appeler le service d'authentification pour vérifier l'email
         this.authService.verifyEmail(token).subscribe({
             next: (response) => {
                 this.isVerifying = false;
                 this.isSuccess = true;
-                this.toastService.success('Email vérifié avec succès ! Redirection vers le dashboard...');
+
+                const isLoggedIn = this.authService.persistSessionFromResponse(response);
+
+                if (isLoggedIn) {
+                    this.toastService.success('Email vérifié. Vous êtes maintenant connecté. Redirection vers le dashboard...');
+                } else {
+                    this.toastService.info('Email vérifié avec succès ! Redirection vers le dashboard...');
+                }
+
                 setTimeout(() => {
                     this.router.navigate(['/pages/dashboard/production']);
                 }, 2000);
@@ -51,7 +69,13 @@ export class VerifyEmailComponent implements OnInit {
             error: (error) => {
                 this.isVerifying = false;
                 this.isError = true;
-                this.errorMessage = error.error?.message || 'Erreur lors de la vérification';
+                const backendMessage = String(error?.error?.message ?? error?.error ?? '').toLowerCase();
+
+                if (error?.status === 400 || backendMessage.includes('token')) {
+                    this.errorMessage = 'Token de vérification invalide ou expiré.';
+                } else {
+                    this.errorMessage = 'Erreur lors de la vérification';
+                }
                 this.toastService.error(this.errorMessage);
             }
         });

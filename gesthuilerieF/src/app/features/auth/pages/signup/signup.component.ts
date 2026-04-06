@@ -18,7 +18,12 @@ export class SignupComponent {
   readonly signupForm;
   isLoading = false;
   errorMessage: string | null = null;
+  showPassword = false;
   private readonly strictEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   constructor(
     private formBuilder: FormBuilder,
@@ -105,8 +110,18 @@ export class SignupComponent {
         },
         error: (error) => {
           const backendMessage = String(error?.error?.message ?? error?.error?.error ?? '').toLowerCase();
+          const duplicateEmailPatterns = [
+            'email deja utilise',
+            'adresse email deja utilisee',
+            'email already exists',
+            'email already used',
+            'duplicate email',
+            'email existe deja',
+            'email already registered'
+          ];
+          const isDuplicateEmail = duplicateEmailPatterns.some((pattern) => backendMessage.includes(pattern));
 
-          if (error?.status === 409 || backendMessage.includes('deja utilise') || backendMessage.includes('already')) {
+          if (error?.status === 409 || isDuplicateEmail) {
             this.errorMessage = 'Cette adresse email est deja utilisee.';
             this.toastService.show('error', 'Cet email est deja utilise. Essayez de vous connecter ou utilisez un autre email.', 7000);
             return;

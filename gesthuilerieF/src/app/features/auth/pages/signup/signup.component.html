@@ -199,7 +199,7 @@
 
       <label>
         Mot de passe
-        <span class="input-shell"
+        <span class="input-shell password-shell"
           [class.input-shell-invalid]="signupForm.get('motDePasse')?.invalid && signupForm.get('motDePasse')?.touched">
           <span class="input-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
@@ -208,7 +208,25 @@
               <path d="M12 13.2v3.2" />
             </svg>
           </span>
-          <input type="password" formControlName="motDePasse" placeholder="Minimum 8 caracteres" />
+          <input [type]="showPassword ? 'text' : 'password'" formControlName="motDePasse" placeholder="Minimum 8 caracteres" />
+          <button
+            type="button"
+            class="toggle-visibility"
+            aria-label="Afficher ou masquer le mot de passe"
+            title="Afficher ou masquer le mot de passe"
+            (click)="togglePasswordVisibility()">
+            <span class="visually-hidden">{{ showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe' }}</span>
+            <svg *ngIf="!showPassword" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg *ngIf="showPassword" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3l18 18" />
+              <path d="M10.6 10.7A3 3 0 0 0 12 15a3 3 0 0 0 2.3-5.3" />
+              <path d="M6.7 6.8C4.5 8.2 3 10.5 2 12c1.5 2.3 4.7 6 10 6 2.1 0 3.8-.6 5.2-1.4" />
+              <path d="M9.9 4.2A11.6 11.6 0 0 1 12 4c6.5 0 10 6 10 6-.5.9-1.4 2.2-2.7 3.4" />
+            </svg>
+          </button>
         </span>
         <span class="field-error"
           *ngIf="signupForm.get('motDePasse')?.invalid && signupForm.get('motDePasse')?.touched">

@@ -18,7 +18,12 @@ export class LoginComponent {
   readonly loginForm;
   isLoading = false;
   errorMessage: string | null = null;
+  showPassword = false;
   private readonly strictEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   constructor(
     private formBuilder: FormBuilder,
@@ -86,18 +91,28 @@ export class LoginComponent {
           const backendMessage = String(error?.error?.message ?? error?.error?.error ?? '').toLowerCase();
 
           if (
+            backendMessage.includes('verifier votre email')
+            || backendMessage.includes('email non verifie')
+            || backendMessage.includes('non vérifié')
+          ) {
+            this.errorMessage = 'Votre email n\'est pas encore verifie.';
+            this.toastService.show('info', 'Compte non verifie. Verifiez votre boite mail puis reessayez.', 7000);
+            return;
+          }
+
+          if (backendMessage.includes('utilisateur inactif')) {
+            this.errorMessage = 'Compte inactif. Contactez un administrateur.';
+            this.toastService.show('error', this.errorMessage, 7000);
+            return;
+          }
+
+          if (
             error?.status === 401
             || backendMessage.includes('mot de passe invalide')
             || backendMessage.includes('email ou mot de passe invalide')
           ) {
             this.errorMessage = 'Email ou mot de passe incorrect.';
             this.toastService.show('error', 'Identifiants invalides. Verifiez votre email et votre mot de passe.', 7000);
-            return;
-          }
-
-          if (error?.status === 403 || backendMessage.includes('verifier votre email')) {
-            this.errorMessage = 'Votre email n\'est pas encore verifie.';
-            this.toastService.show('info', 'Compte non verifie. Verifiez votre boite mail puis reessayez.', 7000);
             return;
           }
 

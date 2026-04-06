@@ -1,13 +1,45 @@
-<mat-card class="olive-card">
-  <mat-card-header>
-    <mat-card-title>Machines - Filtres availability</mat-card-title>
+<mat-card class="olive-card machines-filter-card">
+  <mat-card-header class="page-head">
+    <div class="title-wrap">
+      <div class="title-line">
+        <p class="eyebrow">Analyse</p>
+        <mat-card-title>Filtres machines</mat-card-title>
+      </div>
+      <p class="subtitle">Affinez rapidement vos recherches par etat, disponibilite et capacite minimale.</p>
+    </div>
+    <a mat-stroked-button class="list-cta" [routerLink]="['/pages/machines']">Retour liste</a>
   </mat-card-header>
+
   <mat-card-content>
+    <div class="quick-stats">
+      <article class="stat-item">
+        <span>Total</span>
+        <strong>{{ totalMachinesCount }}</strong>
+      </article>
+      <article class="stat-item active">
+        <span>Resultats</span>
+        <strong>{{ filteredMachinesCount }}</strong>
+      </article>
+      <article class="stat-item soft">
+        <span>Disponibles</span>
+        <strong>{{ filteredAvailableCount }}</strong>
+      </article>
+    </div>
+
     <form class="filters" [formGroup]="form">
       <mat-form-field appearance="outline">
         <mat-label>Etat machine</mat-label>
         <mat-select formControlName="etatMachine">
           <mat-option value="ALL">Tous</mat-option>
+          <mat-option value="DISPONIBLE">Disponible</mat-option>
+          <mat-option value="INDISPONIBLE">Indisponible</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Disponibilite</mat-label>
+        <mat-select formControlName="availability">
+          <mat-option value="ALL">Toutes</mat-option>
           <mat-option value="EN_SERVICE">En service</mat-option>
           <mat-option value="SURVEILLANCE">Surveillance</mat-option>
           <mat-option value="MAINTENANCE">Maintenance</mat-option>
@@ -15,19 +47,15 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Availability</mat-label>
-        <mat-select formControlName="availability">
-          <mat-option value="ALL">Toutes</mat-option>
-          <mat-option value="DISPONIBLE">Disponible</mat-option>
-          <mat-option value="INDISPONIBLE">Indisponible</mat-option>
-        </mat-select>
+        <mat-label>Capacite minimale (kg/j)</mat-label>
+        <input matInput type="number" min="0" formControlName="minCapacite" placeholder="Ex: 800" />
       </mat-form-field>
 
+      <div class="actions">
+        <button mat-flat-button color="primary" type="button" (click)="applyFilter()">Appliquer</button>
+        <button mat-stroked-button type="button" (click)="resetFilters()">Reinitialiser</button>
+      </div>
     </form>
-
-    <div class="actions">
-      <a mat-stroked-button [routerLink]="['/pages/machines']">Retour liste</a>
-    </div>
 
     <div class="table-wrap">
       <table>
@@ -35,16 +63,19 @@
           <tr>
             <th>Machine</th>
             <th>Etat</th>
-            <th>Capacite</th>
-            <th>Availability</th>
+            <th>Capacite (kg/j)</th>
+            <th>Disponibilite</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let machine of filteredMachines">
-            <td>{{ machine.nomMachine }}</td>
+            <td class="machine-name">{{ machine.nomMachine }}</td>
             <td>{{ statusLabel(machine.etatMachine) }}</td>
             <td>{{ machine.capacite }}</td>
             <td>{{ availabilityLabel(machine.availability) }}</td>
+          </tr>
+          <tr *ngIf="filteredMachines.length === 0">
+            <td colspan="4" class="empty-state">Aucun resultat ne correspond aux filtres selectionnes.</td>
           </tr>
         </tbody>
       </table>

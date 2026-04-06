@@ -72,7 +72,28 @@ export class MachinesFormComponent implements OnInit {
     return value === 'DISPONIBLE' ? 'Disponible' : 'Indisponible';
   }
 
-  private applyFilter(): void {
+  resetFilters(): void {
+    this.form.reset({
+      etatMachine: 'ALL',
+      minCapacite: '',
+      availability: 'ALL',
+    });
+    this.applyFilter();
+  }
+
+  get totalMachinesCount(): number {
+    return this.machines.length;
+  }
+
+  get filteredMachinesCount(): number {
+    return this.filteredMachines.length;
+  }
+
+  get filteredAvailableCount(): number {
+    return this.filteredMachines.filter((machine) => machine.availability === 'DISPONIBLE').length;
+  }
+
+  applyFilter(): void {
     const raw = this.form.getRawValue();
     const minCapacite = raw.minCapacite ? Number(raw.minCapacite) : 0;
 

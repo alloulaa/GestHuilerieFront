@@ -90,8 +90,15 @@ export class ResetPasswordConfirmComponent implements OnInit {
     this.successMessage = null;
 
     this.authService.resetPasswordConfirm(this.token, this.form.value.password).subscribe({
-      next: () => {
-        this.toastService.success('Mot de passe réinitialisé. Redirection vers le dashboard...');
+      next: (response) => {
+        const isLoggedIn = this.authService.persistSessionFromResponse(response);
+
+        if (isLoggedIn) {
+          this.toastService.success('Mot de passe réinitialisé. Vous êtes maintenant connecté. Redirection vers le dashboard...');
+        } else {
+          this.toastService.info('Mot de passe réinitialisé. Redirection vers le dashboard...');
+        }
+
         this.isLoading = false;
         this.form.reset();
         setTimeout(() => {
