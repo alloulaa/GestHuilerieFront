@@ -1,0 +1,44 @@
+<nb-card class="section-card polished-card">
+  <nb-card-header>
+    <div class="section-heading">
+      <p class="eyebrow">Pilotage</p>
+      <h3>Réception</h3>
+      <p class="subhead">Consultez l'historique des réceptions de matières premières.</p>
+    </div>
+  </nb-card-header>
+  <nb-card-body>
+    <div class="panel-toolbar">
+      <input nbInput fullWidth [(ngModel)]="lotSearchValue" placeholder="Filtrer par lot" type="number"
+        name="lotSearchValue" />
+      <button nbButton status="primary" type="button" (click)="filterByLot()">Filtrer</button>
+      <button nbButton status="basic" outline type="button" (click)="resetFilter()">Réinitialiser</button>
+    </div>
+
+    <p class="error" *ngIf="filterMessage">{{ filterMessage }}</p>
+
+    <div class="table-wrap">
+      <table class="crud-table">
+        <thead>
+          <tr>
+            <th>REFERENCE</th>
+            <th>DATE</th>
+            <th>LOT</th>
+            <th>BRUT</th>
+            <th>TARE</th>
+            <th>NET</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let pesee of filteredPesees; trackBy: trackByPesee">
+            <td>{{ pesee.idPesee }}</td>
+            <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ pesee.lotId }}</td>
+            <td>{{ pesee.poidsBrut }} kg</td>
+            <td>{{ pesee.poidsTare }} kg</td>
+            <td>{{ pesee.poidsNet }} kg</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </nb-card-body>
+</nb-card>

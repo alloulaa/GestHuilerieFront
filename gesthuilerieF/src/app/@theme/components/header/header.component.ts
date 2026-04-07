@@ -1,4 +1,5 @@
 import { Component, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { NbIconModule, NbActionsModule, NbContextMenuModule, NbMenuService } from '@nebular/theme';
 import { Subject, filter, takeUntil } from 'rxjs';
@@ -18,6 +19,7 @@ interface SearchResultItem {
   templateUrl: './header.component.html',
   standalone: true,
   imports: [
+    CommonModule,
     NbIconModule,
     NbActionsModule,
     NbContextMenuModule,

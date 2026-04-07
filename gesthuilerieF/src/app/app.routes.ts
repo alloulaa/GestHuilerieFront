@@ -39,6 +39,14 @@ export const APP_ROUTES: Routes = [
       },
       // Reception
       {
+        path: 'reception/consulter',
+        loadComponent: () => import('./features/reception/pages/reception-consulter/reception-consulter.component').then(c => c.ReceptionConsulterComponent),
+      },
+      {
+        path: 'reception/gerer',
+        loadComponent: () => import('./features/reception/pages/reception-gerer/reception-gerer.component').then(c => c.ReceptionGererComponent),
+      },
+      {
         path: 'reception',
         loadComponent: () => import('./features/reception/pages/reception-list/reception-list.component').then(c => c.ReceptionListComponent),
       },
@@ -52,23 +60,20 @@ export const APP_ROUTES: Routes = [
       },
       // Production
       {
-        path: 'production/guides',
-        loadComponent: () => import('./features/production/pages/production-guides/production-guides.component').then(c => c.ProductionGuidesComponent),
-        children: [
-          { path: '', redirectTo: 'consulter', pathMatch: 'full' },
-          {
-            path: 'consulter',
-            loadComponent: () => import('./features/production/pages/production-guides/guides-consulter.component').then(c => c.GuidesConsulterComponent),
-          },
-          {
-            path: 'creer',
-            loadComponent: () => import('./features/production/pages/production-guides/guides-creer.component').then(c => c.GuidesCreerComponent),
-          },
-          {
-            path: 'executer',
-            loadComponent: () => import('./features/production/pages/production-guides/guides-executer.component').then(c => c.GuidesExecuterComponent),
-          },
-        ],
+        path: 'production/guides/consulter',
+        loadComponent: () => import('./features/production/pages/production-guides/guides-consulter.component').then(c => c.GuidesConsulterComponent),
+      },
+      {
+        path: 'production/guides/gerer',
+        loadComponent: () => import('./features/production/pages/production-guides/guides-gerer.component').then(c => c.GuidesGererComponent),
+      },
+      {
+        path: 'production/guides/creer',
+        loadComponent: () => import('./features/production/pages/production-guides/guides-creer.component').then(c => c.GuidesCreerComponent),
+      },
+      {
+        path: 'production/guides/executer',
+        loadComponent: () => import('./features/production/pages/production-guides/guides-executer.component').then(c => c.GuidesExecuterComponent),
       },
       {
         path: 'production/quality',
@@ -76,18 +81,20 @@ export const APP_ROUTES: Routes = [
       },
       // Raw material
       {
+        path: 'matieres-premieres/consulter',
+        loadComponent: () => import('./features/matieres-premieres/pages/raw-materials-consulter/raw-materials-consulter.component').then(c => c.RawMaterialsConsulterComponent),
+      },
+      {
+        path: 'matieres-premieres/gerer',
+        loadComponent: () => import('./features/matieres-premieres/pages/raw-materials-gerer/raw-materials-gerer.component').then(c => c.RawMaterialsGererComponent),
+      },
+      {
+        path: 'matieres-premieres/creer',
+        loadComponent: () => import('./features/matieres-premieres/pages/raw-materials-creer/raw-materials-creer.component').then(c => c.RawMaterialsCreerComponent),
+      },
+      {
         path: 'matieres-premieres',
         loadComponent: () => import('./features/matieres-premieres/pages/raw-materials/raw-materials.component').then(c => c.RawMaterialsComponent),
-        children: [
-          {
-            path: 'creer',
-            loadComponent: () => import('./features/matieres-premieres/pages/raw-materials-creer/raw-materials-creer.component').then(c => c.RawMaterialsCreerComponent),
-          },
-          {
-            path: 'consulter',
-            loadComponent: () => import('./features/matieres-premieres/pages/raw-materials-consulter/raw-materials-consulter.component').then(c => c.RawMaterialsConsulterComponent),
-          },
-        ],
       },
       // Machines
       {

@@ -1,246 +1,323 @@
-# 🔗 Guide de Connexion Frontend-Backend
+# Backend Connection Guide for Frontend
 
-## Configuration Actuelle
-- **Backend (Spring Boot)**: `http://localhost:8000`
-- **Frontend (Angular)**: À démarrer sur le port 4200 (par défaut)
-- **Base de données**: MySQL `gestionhuilerie` sur `localhost:3306`
+## Overview
+This guide provides all necessary information for the frontend to connect to the GestionHuilerie Backend API.
 
 ---
 
-## 📋 Étape 1: Configurer CORS sur le Backend Spring Boot
+## 1. Base Configuration
 
-Pour que le frontend puisse communiquer avec le backend, vous DEVEZ ajouter la configuration CORS côté backend.
+### Server Details
+- **Backend URL:** `http://localhost:8000`
+- **API Base Path:** `/api`
+- **Full API URL:** `http://localhost:8000/api`
 
-### Créer une classe `CorsConfig` dans votre projet Spring Boot:
+### Database Connection (Backend Only)
+- **Database:** MySQL
+- **Host:** localhost
+- **Port:** 3306
+- **Database Name:** gestionhuilerie
+- **Driver:** com.mysql.cj.jdbc.Driver
 
-```java
-package com.example.config;
+---
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+## 2. CORS Configuration
 
-@Configuration
-public class CorsConfig implements WebMvcConfigurer {
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-            .allowedOrigins("http://localhost:4200")  // URL du frontend
-            .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .allowedHeaders("*")
-            .allowCredentials(true)
-            .maxAge(3600);
-    }
+The backend is configured to accept requests from frontends running on:
+- `http://localhost:*` (any port on localhost)
+- `http://127.0.0.1:*` (any port on 127.0.0.1)
+
+### Allowed HTTP Methods
+- GET
+- POST
+- PUT
+- PATCH
+- DELETE
+- OPTIONS
+
+### Allowed Headers
+- All headers (`*`)
+
+### Credentials
+- Yes, credentials are allowed
+
+### Cache Duration
+- Max Age: 3600 seconds (1 hour)
+
+---
+
+## 3. Authentication & JWT
+
+### Overview
+The backend uses JWT (JSON Web Token) for authentication.
+
+### Token Configuration
+- **Token Type:** Bearer Token
+- **Token Expiration:** 86,400,000 ms (24 hours)
+- **Refresh Token Expiration:** 604,800,000 ms (7 days)
+- **Secret Key:** Configured server-side (do not hardcode)
+
+### Authentication Flow
+
+#### Step 1: Login
+**Endpoint:** `POST /api/auth/login`
+
+**Request Body:**
+```json
+{
+  "username": "user",
+  "password": "password"
 }
 ```
 
-**OU** ajouter dans `application.properties`:
-```properties
-cors.allowed-origins=http://localhost:4200
-cors.allowed-methods=GET,POST,PUT,PATCH,DELETE,OPTIONS
-cors.allowed-headers=*
-cors.max-age=3600
-cors.allow-credentials=true
+**Response (Success):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "userId": "123",
+  "username": "user",
+  "huilerie": {...}
+}
+```
+
+#### Step 2: Use Token in Requests
+Include the JWT token in the Authorization header for all protected endpoints:
+
+```
+Authorization: Bearer <token>
+```
+
+**Example Header:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Step 3: Token Refresh
+**Endpoint:** `POST /api/auth/refresh-token`
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
 ```
 
 ---
 
-## 🚀 Étape 2: Démarrer le Backend Spring Boot
+## 4. Available API Endpoints
 
-1. **Ouvrez votre projet Spring Boot** dans votre IDE (IntelliJ, VS Code, etc.)
+### Authentication Endpoints
+- `POST /api/auth/login` - Login user
+- `POST /api/auth/register` - Register new user (if enabled)
+- `POST /api/auth/refresh-token` - Refresh JWT token
+- `POST /api/auth/logout` - Logout user
 
-2. **Vérifiez que MySQL est en cours d'exécution**:
-   - La base `gestionhuilerie` doit exister ou être créée automatiquement (ddl-auto=update)
-   - Vérifiez les credentials: `root` / (aucun mot de passe)
+### User & Profile Endpoints
+- `GET /api/utilisateur` - List all users (admin only)
+- `GET /api/utilisateur/{id}` - Get user details
+- `PUT /api/utilisateur/{id}` - Update user
+- `POST /api/profil` - Create profile
+- `GET /api/profil` - Get profiles
 
-3. **Exécutez l'application**:
-   ```bash
-   # Avec Maven
-   mvn spring-boot:run
-   
-   # Ou avec Gradle
-   gradle bootRun
-   ```
+### Huilerie (Oil Mill) Endpoints
+- `GET /api/huilerie` - List all oil mills
+- `GET /api/huilerie/{id}` - Get specific oil mill
+- `POST /api/huilerie` - Create new oil mill
+- `PUT /api/huilerie/{id}` - Update oil mill
+- `DELETE /api/huilerie/{id}` - Delete oil mill
 
-4. **Vérifiez que le backend est accessible**:
-   ```
-   http://localhost:8000/api/huileries
-   ```
-   Vous devriez recevoir une réponse JSON (possiblement un tableau vide `[]`)
+### Production Endpoints
+- `GET /api/guide-production` - List production guides
+- `GET /api/guide-production/{id}` - Get production guide details
+- `POST /api/guide-production` - Create production guide
+- `PUT /api/guide-production/{id}` - Update production guide
 
----
+- `GET /api/execution-production` - List production executions
+- `POST /api/execution-production` - Create production execution
 
-## 🎨 Étape 3: Démarrer le Frontend Angular
+### Stock Management
+- `GET /api/stock` - List inventory items
+- `GET /api/stock/{id}` - Get stock details
+- `POST /api/stock` - Create stock item
+- `PUT /api/stock/{id}` - Update stock
+- `DELETE /api/stock/{id}` - Delete stock
 
-### Terminal 1 - Installer les dépendances (si nécessaire):
-```bash
-cd c:\Users\takwa\Desktop\GestHuilerieFront\gesthuilerieF
-npm install
-```
+- `GET /api/stock-movement` - List stock movements
+- `POST /api/stock-movement` - Record stock movement
 
-### Terminal 2 - Démarrer le serveur de développement Angular:
-```bash
-cd c:\Users\takwa\Desktop\GestHuilerieFront\gesthuilerieF
-npm start
-# ou
-ng serve
-```
+### Machine Management
+- `GET /api/machine` - List machines
+- `POST /api/machine` - Create machine
+- `PUT /api/machine/{id}` - Update machine
+- `DELETE /api/machine/{id}` - Delete machine
 
-Le frontend démarrera sur: **http://localhost:4200**
+### Lot Management
+- `GET /api/lot-olives` - List olive lots
+- `POST /api/lot-olives` - Create olive lot
+- `GET /api/lot-olives/{id}` - Get lot details
 
----
+### Traceability
+- `GET /api/traceability` - Get traceability information
+- `GET /api/traceability/{id}` - Get specific traceability record
 
-## ✅ Vérifier la Connexion
+### Permissions
+- `GET /api/permission` - List permissions
+- `POST /api/permission` - Create permission
+- `PUT /api/permission/{id}` - Update permission
+- `DELETE /api/permission/{id}` - Delete permission
 
-1. **Ouvrez le navigateur**: `http://localhost:4200`
-2. **Ouvrez la console du navigateur** (F12 → Console)
-3. **Accédez à un module** (ex: Machines, Matières Premières, etc.)
-4. **Vérifiez qu'il n'y a pas d'erreurs CORS** dans la console
-
-**Erreur CORS typique**:
-```
-Access to XMLHttpRequest at 'http://localhost:8000/api/...' from origin 
-'http://localhost:4200' has been blocked by CORS policy
-```
-→ Solution: Configurez CORS dans votre Spring Boot (voir Étape 1)
-
----
-
-## 🔧 Configuration des Environnements
-
-### Pour modifier l'URL du backend:
-
-**Développement** (`environment.ts`):
-```typescript
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:8000/api'
-};
-```
-
-**Production** (`environment.prod.ts`):
-```typescript
-export const environment = {
-  production: true,
-  apiUrl: 'https://api.votredomaine.com/api'  // Remplacez par votre URL production
-};
-```
+### Module Management
+- `GET /api/module` - List modules
+- `POST /api/module` - Create module
 
 ---
 
-## 📡 Endpoints Disponibles
+## 5. Error Handling
 
-### Huileries (Oil Mills)
-```
-GET  /api/huileries               → Récupérer toutes les huileries
-POST /api/huileries               → Créer une huilerie
-GET  /api/huileries/{id}          → Récupérer une huilerie
-PUT  /api/huileries/{id}          → Modifier une huilerie
-PATCH /api/huileries/{id}/activate   → Activer une huilerie
-PATCH /api/huileries/{id}/deactivate → Désactiver une huilerie
-```
+### Common HTTP Status Codes
+- **200 OK** - Request succeeded
+- **201 Created** - Resource created successfully
+- **400 Bad Request** - Invalid request format
+- **401 Unauthorized** - Missing or invalid token
+- **403 Forbidden** - Insufficient permissions
+- **404 Not Found** - Resource not found
+- **500 Internal Server Error** - Server error
 
-### Machines
-```
-GET  /api/machines                → Récupérer toutes les machines
-POST /api/machines                → Créer une machine
-GET  /api/machines/{id}           → Récupérer une machine
-PUT  /api/machines/{id}           → Modifier une machine
-DELETE /api/machines/{id}         → Supprimer une machine
-GET  /api/machines/huilerie/{nom} → Machines par huilerie
-PATCH /api/machines/{id}/matiere-premiere → Assigner matière première
-```
-
-### Matières Premières (Raw Materials)
-```
-GET  /api/matieresPremieres               → Récupérer toutes
-POST /api/matieresPremieres               → Créer
-GET  /api/matieresPremieres/{id}          → Récupérer une
-PUT  /api/matieresPremieres/{id}          → Modifier
-DELETE /api/matieresPremieres/{id}        → Supprimer
-```
-
-### Pesées (Weighings)
-```
-GET  /api/pesees         → Récupérer toutes les pesées
-POST /api/pesees         → Créer une pesée (réception)
-GET  /api/pesees/{id}    → Récupérer une pesée
-GET  /api/pesees/{id}/pdf → Télécharger le bon de pesée (PDF)
-```
-
-### Mouvements de Stock
-```
-GET  /api/stockMovements             → Récupérer tous les mouvements
-POST /api/stockMovements             → Créer un mouvement
-GET  /api/stockMovements/stock/{id}  → Mouvements par stock
-PATCH /api/stockMovements/{id}/type  → Modifier le type de mouvement
-```
-
-### Traçabilité
-```
-GET /api/traceability/lot/{lotId} → Historique complet du lot
+### Error Response Format
+```json
+{
+  "message": "Error description",
+  "status": 400,
+  "timestamp": "2026-04-07T10:30:00Z"
+}
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## 6. Frontend Setup Example
 
-### ❌ Erreur: "Cannot GET /api/..."
-- Vérifiez que le backend Spring Boot est en cours d'exécution (port 8000)
-- Vérifiez l'URL dans la console du navigateur (F12)
+### Configuration File (frontend/.env or similar)
+```
+REACT_APP_API_BASE_URL=http://localhost:8000/api
+REACT_APP_API_TIMEOUT=5000
+```
 
-### ❌ Erreur CORS
-- Configurez la classe `CorsConfig` dans le backend (voir Étape 1)
-- Redémarrez le backend après la modification
+### API Client Setup (Example with Axios)
+```javascript
+import axios from 'axios';
 
-### ❌ Erreur connexion base de données
-- Vérifiez que MySQL est en cours d'exécution
-- Vérifiez les credentials dans `application.properties`:
-  ```properties
-  spring.datasource.url=jdbc:mysql://localhost:3306/gestionhuilerie
-  spring.datasource.username=root
-  spring.datasource.password=
-  ```
+const apiClient = axios.create({
+  baseURL: 'http://localhost:8000/api',
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
 
-### ❌ Le frontend ne démarre pas
-```bash
-# Vérifiez Node.js
-node --version
+// Add JWT token to requests
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('jwtToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-# Réinstallez les dépendances
-npm install
+// Handle token refresh on 401
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Attempt token refresh
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        // Call refresh endpoint
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
-# Démarrez à nouveau
-npm start
+export default apiClient;
 ```
 
 ---
 
-## 💾 Résumé des Modifications du Frontend
+## 7. Data Transfer Objects (DTOs)
 
-✅ **Centralisé les URLs**: Tous les services utilisent désormais `environment.apiUrl`
-✅ **Fichiers environment.ts créés**: Pour dev et production
-✅ **URL changée de 8069 → 8000**: Pour correspondre à votre backend
+### Common Response Format
+Most endpoints return data wrapped in an API response:
 
-### Services mis à jour:
-- `huilerie.service.ts`
-- `machine.service.ts`
-- `raw-material.service.ts`
-- `weighing.service.ts`
-- `stock-movement.service.ts`
-- `traceability.service.ts`
-- `lot-olives.service.ts`
-- `analyse-laboratoire.service.ts`
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": {...}
+}
+```
+
+### Authentication Response (AuthResponseDTO)
+```json
+{
+  "token": "string",
+  "refreshToken": "string",
+  "userId": "number",
+  "username": "string",
+  "huilerie": {...}
+}
+```
 
 ---
 
-## 🎯 Prochaines Étapes
+## 8. Email Configuration
 
-1. ✅ Configurez CORS sur le backend
-2. ✅ Démarrez MySQL
-3. ✅ Démarrez le backend Spring Boot (port 8000)
-4. ✅ Démarrez le frontend Angular (port 4200)
-5. ✅ Testez la connexion en accédant à `http://localhost:4200`
-6. ✅ Vérifiez que les données s'affichent sans erreurs
+The backend is configured to send emails via Gmail:
+- **SMTP Host:** smtp.gmail.com
+- **SMTP Port:** 587
+- **Email:** Huileriaa@gmail.com
+- **Features:** Password reset emails, notifications (if implemented)
 
-**Questions?** Vérifiez la console du navigateur (F12) pour les messages d'erreur détaillés.
+---
+
+## 9. Dashboard Link
+
+The frontend dashboard may redirect to:
+```
+http://localhost:64412/pages/dashboard/production
+```
+
+---
+
+## 10. Development Notes
+
+- **Cors Max Age:** 3600 seconds (1 hour)
+- **Token Duration:** 24 hours (refresh token: 7 days)
+- **Time Zone:** Server-based
+- **Charset:** UTF-8
+
+---
+
+## 11. Common Integration Tasks
+
+### Login Flow
+1. User submits credentials
+2. Call `POST /api/auth/login`
+3. Store returned `token` in localStorage/sessionStorage
+4. Store returned `refreshToken` for token refresh
+5. Set Authorization header for subsequent requests
+
+### Protected Endpoints
+1. Attach JWT token to Authorization header
+2. If you receive 401, refresh token using refresh endpoint
+3. Retry original request with new token
+
+### Logout Flow
+1. Call `POST /api/auth/logout` (optional)
+2. Clear `token` and `refreshToken` from storage
+3. Redirect to login page
+
+---
+
+**Last Updated:** April 7, 2026
+**Backend Version:** Spring Boot 3.x
+**API Version:** v1

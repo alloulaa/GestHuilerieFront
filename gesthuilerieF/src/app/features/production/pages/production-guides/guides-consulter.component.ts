@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, forwardRef } from '@angular/core';
-import { NbButtonModule, NbCardModule } from '@nebular/theme';
+import { FormsModule } from '@angular/forms';
+import { NbButtonModule, NbCardModule, NbIconModule } from '@nebular/theme';
 import { ExecutionProduction, GuideProduction } from '../../models/production.models';
 import { ExecutionProductionService } from '../../services/execution-production.service';
 import { GuideProductionService } from '../../services/guide-production.service';
@@ -9,16 +10,22 @@ import { GuideProductionService } from '../../services/guide-production.service'
   selector: 'app-guides-consulter',
   standalone: true,
   templateUrl: './guides-consulter.component.html',
-  styleUrls: ['./production-guides.component.scss'],
-  imports: [CommonModule, NbCardModule, NbButtonModule],
+  styleUrl: './guides-consulter.component.scss',
+  imports: [CommonModule, NbCardModule, NbButtonModule, NbIconModule, FormsModule],
 })
 export class GuidesConsulterComponent implements OnInit {
   guides: GuideProduction[] = [];
+  filteredGuides: GuideProduction[] = [];
   executions: ExecutionProduction[] = [];
+  filteredExecutions: ExecutionProduction[] = [];
 
+  guideSearchValue = '';
+  executionStatusFilter = '';
   selectedGuideId: number | null = null;
   selectedExecutionId: number | null = null;
 
+  guideMessage = '';
+  guideError = '';
   executionMessage = '';
   executionError = '';
   creatingProduitFinal = false;
@@ -31,8 +38,46 @@ export class GuidesConsulterComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Ensure clean filter state on first mount.
+    this.guideSearchValue = '';
+    this.executionStatusFilter = '';
+
     this.reloadGuides();
     this.reloadExecutions();
+  }
+
+  filterGuides(): void {
+    const search = this.guideSearchValue.toLowerCase().trim();
+    if (!search) {
+      this.filteredGuides = [...this.guides];
+      return;
+    }
+    this.filteredGuides = this.guides.filter(g => 
+      g.nom.toLowerCase().includes(search) || 
+      g.reference.toLowerCase().includes(search) ||
+      g.description.toLowerCase().includes(search)
+    );
+  }
+
+  resetGuideFilter(): void {
+    this.guideSearchValue = '';
+    this.filteredGuides = [...this.guides];
+  }
+
+  filterExecutions(): void {
+    const status = this.executionStatusFilter?.trim().toUpperCase();
+
+    if (!status || status === 'TOUS') {
+      this.filteredExecutions = [...this.executions];
+      return;
+    }
+
+    this.filteredExecutions = this.executions.filter((e) => e.statut === status);
+  }
+
+  resetExecutionFilter(): void {
+    this.executionStatusFilter = '';
+    this.filteredExecutions = [...this.executions];
   }
 
   get selectedGuide(): GuideProduction | undefined {
@@ -116,6 +161,11 @@ export class GuidesConsulterComponent implements OnInit {
   private reloadGuides(selectGuideId?: number): void {
     this.guideProductionService.getAll().subscribe((items) => {
       this.guides = items;
+      this.filteredGuides = [...items];
+
+      if (this.guideSearchValue.trim()) {
+        this.filterGuides();
+      }
 
       if (selectGuideId) {
         const createdGuide = this.guides.find((guide) => guide.idGuideProduction === selectGuideId);
@@ -129,6 +179,12 @@ export class GuidesConsulterComponent implements OnInit {
   private reloadExecutions(selectExecutionId?: number): void {
     this.executionProductionService.getAll().subscribe((items) => {
       this.executions = items;
+      this.filteredExecutions = [...items];
+
+      const status = this.executionStatusFilter?.trim().toUpperCase();
+      if (status && status !== 'TOUS') {
+        this.filterExecutions();
+      }
 
       if (selectExecutionId) {
         this.selectedExecutionId = selectExecutionId;

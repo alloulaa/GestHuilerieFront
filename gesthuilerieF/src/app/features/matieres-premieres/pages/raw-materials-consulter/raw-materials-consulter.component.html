@@ -9,7 +9,7 @@
             <th>Type</th>
             <th>Unite</th>
             <th>Description</th>
-            <th>Actions</th>
+           
           </tr>
         </thead>
         <tbody>
@@ -19,16 +19,7 @@
             <td>{{ item.type }}</td>
             <td>{{ item.uniteMesure }}</td>
             <td>{{ item.description }}</td>
-            <td class="actions">
-              <button nbButton ghost status="primary" size="small" type="button" (click)="edit(item)" title="Modifier"
-                aria-label="Modifier">
-                <nb-icon icon="edit-outline"></nb-icon>
-              </button>
-              <button nbButton ghost status="danger" size="small" type="button" (click)="askRemove(item)"
-                title="Supprimer" aria-label="Supprimer">
-                <nb-icon icon="trash-2-outline"></nb-icon>
-              </button>
-            </td>
+         
           </tr>
         </tbody>
       </table>
@@ -36,19 +27,5 @@
   </nb-card-body>
 </nb-card>
 
-<div class="confirm-overlay" *ngIf="pendingRawMaterialDeletion" (click)="cancelRemove()">
-  <nb-card class="confirm-card" (click)="$event.stopPropagation()">
-    <nb-card-header class="confirm-title">Confirmer la suppression</nb-card-header>
-    <nb-card-body>
-      <p>
-        Voulez-vous vraiment supprimer la matiere premiere
-        <strong>{{ pendingRawMaterialDeletion.nom }}</strong> ?
-      </p>
-      <p class="confirm-error" *ngIf="deleteErrorMessage">{{ deleteErrorMessage }}</p>
-    </nb-card-body>
-    <nb-card-footer class="confirm-actions">
-      <button nbButton status="basic" outline type="button" (click)="cancelRemove()">Annuler</button>
-      <button nbButton status="danger" type="button" (click)="confirmRemove()">Supprimer</button>
-    </nb-card-footer>
-  </nb-card>
-</div>
+
+

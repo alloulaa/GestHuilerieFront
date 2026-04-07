@@ -28,7 +28,15 @@ export class ExecutionProductionService {
         return this.http.post<ExecutionProduction>(this.apiUrl, payload);
     }
 
+    update(idExecutionProduction: number, payload: Partial<ExecutionProductionCreate>): Observable<ExecutionProduction> {
+        return this.http.put<ExecutionProduction>(`${this.apiUrl}/${idExecutionProduction}`, payload);
+    }
+
     createProduitFinal(idExecutionProduction: number): Observable<ExecutionProduction> {
         return this.http.post<ExecutionProduction>(`${this.apiUrl}/${idExecutionProduction}/produit-final`, {});
+    }
+
+    delete(idExecutionProduction: number): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/${idExecutionProduction}`);
     }
 }

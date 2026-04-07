@@ -109,4 +109,42 @@ export class LotManagementService {
       ),
     );
   }
+
+  updatePesee(idPesee: number, input: CreatePeseeInput): Observable<Pesee> {
+    const payload: ReceptionPeseeCreatePayload = {
+      lotId: input.lotMode === 'existing' ? Number(input.existingLotId) : null,
+      datePesee: input.datePesee,
+      poidsBrut: Number(input.poidsBrut),
+      poidsTare: Number(input.poidsTare),
+      huilerieId: Number(input.huilerieId),
+      origine: input.origine,
+      varieteOlive: input.varieteOlive,
+      maturite: input.lotMode === 'new' ? input.newLotDetails?.maturite : undefined,
+      dateRecolte: input.lotMode === 'new' ? input.newLotDetails?.dateRecolte : undefined,
+      dateReception: input.lotMode === 'new' ? input.newLotDetails?.dateReception : undefined,
+      dureeStockageAvantBroyage: input.lotMode === 'new' ? Number(input.newLotDetails?.dureeStockageAvantBroyage) : undefined,
+      matierePremiereId: input.lotMode === 'new' ? Number(input.newLotDetails?.matierePremiereId) : undefined,
+      campagneAnnee: input.lotMode === 'new'
+        ? String(input.newLotDetails?.campagneId)
+        : undefined,
+    };
+
+    return this.weighingService.updateReception(idPesee, payload).pipe(
+      switchMap(updated =>
+        this.loadInitialData().pipe(
+          map(() => updated),
+        ),
+      ),
+    );
+  }
+
+  deletePesee(idPesee: number): Observable<void> {
+    return this.weighingService.delete(idPesee).pipe(
+      switchMap(result =>
+        this.loadInitialData().pipe(
+          map(() => result),
+        ),
+      ),
+    );
+  }
 }

@@ -13,14 +13,14 @@ export const MENU_ITEMS: NbMenuItem[] = [
     icon: 'cube-outline',
     children: [
       {
-        title: 'Gérer',
-        icon: 'plus-circle-outline',
-        link: '/pages/reception/new',
-      },
-      {
         title: 'Consulter',
         icon: 'list-outline',
-        link: '/pages/reception',
+        link: '/pages/reception/consulter',
+      },
+      {
+        title: 'Gérer',
+        icon: 'settings-outline',
+        link: '/pages/reception/gerer',
       },
     ],
   },
@@ -35,13 +35,8 @@ export const MENU_ITEMS: NbMenuItem[] = [
       },
       {
         title: 'Gérer',
-        icon: 'plus-circle-outline',
-        link: '/pages/production/guides/creer',
-      },
-      {
-        title: 'Exécuter',
-        icon: 'play-circle-outline',
-        link: '/pages/production/guides/executer',
+        icon: 'settings-outline',
+        link: '/pages/production/guides/gerer',
       },
     ],
   },
@@ -66,14 +61,14 @@ export const MENU_ITEMS: NbMenuItem[] = [
     icon: 'archive-outline',
     children: [
       {
-        title: 'Créer',
-        icon: 'plus-circle-outline',
-        link: '/pages/matieres-premieres/creer',
-      },
-      {
         title: 'Consulter',
         icon: 'list-outline',
         link: '/pages/matieres-premieres/consulter',
+      },
+      {
+        title: 'Gérer',
+        icon: 'settings-outline',
+        link: '/pages/matieres-premieres/gerer',
       },
     ],
   },

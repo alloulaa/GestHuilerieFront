@@ -24,7 +24,15 @@ export class WeighingService {
     return this.http.post<Pesee>(this.apiUrl, payload);
   }
 
+  updateReception(idPesee: number, payload: Partial<ReceptionPeseeCreatePayload>): Observable<Pesee> {
+    return this.http.put<Pesee>(`${this.apiUrl}/${idPesee}`, payload);
+  }
+
   generateBonPeseePdf(idPesee: number): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${idPesee}/pdf`, { responseType: 'blob' });
+  }
+
+  delete(idPesee: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${idPesee}`);
   }
 }

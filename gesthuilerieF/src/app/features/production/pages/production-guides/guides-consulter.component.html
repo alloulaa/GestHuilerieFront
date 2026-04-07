@@ -1,127 +1,283 @@
-<nb-card class="panel panel--list">
-  <nb-card-header>Guides enregistrés</nb-card-header>
-  <nb-card-body>
-    <div class="list-card" *ngIf="selectedGuide as guide">
-      <div class="list-card__header">
-        <div>
-          <h3>{{ guide.nom }}</h3>
-          <p>{{ guide.reference }} · {{ guide.description }}</p>
-        </div>
-        <span class="pill">{{ stepSummary(guide) }}</span>
-      </div>
+<div class="guides-consulter-container">
 
-      <div class="guide-flow">
-        <div class="guide-step" *ngFor="let etape of guide.etapes">
-          <div class="guide-step__head">
-            <strong>{{ etape.ordre }}. {{ etape.nom }}</strong>
-            <span>{{ etape.description }}</span>
+  <!-- Messages -->
+  <div class="message-box success" *ngIf="guideMessage">
+    <div>{{ guideMessage }}</div>
+    <button class="close-msg" (click)="guideMessage = ''">✕</button>
+  </div>
+  <div class="message-box error" *ngIf="guideError">
+    <div>{{ guideError }}</div>
+    <button class="close-msg" (click)="guideError = ''">✕</button>
+  </div>
+  <div class="message-box success" *ngIf="executionMessage">
+    <div>{{ executionMessage }}</div>
+    <button class="close-msg" (click)="executionMessage = ''">✕</button>
+  </div>
+  <div class="message-box error" *ngIf="executionError">
+    <div>{{ executionError }}</div>
+    <button class="close-msg" (click)="executionError = ''">✕</button>
+  </div>
+
+  <!-- GUIDES SECTION -->
+  <div class="section-wrapper">
+    <div class="section-header">
+      <div class="header-content">
+        <h1 class="section-title">Plans de Production</h1>
+        <p class="section-subtitle">Consultez tous les guides de production enregistrés</p>
+      </div>
+      <div class="search-filter-bar">
+        <input type="text" class="search-input" placeholder="Chercher par nom, référence..." 
+               [(ngModel)]="guideSearchValue" (change)="filterGuides()">
+        <button class="filter-btn" (click)="filterGuides()">Chercher</button>
+        <button class="reset-btn" (click)="resetGuideFilter()">Réinitialiser</button>
+      </div>
+    </div>
+
+    <!-- Guides Grid -->
+    <div class="cards-grid" *ngIf="filteredGuides.length > 0">
+      <div class="guide-card" *ngFor="let guide of filteredGuides" 
+           [class.selected]="guide.idGuideProduction === selectedGuideId"
+           (click)="selectGuide(guide)">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title">{{ guide.nom }}</div>
+            <div class="card-ref">{{ guide.reference }}</div>
           </div>
-
-          <div class="guide-params">
-            <span class="param-pill" *ngFor="let parametre of etape.parametres">
-              {{ parametre.nom }} · {{ parametre.valeur }} {{ parametre.uniteMesure }}
-            </span>
+          <span class="step-badge">{{ stepSummary(guide) }}</span>
+        </div>
+        <p class="card-description">{{ guide.description }}</p>
+        <div class="card-meta">
+          <div class="meta-item">
+            <span class="meta-label">Création:</span>
+            <span class="meta-value">{{ guide.dateCreation | date: 'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Huilerie:</span>
+            <span class="meta-value">#{{ guide.huilerieId }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Référence</th>
-            <th>Nom</th>
-            <th>Création</th>
-            <th>Huilerie</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let guide of guides" [class.is-selected]="guide.idGuideProduction === selectedGuideId">
-            <td>{{ guide.reference }}</td>
-            <td>{{ guide.nom }}</td>
-            <td>{{ guide.dateCreation }}</td>
-            <td>{{ guide.huilerieId }}</td>
-            <td class="table-actions">
-              <button nbButton size="small" outline type="button" (click)="selectGuide(guide)">Voir</button>
-              <button nbButton size="small" status="basic" outline type="button" (click)="closeGuideDetails()">Fermer</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredGuides.length === 0">
+      <p>{{ guides.length === 0 ? 'Aucun guide enregistré' : 'Aucun guide ne correspond à votre recherche' }}</p>
     </div>
-  </nb-card-body>
-</nb-card>
 
-<nb-card class="panel panel--list panel--execution-list">
-  <nb-card-header>Exécutions enregistrées</nb-card-header>
-  <nb-card-body>
-    <div class="list-card" *ngIf="selectedExecution as execution">
-      <div class="list-card__header">
-        <div>
-          <h3>{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</h3>
-          <p>{{ execution.dateDebut }} → {{ execution.dateFinPrevue }}</p>
-        </div>
-        <span class="pill" [ngClass]="statusClass(execution.statut)">{{ statusLabel(execution.statut) }}</span>
+    <!-- Guide Details -->
+    <div class="details-panel" *ngIf="selectedGuide as guide">
+      <div class="panel-header">
+        <h3>{{ guide.nom }} <strong style="opacity: 0.8;">({{ guide.reference }})</strong></h3>
+        <button class="close-btn" (click)="closeGuideDetails()">×</button>
       </div>
+      <div class="panel-content">
+        <div class="detail-section">
+          <p class="detail-description">{{ guide.description }}</p>
+        </div>
 
-      <div class="execution-meta">
-        <div>
-          <span>Guide</span>
-          <strong>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</strong>
+        <div class="meta-grid">
+          <div class="meta-box">
+            <span class="meta-label">Référence</span>
+            <strong>{{ guide.reference }}</strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Création</span>
+            <strong>{{ guide.dateCreation | date: 'dd/MM/yyyy HH:mm' }}</strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Huilerie</span>
+            <strong>#{{ guide.huilerieId }}</strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Étapes</span>
+            <strong>{{ guide.etapes.length }}</strong>
+          </div>
         </div>
-        <div>
-          <span>Machine</span>
-          <strong>{{ execution.machineNom || ('#' + execution.machineId) }}</strong>
-        </div>
-        <div>
-          <span>Lot olives</span>
-          <strong>{{ execution.lotOlivesReference || execution.lotOlivesVariete || ('#' + execution.lotOlivesId) }}</strong>
-        </div>
-        <div>
-          <span>Produit final</span>
-          <strong>{{ execution.produitFinalCode || execution.produitFinalNomProduit || '-' }}</strong>
-        </div>
-      </div>
 
-      <div class="value-summary" *ngIf="execution.valeursReelles.length > 0">
-        <div class="value-summary__row" *ngFor="let valeur of execution.valeursReelles">
-          <span>{{ valeur.parametreEtapeNom || ('Paramètre #' + valeur.parametreEtapeId) }}</span>
-          <strong>{{ valeur.valeurReelle }}</strong>
+        <div class="etapes-list" *ngIf="guide.etapes && guide.etapes.length > 0">
+          <h5>Étapes du processus</h5>
+          <div class="etape-item" *ngFor="let etape of guide.etapes; let i = index">
+            <div class="etape-header">
+              <span class="etape-number">{{ i + 1 }}</span>
+              <div class="etape-info">
+                <strong>{{ etape.nom }}</strong>
+                <p>{{ etape.description }}</p>
+              </div>
+            </div>
+
+            <!-- Parametres -->
+            <div class="parametres-list" *ngIf="etape.parametres && etape.parametres.length > 0">
+              <h5>Paramètres</h5>
+              <div class="param-item" *ngFor="let param of etape.parametres">
+                <span class="param-name">{{ param.nom }}</span>
+                <span class="param-value">{{ param.valeur }} {{ param.uniteMesure }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Référence exécution</th>
-            <th>Réf. guide</th>
-            <th>Machine</th>
-            <th>Statut</th>
-            <th>Rendement</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let execution of executions" [class.is-selected]="execution.idExecutionProduction === selectedExecutionId">
-            <td>{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</td>
-            <td>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</td>
-            <td>{{ execution.machineNom || ('#' + execution.machineId) }}</td>
-            <td><span class="pill" [ngClass]="statusClass(execution.statut)">{{ statusLabel(execution.statut) }}</span></td>
-            <td>{{ execution.rendement }}</td>
-            <td class="table-actions">
-              <button nbButton size="small" outline type="button" (click)="selectExecution(execution)">Voir</button>
-              <button nbButton size="small" status="success" outline type="button" (click)="createProduitFinal(execution)" [disabled]="creatingProduitFinal">
-                {{ creatingProduitFinal ? 'Génération...' : 'Terminer' }}
-              </button>
-              <button nbButton size="small" status="basic" outline type="button" (click)="closeExecutionDetails()">Fermer</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <!-- EXECUTIONS SECTION -->
+  <div class="section-wrapper">
+    <div class="section-header">
+      <div class="header-content">
+        <h1 class="section-title">Exécutions</h1>
+        <p class="section-subtitle">Suivi des exécutions de guides en cours</p>
+      </div>
+      <div class="search-filter-bar">
+        <select class="status-filter" [(ngModel)]="executionStatusFilter" (change)="filterExecutions()">
+          <option value="">Tous les statuts</option>
+          <option value="EN_COURS">En cours</option>
+          <option value="TERMINEE">Terminée</option>
+          <option value="PLANIFIEE">Planifiée</option>
+          <option value="ANNULEE">Annulée</option>
+        </select>
+        <button class="filter-btn" (click)="filterExecutions()">Filtrer</button>
+        <button class="reset-btn" (click)="resetExecutionFilter()">Réinitialiser</button>
+      </div>
     </div>
-  </nb-card-body>
-</nb-card>
+
+    <!-- Executions Grid -->
+    <div class="cards-grid" *ngIf="filteredExecutions.length > 0">
+      <div class="execution-card" *ngFor="let execution of filteredExecutions"
+           [class.selected]="execution.idExecutionProduction === selectedExecutionId"
+           [ngClass]="'status-' + execution.statut.toLowerCase()"
+           (click)="selectExecution(execution)">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title">{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</div>
+            <div class="card-ref">Guide: {{ execution.guideProductionReference || '#' + execution.guideProductionId }}</div>
+          </div>
+          <span class="status-badge" [ngClass]="'status-' + execution.statut.toLowerCase()">
+            {{ statusLabel(execution.statut) }}
+          </span>
+        </div>
+
+        <div class="card-meta">
+          <div class="meta-item">
+            <span class="meta-label">Machine:</span>
+            <span class="meta-value">{{ execution.machineNom || '#' + execution.machineId }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Lot:</span>
+            <span class="meta-value">{{ execution.lotOlivesReference || execution.lotOlivesVariete || '#' + execution.lotOlivesId }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Début:</span>
+            <span class="meta-value">{{ execution.dateDebut | date: 'dd/MM HH:mm' }}</span>
+          </div>
+        </div>
+
+        <!-- Rendement Progress -->
+        <div class="rendement-section" *ngIf="execution.rendement">
+          <div class="rendement-header">
+            <span class="rendement-label">Rendement</span>
+            <span class="rendement-value">{{ execution.rendement }}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="execution.rendement"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredExecutions.length === 0">
+      <p>{{ executions.length === 0 ? 'Aucune exécution enregistrée' : 'Aucune exécution ne correspond à votre filtre' }}</p>
+    </div>
+
+    <!-- Execution Details -->
+    <div class="details-panel" *ngIf="selectedExecution as execution">
+      <div class="panel-header">
+        <h3>Exécution {{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</h3>
+        <button class="close-btn" (click)="closeExecutionDetails()">×</button>
+      </div>
+      <div class="panel-content">
+        <div class="meta-grid">
+          <div class="meta-box">
+            <span class="meta-label">Référence</span>
+            <strong>{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Statut</span>
+            <strong>
+              <span class="status-badge" [ngClass]="'status-' + execution.statut.toLowerCase()">
+                {{ statusLabel(execution.statut) }}
+              </span>
+            </strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Guide</span>
+            <strong>{{ execution.guideProductionReference || '#' + execution.guideProductionId }}</strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Machine</span>
+            <strong>{{ execution.machineNom || '#' + execution.machineId }}</strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Lot olives</span>
+            <strong>{{ execution.lotOlivesReference || execution.lotOlivesVariete || '#' + execution.lotOlivesId }}</strong>
+          </div>
+          <div class="meta-box">
+            <span class="meta-label">Produit final</span>
+            <strong>{{ execution.produitFinalCode || execution.produitFinalNomProduit || '—' }}</strong>
+          </div>
+        </div>
+
+        <!-- Dates -->
+        <div class="detail-section">
+          <h4>Temporalité</h4>
+          <div class="meta-grid">
+            <div class="meta-box">
+              <span class="meta-label">Début</span>
+              <strong>{{ execution.dateDebut | date: 'dd/MM/yyyy HH:mm' }}</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Fin prévue</span>
+              <strong>{{ execution.dateFinPrevue | date: 'dd/MM/yyyy HH:mm' }}</strong>
+            </div>
+            <div class="meta-box" *ngIf="execution.dateFinReelle">
+              <span class="meta-label">Fin réelle</span>
+              <strong>{{ execution.dateFinReelle | date: 'dd/MM/yyyy HH:mm' }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rendement -->
+        <div class="detail-section" *ngIf="execution.rendement">
+          <h4>Rendement</h4>
+          <div style="margin: 1rem 0;">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="execution.rendement"></div>
+            </div>
+            <div style="margin-top: 0.5rem; text-align: right; font-size: 0.95rem; font-weight: 600; color: #6B7C3A;">
+              {{ execution.rendement }}%
+            </div>
+          </div>
+        </div>
+
+        <!-- Valeurs Réelles -->
+        <div class="detail-section" *ngIf="execution.valeursReelles && execution.valeursReelles.length > 0">
+          <h4>Valeurs réelles</h4>
+          <div class="valeurs-list">
+            <div class="valeur-item" *ngFor="let valeur of execution.valeursReelles">
+              <span class="valeur-name">{{ valeur.parametreEtapeNom || ('Paramètre #' + valeur.parametreEtapeId) }}</span>
+              <span class="valeur-value">{{ valeur.valeurReelle }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card-actions" style="margin-top: 2rem;">
+          <button class="action-btn btn-finish" (click)="createProduitFinal(execution)" 
+                  [disabled]="creatingProduitFinal || execution.statut === 'TERMINEE'">
+            {{ creatingProduitFinal ? '⏳ Génération...' : '✓ Terminer l\'exécution' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

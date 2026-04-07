@@ -1,0 +1,97 @@
+<nb-card class="section-card polished-card">
+  <nb-card-header>
+    <div class="section-heading">
+      <p class="eyebrow">Pilotage</p>
+      <h3>Réception - Gérer</h3>
+      <p class="subhead">Créez et gérez les réceptions de matières premières.</p>
+    </div>
+  </nb-card-header>
+  <nb-card-body>
+    <p class="error" *ngIf="formErrorMessage">{{ formErrorMessage }}</p>
+  <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
+
+    <form class="entity-form" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-group">
+        <label class="form-label">Date réception *</label>
+        <input nbInput fullWidth type="datetime-local" formControlName="datePesee"
+          [status]="isFieldInvalid('datePesee') ? 'danger' : 'basic'" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Poids brut (kg) *</label>
+        <input nbInput fullWidth type="number" formControlName="poidsBrut" placeholder="0"
+          [status]="isFieldInvalid('poidsBrut') ? 'danger' : 'basic'" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Poids tare (kg) *</label>
+        <input nbInput fullWidth type="number" formControlName="poidsTare" placeholder="0"
+          [status]="isFieldInvalid('poidsTare') ? 'danger' : 'basic'" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Lot *</label>
+        <input nbInput fullWidth type="number" formControlName="lotId" placeholder="ID lot"
+          [status]="isFieldInvalid('lotId') ? 'danger' : 'basic'" />
+      </div>
+
+      <div class="form-actions">
+        <button nbButton status="primary" type="submit">
+          {{ editingId ? 'Mettre à jour la réception' : 'Ajouter réception' }}
+        </button>
+        <button nbButton status="basic" type="button" *ngIf="editingId" (click)="resetForm()">
+          Annuler
+        </button>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table class="crud-table">
+        <thead>
+          <tr>
+            <th>REFERENCE</th>
+            <th>DATE</th>
+            <th>LOT</th>
+            <th>BRUT</th>
+            <th>TARE</th>
+            <th>NET</th>
+                      <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let pesee of pesees; trackBy: trackByPesee">
+            <td>{{ pesee.idPesee }}</td>
+            <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ pesee.lotId }}</td>
+            <td>{{ pesee.poidsBrut }} kg</td>
+            <td>{{ pesee.poidsTare }} kg</td>
+            <td>{{ pesee.poidsNet }} kg</td>
+                      <td class="actions-cell">
+                        <button nbButton ghost size="small" (click)="edit(pesee)" status="warning">
+                          <nb-icon icon="edit-outline"></nb-icon>
+                        </button>
+                        <button nbButton ghost size="small" (click)="askDelete(pesee)" status="danger">
+                          <nb-icon icon="trash-2-outline"></nb-icon>
+                        </button>
+                      </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div class="confirmation-modal" *ngIf="pendingDeletion">
+      <div class="modal-overlay"></div>
+      <div class="modal-box">
+        <div class="modal-header">Confirmer la suppression</div>
+        <div class="modal-body">
+          Êtes-vous sûr de vouloir supprimer la réception du <strong>{{ pendingDeletion.datePesee | date:'dd/MM/yyyy HH:mm' }}</strong> ?
+        </div>
+        <div class="modal-actions">
+          <button nbButton status="basic" (click)="cancelDelete()">Annuler</button>
+          <button nbButton status="danger" (click)="confirmDelete()">Supprimer</button>
+        </div>
+      </div>
+    </div>
+  </nb-card-body>
+</nb-card>

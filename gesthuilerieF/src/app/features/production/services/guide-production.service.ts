@@ -27,4 +27,12 @@ export class GuideProductionService {
     create(payload: Omit<GuideProduction, 'idGuideProduction' | 'reference'>): Observable<GuideProduction> {
         return this.http.post<GuideProduction>(this.apiUrl, payload);
     }
+
+    update(idGuideProduction: number, payload: Partial<Omit<GuideProduction, 'idGuideProduction' | 'reference'>>): Observable<GuideProduction> {
+        return this.http.put<GuideProduction>(`${this.apiUrl}/${idGuideProduction}`, payload);
+    }
+
+    delete(idGuideProduction: number): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/${idGuideProduction}`);
+    }
 }
