@@ -4,25 +4,58 @@
     <h2>Mon Profil</h2>
   </div>
 
-  <div class="profile-container" *ngIf="!isLoading && user">
+  <div
+    class="profile-container"
+    *ngIf="!isLoading && user && (user.fullName || user.name || user.nomComplet || ((user.prenom || '') + ' ' + (user.nom || '')).trim() || user.email || 'N/A') as displayName"
+  >
+    <section class="profile-identity profile-section">
+      <div class="avatar-circle">{{ ((displayName || '').replace(' ', '').slice(0, 2) || 'NA').toUpperCase() }}</div>
+      <h3 class="identity-name">{{ displayName }}</h3>
+      <span class="profile-pill">{{ user.profil?.nom || user.profil || user.role || 'N/A' }}</span>
+    </section>
+
     <section class="profile-section">
       <h3>Informations personnelles</h3>
-      <div class="info-grid">
-        <div class="info-item">
-          <label>Nom complet</label>
-          <p>{{ user.fullName || user.name }}</p>
+
+      <input #nameEditToggle type="checkbox" class="state-toggle" />
+
+      <div class="info-list">
+        <div class="info-row">
+          <label>NOM COMPLET</label>
+
+          <div class="row-content" *ngIf="!nameEditToggle.checked">
+            <p>{{ displayName }}</p>
+            <button class="icon-edit" type="button" (click)="nameEditToggle.checked = true" aria-label="Modifier le nom">
+              &#9998;
+            </button>
+          </div>
+
+          <div class="name-edit-inline" *ngIf="nameEditToggle.checked">
+            <input #fullNameInput type="text" [value]="displayName" />
+            <button
+              class="btn-save"
+              type="button"
+              (click)="user.fullName = fullNameInput.value; user.name = fullNameInput.value; user.nomComplet = fullNameInput.value; nameEditToggle.checked = false"
+            >
+              Sauvegarder
+            </button>
+            <button class="btn-cancel" type="button" (click)="nameEditToggle.checked = false">Annuler</button>
+          </div>
         </div>
-        <div class="info-item">
-          <label>Email</label>
-          <p>{{ user.email }}</p>
+
+        <div class="info-row">
+          <label>EMAIL</label>
+          <p>{{ user.email || 'N/A' }}</p>
         </div>
-        <div class="info-item">
-          <label>Entreprise</label>
-          <p>{{ user.companyName || 'N/A' }}</p>
+
+        <div class="info-row">
+          <label>ENTREPRISE</label>
+          <p>{{ user.companyName || user.entreprise || 'N/A' }}</p>
         </div>
-        <div class="info-item">
-          <label>Profil</label>
-          <p>{{ user.profil || user.role || 'N/A' }}</p>
+
+        <div class="info-row">
+          <label>PROFIL</label>
+          <p>{{ user.profil?.nom || user.profil || user.role || 'N/A' }}</p>
         </div>
       </div>
     </section>
@@ -35,8 +68,8 @@
             <tr>
               <th>Module</th>
               <th>Afficher</th>
-              <th>Créer</th>
-              <th>Éditer</th>
+              <th>Creer</th>
+              <th>Editer</th>
               <th>Supprimer</th>
             </tr>
           </thead>
@@ -54,33 +87,45 @@
     </section>
 
     <section class="profile-section">
-      <h3>Changer le mot de passe</h3>
-      <form [formGroup]="changePasswordForm" (ngSubmit)="onChangePassword()" class="password-form">
-        <div class="form-group">
-          <label>Mot de passe actuel</label>
-          <input type="password" formControlName="currentPassword" placeholder="Entrez votre mot de passe" />
-          <span class="error" *ngIf="changePasswordForm.get('currentPassword')?.touched && changePasswordForm.get('currentPassword')?.invalid">
-            Requis
-          </span>
-        </div>
+      <h3>Securite</h3>
 
-        <div class="form-group">
-          <label>Nouveau mot de passe</label>
-          <input type="password" formControlName="newPassword" placeholder="Au moins 8 caractères" />
-          <span class="error" *ngIf="changePasswordForm.get('newPassword')?.touched && changePasswordForm.get('newPassword')?.invalid">
-            Au moins 8 caractères
-          </span>
-        </div>
+      <input #passwordToggle type="checkbox" class="state-toggle" />
 
-        <div class="form-group">
-          <label>Confirmer le mot de passe</label>
-          <input type="password" formControlName="confirmPassword" placeholder="Confirmez le mot de passe" />
-        </div>
+      <button class="btn-password-toggle" type="button" *ngIf="!passwordToggle.checked" (click)="passwordToggle.checked = true">
+        Changer le mot de passe
+      </button>
 
-        <button type="submit" [disabled]="isChangingPassword">
-          {{ isChangingPassword ? 'Traitement...' : 'Modifier le mot de passe' }}
-        </button>
-      </form>
+      <div class="password-panel" *ngIf="passwordToggle.checked">
+        <form [formGroup]="changePasswordForm" (ngSubmit)="onChangePassword()" class="password-form">
+          <div class="form-group">
+            <label>Mot de passe actuel</label>
+            <input type="password" formControlName="currentPassword" placeholder="Entrez votre mot de passe" />
+            <span class="error" *ngIf="changePasswordForm.get('currentPassword')?.touched && changePasswordForm.get('currentPassword')?.invalid">
+              Requis
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Nouveau mot de passe</label>
+            <input type="password" formControlName="newPassword" placeholder="Au moins 8 caractères" />
+            <span class="error" *ngIf="changePasswordForm.get('newPassword')?.touched && changePasswordForm.get('newPassword')?.invalid">
+              Au moins 8 caractères
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Confirmer le mot de passe</label>
+            <input type="password" formControlName="confirmPassword" placeholder="Confirmez le mot de passe" />
+          </div>
+
+          <div class="password-actions">
+            <button type="submit" [disabled]="isChangingPassword">
+              {{ isChangingPassword ? 'Traitement...' : 'Modifier le mot de passe' }}
+            </button>
+            <button class="btn-cancel" type="button" (click)="passwordToggle.checked = false">Annuler</button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <div class="profile-actions">

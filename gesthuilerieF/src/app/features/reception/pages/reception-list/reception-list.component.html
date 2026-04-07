@@ -3,20 +3,6 @@
     <mat-card-title>Reception</mat-card-title>
   </mat-card-header>
   <mat-card-content>
-    <div class="toolbar">
-      <div class="toolbar-copy">
-        <h3>Historique des receptions</h3>
-        <p>Consultez l'ensemble des pesees et filtrez rapidement par lot.</p>
-
-        <div class="meta-row">
-          <span class="chip">Total: {{ allPesees.length }}</span>
-          <span class="chip" *ngIf="lotSearchValue">Resultat filtre: {{ pesees.length }}</span>
-        </div>
-      </div>
-
-      <a mat-raised-button color="primary" [routerLink]="['/pages/reception/form']">Nouvelle reception</a>
-    </div>
-
     <div class="filters-panel">
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>Filtrer par lot</mat-label>

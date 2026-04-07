@@ -9,6 +9,17 @@
     "src/main.ts"
   ],
   "include": [
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "src/app/features/reception/pages/reception-new/reception-new.component.ts",
+    "src/app/features/production/pages/production-guides/guides-consulter.component.ts",
+    "src/app/features/production/pages/production-guides/guides-creer.component.ts",
+    "src/app/features/production/pages/production-guides/guides-executer.component.ts",
+    "src/app/features/huilerie/pages/huileries-management/huileries-management.component.ts",
+    "src/app/features/matieres-premieres/pages/raw-materials-creer/raw-materials-creer.component.ts",
+    "src/app/features/matieres-premieres/pages/raw-materials-consulter/raw-materials-consulter.component.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/test.ts"
   ]
 }

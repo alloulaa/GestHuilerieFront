@@ -1,0 +1,109 @@
+<nb-card class="panel">
+  <nb-card-header>Créer une exécution de production</nb-card-header>
+  <nb-card-body>
+    <p class="panel-hint">L’exécution envoie le lot, la machine et les valeurs réelles au backend.</p>
+
+    <form class="stack-form" [formGroup]="executionForm" (ngSubmit)="submitExecution()">
+      <div class="form-grid">
+        <label class="field">
+          <span>Guide *</span>
+          <nb-select fullWidth formControlName="guideProductionId" placeholder="Sélectionner" (selectedChange)="onGuideSelectionChange($event)">
+            <nb-option *ngFor="let guide of guides" [value]="guide.idGuideProduction">
+              {{ guide.reference }} - {{ guide.nom }}
+            </nb-option>
+          </nb-select>
+        </label>
+
+        <label class="field">
+          <span>Date début *</span>
+          <input nbInput fullWidth type="date" formControlName="dateDebut" />
+        </label>
+
+        <label class="field">
+          <span>Date fin prévue *</span>
+          <input nbInput fullWidth type="date" formControlName="dateFinPrevue" />
+        </label>
+
+        <label class="field">
+          <span>Date fin réelle</span>
+          <input nbInput fullWidth type="date" formControlName="dateFinReelle" />
+        </label>
+
+        <label class="field">
+          <span>Statut *</span>
+          <nb-select fullWidth formControlName="statut">
+            <nb-option value="EN_COURS">En cours</nb-option>
+            <nb-option value="TERMINEE">Terminée</nb-option>
+            <nb-option value="ANNULEE">Annulée</nb-option>
+            <nb-option value="PLANIFIEE">Planifiée</nb-option>
+          </nb-select>
+        </label>
+
+        <label class="field">
+          <span>Rendement *</span>
+          <input nbInput fullWidth type="number" step="0.01" min="0" formControlName="rendement" placeholder="0.0" />
+        </label>
+
+        <label class="field">
+          <span>Machine *</span>
+          <nb-select fullWidth formControlName="machineId" placeholder="Sélectionner">
+            <nb-option *ngFor="let machine of machines" [value]="machine.idMachine">
+              {{ machine.nomMachine }}
+            </nb-option>
+          </nb-select>
+        </label>
+
+        <label class="field">
+          <span>Lot d'olives *</span>
+          <nb-select fullWidth formControlName="lotOlivesId" placeholder="Sélectionner">
+            <nb-option *ngFor="let lot of lots" [value]="lot.idLot">
+              {{ lotDisplayLabel(lot) }}
+            </nb-option>
+          </nb-select>
+        </label>
+
+        <label class="field">
+          <span>Matière première liée au lot</span>
+          <input nbInput fullWidth [value]="selectedLotMatierePremiereNom" readonly />
+        </label>
+
+        <label class="field field-wide">
+          <span>Observations</span>
+          <textarea nbInput fullWidth rows="3" formControlName="observations" placeholder="Première exécution"></textarea>
+        </label>
+      </div>
+
+      <div class="values-box" *ngIf="executionValueRows.length > 0; else noGuideSelected">
+        <div class="values-box__header">
+          <div>
+            <h3>Valeurs réelles</h3>
+            <p>{{ selectedGuideParameterCount }} paramètre(s) rattaché(s) au guide sélectionné</p>
+          </div>
+        </div>
+
+        <div class="value-item" formArrayName="valeursReelles" *ngFor="let row of executionValueRows; let valueIndex = index">
+          <div class="value-item__meta">
+            <strong>{{ row.stepName }}</strong>
+            <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
+          </div>
+          <div [formGroupName]="valueIndex" class="value-item__input">
+            <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noGuideSelected>
+        <div class="empty-state">Sélectionne un guide pour générer les paramètres réels attendus.</div>
+      </ng-template>
+
+      <div class="feedback success" *ngIf="executionMessage">{{ executionMessage }}</div>
+      <div class="feedback error" *ngIf="executionError">{{ executionError }}</div>
+
+      <div class="actions-row">
+        <button nbButton status="primary" type="submit" [disabled]="submittingExecution">
+          {{ submittingExecution ? 'Démarrage...' : 'Commencer exécution' }}
+        </button>
+      </div>
+    </form>
+  </nb-card-body>
+</nb-card>

@@ -43,6 +43,10 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./features/reception/pages/reception-list/reception-list.component').then(c => c.ReceptionListComponent),
       },
       {
+        path: 'reception/new',
+        loadComponent: () => import('./features/reception/pages/reception-new/reception-new.component').then(c => c.ReceptionNewComponent),
+      },
+      {
         path: 'reception/form',
         loadComponent: () => import('./features/reception/pages/reception-form/reception-form.component').then(c => c.ReceptionFormComponent),
       },
@@ -50,6 +54,21 @@ export const APP_ROUTES: Routes = [
       {
         path: 'production/guides',
         loadComponent: () => import('./features/production/pages/production-guides/production-guides.component').then(c => c.ProductionGuidesComponent),
+        children: [
+          { path: '', redirectTo: 'consulter', pathMatch: 'full' },
+          {
+            path: 'consulter',
+            loadComponent: () => import('./features/production/pages/production-guides/guides-consulter.component').then(c => c.GuidesConsulterComponent),
+          },
+          {
+            path: 'creer',
+            loadComponent: () => import('./features/production/pages/production-guides/guides-creer.component').then(c => c.GuidesCreerComponent),
+          },
+          {
+            path: 'executer',
+            loadComponent: () => import('./features/production/pages/production-guides/guides-executer.component').then(c => c.GuidesExecuterComponent),
+          },
+        ],
       },
       {
         path: 'production/quality',
@@ -59,6 +78,16 @@ export const APP_ROUTES: Routes = [
       {
         path: 'matieres-premieres',
         loadComponent: () => import('./features/matieres-premieres/pages/raw-materials/raw-materials.component').then(c => c.RawMaterialsComponent),
+        children: [
+          {
+            path: 'creer',
+            loadComponent: () => import('./features/matieres-premieres/pages/raw-materials-creer/raw-materials-creer.component').then(c => c.RawMaterialsCreerComponent),
+          },
+          {
+            path: 'consulter',
+            loadComponent: () => import('./features/matieres-premieres/pages/raw-materials-consulter/raw-materials-consulter.component').then(c => c.RawMaterialsConsulterComponent),
+          },
+        ],
       },
       // Machines
       {
@@ -72,6 +101,10 @@ export const APP_ROUTES: Routes = [
       {
         path: 'machines/management',
         loadComponent: () => import('./features/machines/pages/oil-mills-management/oil-mills-management.component').then(c => c.OilMillsManagementComponent),
+      },
+      {
+        path: 'huileries/management',
+        loadComponent: () => import('./features/huilerie/pages/huileries-management/huileries-management.component').then(c => c.HuileriesManagementComponent),
       },
       // Stock
       {

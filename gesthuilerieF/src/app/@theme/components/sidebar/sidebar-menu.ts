@@ -1,10 +1,7 @@
 import { NbMenuItem } from '@nebular/theme';
 
 export const MENU_ITEMS: NbMenuItem[] = [
-  {
-    title: 'Responsable Production',
-    group: true,
-  },
+  
   {
     title: 'Dashboard',
     icon: 'activity-outline',
@@ -14,22 +11,71 @@ export const MENU_ITEMS: NbMenuItem[] = [
   {
     title: 'Réception',
     icon: 'cube-outline',
-    link: '/pages/reception',
+    children: [
+      {
+        title: 'Gérer',
+        icon: 'plus-circle-outline',
+        link: '/pages/reception/new',
+      },
+      {
+        title: 'Consulter',
+        icon: 'list-outline',
+        link: '/pages/reception',
+      },
+    ],
   },
   {
     title: 'Guide de Production',
     icon: 'options-2-outline',
-    link: '/pages/production/guides',
+    children: [
+      {
+        title: 'Consulter',
+        icon: 'list-outline',
+        link: '/pages/production/guides/consulter',
+      },
+      {
+        title: 'Gérer',
+        icon: 'plus-circle-outline',
+        link: '/pages/production/guides/creer',
+      },
+      {
+        title: 'Exécuter',
+        icon: 'play-circle-outline',
+        link: '/pages/production/guides/executer',
+      },
+    ],
   },
   {
     title: 'Machines',
     icon: 'hard-drive-outline',
-    link: '/pages/machines',
+    children: [
+      {
+        title: 'Consulter',
+        icon: 'list-outline',
+        link: '/pages/machines',
+      },
+      {
+        title: 'Gérer',
+        icon: 'settings-outline',
+        link: '/pages/machines/management',
+      },
+    ],
   },
   {
     title: 'Matières Premières',
     icon: 'archive-outline',
-    link: '/pages/matieres-premieres',
+    children: [
+      {
+        title: 'Créer',
+        icon: 'plus-circle-outline',
+        link: '/pages/matieres-premieres/creer',
+      },
+      {
+        title: 'Consulter',
+        icon: 'list-outline',
+        link: '/pages/matieres-premieres/consulter',
+      },
+    ],
   },
   {
     title: 'Stock',
@@ -41,10 +87,7 @@ export const MENU_ITEMS: NbMenuItem[] = [
     icon: 'pricetags-outline',
     link: '/pages/lots/traceability',
   },
-  {
-    title: 'Administrateur',
-    group: true,
-  },
+  
   {
     title: 'Dashboard Admin',
     icon: 'settings-2-outline',
@@ -53,16 +96,22 @@ export const MENU_ITEMS: NbMenuItem[] = [
   {
     title: 'Gestion des Huileries',
     icon: 'home-outline',
-    link: '/pages/machines/management',
+    link: '/pages/huileries/management',
   },
   {
-    title: 'Gestion Acces',
-    icon: 'people-outline',
-    link: '/admin/profils',
-  },
-  {
-    title: 'Affectation Utilisateurs',
-    icon: 'person-done-outline',
-    link: '/admin/utilisateurs',
+    title: 'Gestion Paramétrage',
+    icon: 'settings-2-outline',
+    children: [
+      {
+        title: 'Gestion Profils & Permissions',
+        icon: 'settings-outline',
+        link: '/admin/profils',
+      },
+      {
+        title: 'Gestion Utilisateurs',
+        icon: 'person-done-outline',
+        link: '/admin/utilisateurs',
+      },
+    ],
   },
 ];

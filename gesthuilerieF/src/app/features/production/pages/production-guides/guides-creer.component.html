@@ -1,0 +1,115 @@
+<nb-card class="panel panel--execution-create">
+  <nb-card-header>Créer un guide de production</nb-card-header>
+  <nb-card-body>
+    <p class="panel-hint">Le guide suit exactement le modèle backend : guide, étapes, paramètres.</p>
+
+    <form class="stack-form" [formGroup]="guideForm" (ngSubmit)="submitGuide()">
+      <div class="form-grid">
+        <label class="field">
+          <span>Nom *</span>
+          <input nbInput fullWidth formControlName="nom" placeholder="Guide extraction campagne 2026" />
+        </label>
+
+        <label class="field field-wide">
+          <span>Description *</span>
+          <textarea nbInput fullWidth rows="3" formControlName="description" placeholder="Guide standard d'extraction"></textarea>
+        </label>
+
+        <label class="field">
+          <span>Date de création *</span>
+          <input nbInput fullWidth type="date" formControlName="dateCreation" />
+        </label>
+
+        <label class="field">
+          <span>Huilerie *</span>
+          <nb-select fullWidth formControlName="huilerieId" placeholder="Sélectionner">
+            <nb-option *ngFor="let huilerie of huileries" [value]="huilerie.idHuilerie">
+              {{ huilerie.nom }}
+            </nb-option>
+          </nb-select>
+        </label>
+      </div>
+
+      <div formArrayName="etapes" class="steps-stack">
+        <div class="step-card" *ngFor="let etape of etapes.controls; let etapeIndex = index" [formGroupName]="etapeIndex">
+          <div class="step-card__header">
+            <div>
+              <h3>Étape {{ etapeIndex + 1 }}</h3>
+              <p>Nom, ordre et paramètres associés</p>
+            </div>
+
+            <button nbButton status="danger" outline size="small" type="button" (click)="removeEtape(etapeIndex)" [disabled]="etapes.length <= 1">
+              Supprimer
+            </button>
+          </div>
+
+          <div class="form-grid form-grid--step">
+            <label class="field">
+              <span>Nom *</span>
+              <input nbInput fullWidth formControlName="nom" placeholder="Réception" />
+            </label>
+
+            <label class="field">
+              <span>Ordre *</span>
+              <input nbInput fullWidth type="number" formControlName="ordre" min="1" />
+            </label>
+
+            <label class="field field-wide">
+              <span>Description *</span>
+              <textarea nbInput fullWidth rows="2" formControlName="description" placeholder="Contrôle initial"></textarea>
+            </label>
+          </div>
+
+          <div class="parameters-box" formArrayName="parametres">
+            <div class="parameter-row" *ngFor="let parametre of getParametres(etapeIndex).controls; let parametreIndex = index" [formGroupName]="parametreIndex">
+              <div class="parameter-row__grid">
+                <label class="field">
+                  <span>Paramètre *</span>
+                  <input nbInput fullWidth formControlName="nom" placeholder="Température" />
+                </label>
+
+                <label class="field">
+                  <span>Unité *</span>
+                  <input nbInput fullWidth formControlName="uniteMesure" placeholder="C" />
+                </label>
+
+                <label class="field">
+                  <span>Valeur *</span>
+                  <input nbInput fullWidth formControlName="valeur" placeholder="25" />
+                </label>
+
+                <label class="field field-wide">
+                  <span>Description *</span>
+                  <input nbInput fullWidth formControlName="description" placeholder="Température de réception" />
+                </label>
+              </div>
+
+              <div class="parameter-row__actions">
+                <button nbButton size="tiny" status="danger" ghost type="button" (click)="removeParametre(etapeIndex, parametreIndex)" [disabled]="getParametres(etapeIndex).length <= 1">
+                  Retirer
+                </button>
+              </div>
+            </div>
+
+            <button nbButton status="info" outline size="small" type="button" (click)="addParametre(etapeIndex)">
+              Ajouter un paramètre
+            </button>
+          </div>
+        </div>
+
+        <button nbButton status="primary" outline type="button" (click)="addEtape()">
+          Ajouter une étape
+        </button>
+      </div>
+
+      <div class="feedback success" *ngIf="guideMessage">{{ guideMessage }}</div>
+      <div class="feedback error" *ngIf="guideError">{{ guideError }}</div>
+
+      <div class="actions-row">
+        <button nbButton status="primary" type="submit" [disabled]="submittingGuide">
+          {{ submittingGuide ? 'Création...' : 'Créer le guide' }}
+        </button>
+      </div>
+    </form>
+  </nb-card-body>
+</nb-card>

@@ -1,0 +1,127 @@
+<nb-card class="panel panel--list">
+  <nb-card-header>Guides enregistrés</nb-card-header>
+  <nb-card-body>
+    <div class="list-card" *ngIf="selectedGuide as guide">
+      <div class="list-card__header">
+        <div>
+          <h3>{{ guide.nom }}</h3>
+          <p>{{ guide.reference }} · {{ guide.description }}</p>
+        </div>
+        <span class="pill">{{ stepSummary(guide) }}</span>
+      </div>
+
+      <div class="guide-flow">
+        <div class="guide-step" *ngFor="let etape of guide.etapes">
+          <div class="guide-step__head">
+            <strong>{{ etape.ordre }}. {{ etape.nom }}</strong>
+            <span>{{ etape.description }}</span>
+          </div>
+
+          <div class="guide-params">
+            <span class="param-pill" *ngFor="let parametre of etape.parametres">
+              {{ parametre.nom }} · {{ parametre.valeur }} {{ parametre.uniteMesure }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Nom</th>
+            <th>Création</th>
+            <th>Huilerie</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let guide of guides" [class.is-selected]="guide.idGuideProduction === selectedGuideId">
+            <td>{{ guide.reference }}</td>
+            <td>{{ guide.nom }}</td>
+            <td>{{ guide.dateCreation }}</td>
+            <td>{{ guide.huilerieId }}</td>
+            <td class="table-actions">
+              <button nbButton size="small" outline type="button" (click)="selectGuide(guide)">Voir</button>
+              <button nbButton size="small" status="basic" outline type="button" (click)="closeGuideDetails()">Fermer</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </nb-card-body>
+</nb-card>
+
+<nb-card class="panel panel--list panel--execution-list">
+  <nb-card-header>Exécutions enregistrées</nb-card-header>
+  <nb-card-body>
+    <div class="list-card" *ngIf="selectedExecution as execution">
+      <div class="list-card__header">
+        <div>
+          <h3>{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</h3>
+          <p>{{ execution.dateDebut }} → {{ execution.dateFinPrevue }}</p>
+        </div>
+        <span class="pill" [ngClass]="statusClass(execution.statut)">{{ statusLabel(execution.statut) }}</span>
+      </div>
+
+      <div class="execution-meta">
+        <div>
+          <span>Guide</span>
+          <strong>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</strong>
+        </div>
+        <div>
+          <span>Machine</span>
+          <strong>{{ execution.machineNom || ('#' + execution.machineId) }}</strong>
+        </div>
+        <div>
+          <span>Lot olives</span>
+          <strong>{{ execution.lotOlivesReference || execution.lotOlivesVariete || ('#' + execution.lotOlivesId) }}</strong>
+        </div>
+        <div>
+          <span>Produit final</span>
+          <strong>{{ execution.produitFinalCode || execution.produitFinalNomProduit || '-' }}</strong>
+        </div>
+      </div>
+
+      <div class="value-summary" *ngIf="execution.valeursReelles.length > 0">
+        <div class="value-summary__row" *ngFor="let valeur of execution.valeursReelles">
+          <span>{{ valeur.parametreEtapeNom || ('Paramètre #' + valeur.parametreEtapeId) }}</span>
+          <strong>{{ valeur.valeurReelle }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Référence exécution</th>
+            <th>Réf. guide</th>
+            <th>Machine</th>
+            <th>Statut</th>
+            <th>Rendement</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let execution of executions" [class.is-selected]="execution.idExecutionProduction === selectedExecutionId">
+            <td>{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</td>
+            <td>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</td>
+            <td>{{ execution.machineNom || ('#' + execution.machineId) }}</td>
+            <td><span class="pill" [ngClass]="statusClass(execution.statut)">{{ statusLabel(execution.statut) }}</span></td>
+            <td>{{ execution.rendement }}</td>
+            <td class="table-actions">
+              <button nbButton size="small" outline type="button" (click)="selectExecution(execution)">Voir</button>
+              <button nbButton size="small" status="success" outline type="button" (click)="createProduitFinal(execution)" [disabled]="creatingProduitFinal">
+                {{ creatingProduitFinal ? 'Génération...' : 'Terminer' }}
+              </button>
+              <button nbButton size="small" status="basic" outline type="button" (click)="closeExecutionDetails()">Fermer</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </nb-card-body>
+</nb-card>

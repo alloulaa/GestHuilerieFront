@@ -28,20 +28,13 @@ import { catchError } from 'rxjs/operators';
 export class OilMillsManagementComponent implements OnInit {
   allHuileries: Huilerie[] = [];
   allMachines: Machine[] = [];
-  huileries: Huilerie[] = [];
   machines: Machine[] = [];
-  huilerieErrorMessage = '';
-  huilerieFilterMessage = '';
   machineFilterMessage = '';
-  huilerieSearchNom = '';
   machineSearchHuilerieNom = '';
 
-  editingHuilerieId: number | null = null;
-  editingHuilerieStatus: boolean = true;
   editingMachineId: number | null = null;
   pendingMachineDeletion: Machine | null = null;
 
-  readonly huilerieForm;
   readonly machineForm;
 
   constructor(
@@ -49,15 +42,6 @@ export class OilMillsManagementComponent implements OnInit {
     private huilerieService: HuilerieService,
     private machineService: MachineService,
   ) {
-    this.huilerieForm = this.formBuilder.group({
-      nom: ['', [Validators.required]],
-      localisation: ['', [Validators.required]],
-      type: ['', [Validators.required]],
-      certification: ['', [Validators.required]],
-      capaciteProduction: [0, [Validators.required, Validators.min(1)]],
-      entrepriseId: [1, [Validators.required, Validators.min(1)]],
-    });
-
     this.machineForm = this.formBuilder.group({
       nomMachine: ['', [Validators.required]],
       typeMachine: ['', [Validators.required]],
@@ -68,92 +52,6 @@ export class OilMillsManagementComponent implements OnInit {
   }
   ngOnInit(): void {
     this.loadData();
-  }
-
-  submitHuilerie(): void {
-    this.huilerieErrorMessage = '';
-
-    if (this.huilerieForm.invalid) {
-      this.huilerieForm.markAllAsTouched();
-      return;
-    }
-
-    if (this.editingHuilerieId !== null) {
-      const payload = this.buildHuilerieUpdatePayload(this.editingHuilerieId);
-
-      this.huilerieService.update(this.editingHuilerieId, payload).subscribe({
-        next: () => {
-          this.resetHuilerieForm();
-          this.loadData();
-        },
-        error: (error: HttpErrorResponse) => {
-          alert(this.getHttpErrorMessage(error, 'Echec de mise a jour de l\'huilerie.'));
-        },
-      });
-    } else {
-      const payload = this.buildHuilerieCreatePayload();
-
-      const duplicatedName = this.allHuileries.some(
-        (h) => h.nom.trim().toLowerCase() === payload.nom.trim().toLowerCase(),
-      );
-      if (duplicatedName) {
-        this.huilerieErrorMessage = 'L\'huilerie avec ce nom existe deja.';
-        return;
-      }
-
-      this.huilerieService.create(payload).subscribe({
-        next: () => {
-          this.resetHuilerieForm();
-          this.loadData();
-        },
-        error: (error: HttpErrorResponse) => {
-          const backendMessage = this.getHttpErrorMessage(error, 'Echec de creation de l\'huilerie.');
-          if (backendMessage.toLowerCase().includes('existe')) {
-            this.huilerieErrorMessage = 'L\'huilerie avec ce nom existe deja.';
-            return;
-          }
-          alert(backendMessage);
-        },
-      });
-    }
-  }
-
-  editHuilerie(item: Huilerie): void {
-    this.editingHuilerieId = item.idHuilerie;
-    this.editingHuilerieStatus = item.active;
-    this.huilerieForm.patchValue({
-      nom: item.nom,
-      localisation: item.localisation,
-      type: item.type,
-      certification: item.certification,
-      capaciteProduction: item.capaciteProduction,
-      entrepriseId: item.entrepriseId,
-    });
-  }
-
-  toggleHuilerieStatus(item: Huilerie): void {
-    this.huilerieService.toggleStatus(item.idHuilerie, !item.active).subscribe({
-      next: () => {
-        this.loadData();
-      },
-      error: (error: HttpErrorResponse) => {
-        alert(this.getHttpErrorMessage(error, 'Echec de changement du statut de l\'huilerie.'));
-      },
-    });
-  }
-
-  resetHuilerieForm(): void {
-    this.editingHuilerieId = null;
-    this.editingHuilerieStatus = true;
-    this.huilerieErrorMessage = '';
-    this.huilerieForm.reset({
-      nom: '',
-      localisation: '',
-      type: '',
-      certification: '',
-      capaciteProduction: 0,
-      entrepriseId: 1,
-    });
   }
 
   submitMachine(): void {
@@ -241,33 +139,6 @@ export class OilMillsManagementComponent implements OnInit {
     });
   }
 
-  searchHuilerieByNom(): void {
-    const nom = this.cleanSearchTerm(this.huilerieSearchNom);
-
-    this.huilerieFilterMessage = '';
-
-    if (!nom) {
-      this.loadData();
-      return;
-    }
-
-    const filtered = this.allHuileries.filter((h) =>
-      this.cleanSearchTerm(h.nom).includes(nom),
-    );
-
-    this.huileries = filtered;
-
-    if (filtered.length === 0) {
-      this.huilerieFilterMessage = 'Aucune huilerie trouvee pour ce nom.';
-    }
-  }
-
-  resetHuilerieFilter(): void {
-    this.huilerieSearchNom = '';
-    this.huilerieFilterMessage = '';
-    this.loadData();
-  }
-
   searchMachinesByHuilerie(): void {
     const huilerieNom = this.cleanSearchTerm(this.machineSearchHuilerieNom);
 
@@ -310,26 +181,13 @@ export class OilMillsManagementComponent implements OnInit {
     return value;
   }
 
-  trackByHuilerie(_: number, item: Huilerie): number {
-    return item.idHuilerie;
-  }
-
   trackByMachine(_: number, item: Machine): number {
     return item.idMachine;
-  }
-
-  isHuilerieFieldInvalid(fieldName: string): boolean {
-    const control = this.huilerieForm.get(fieldName);
-    return !!control && control.invalid && control.touched;
   }
 
   isMachineFieldInvalid(fieldName: string): boolean {
     const control = this.machineForm.get(fieldName);
     return !!control && control.invalid && control.touched;
-  }
-
-  get isEditingInactiveHuilerie(): boolean {
-    return this.editingHuilerieId !== null && !this.editingHuilerieStatus;
   }
 
   private loadData(): void {
@@ -339,11 +197,9 @@ export class OilMillsManagementComponent implements OnInit {
     }).subscribe(({ huileries, machines }) => {
       this.allHuileries = huileries;
       this.allMachines = machines;
-      this.huileries = huileries;
       this.machines = machines;
-      this.huilerieFilterMessage = '';
       this.machineFilterMessage = '';
-      const firstHuilerieId = this.huileries[0]?.idHuilerie;
+      const firstHuilerieId = this.allHuileries[0]?.idHuilerie;
       if (firstHuilerieId && !this.editingMachineId && Number(this.machineForm.value.huilerieId) <= 0) {
         this.machineForm.patchValue({ huilerieId: firstHuilerieId });
       }
@@ -356,44 +212,6 @@ export class OilMillsManagementComponent implements OnInit {
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
-  }
-
-  private normalizeSearchTerm(value: string): string {
-    return (value ?? '')
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[ - ]/g, '');
-  }
-
-  private buildHuilerieCreatePayload(): Huilerie {
-    const raw = this.huilerieForm.getRawValue();
-    return {
-      idHuilerie: 0,
-      nom: (raw.nom ?? '').trim(),
-      localisation: (raw.localisation ?? '').trim(),
-      type: (raw.type ?? '').trim(),
-      certification: (raw.certification ?? '').trim(),
-      capaciteProduction: Number(raw.capaciteProduction),
-      entrepriseId: Number(raw.entrepriseId),
-      active: true,
-    };
-  }
-
-  private buildHuilerieUpdatePayload(idHuilerie: number): Huilerie {
-    const raw = this.huilerieForm.getRawValue();
-    const current = this.allHuileries.find((h) => h.idHuilerie === idHuilerie);
-
-    return {
-      idHuilerie,
-      nom: (raw.nom ?? '').trim(),
-      localisation: (raw.localisation ?? '').trim(),
-      type: (raw.type ?? '').trim(),
-      certification: (raw.certification ?? '').trim(),
-      capaciteProduction: Number(raw.capaciteProduction),
-      entrepriseId: Number(raw.entrepriseId),
-      active: current?.active ?? true,
-    };
   }
 
   private buildMachinePayload(): Omit<Machine, 'idMachine'> {
