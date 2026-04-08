@@ -1,8 +1,12 @@
 <nb-card class="section-card">
-  <nb-card-header>Gestion avancee des pesees et lots</nb-card-header>
+  <nb-card-header>
+    <div class="card-head">
+      <h3>Gestion avancee des pesees et lots</h3>
+      <span class="chip">Pesees: {{ weighings.length }}</span>
+    </div>
+  </nb-card-header>
   <nb-card-body>
     <form class="entity-form" [formGroup]="weighingForm" (ngSubmit)="submitWeighing()">
-      <button type="submit">Enregistrer</button>
       <div class="form-group">
         <label class="form-label">Date pesee *</label>
         <input nbInput fullWidth type="datetime-local" formControlName="datePesee" />
@@ -34,7 +38,7 @@
       <div class="form-group" *ngIf="!isNewLotMode()">
         <label class="form-label">Lot existant *</label>
         <nb-select fullWidth formControlName="existingLotId">
-          <nb-option *ngFor="let lot of lots" [value]="lot.idLot">
+          <nb-option *ngFor="let lot of availableLotsForReception" [value]="lot.idLot">
             #{{ lot.idLot }} - {{ lot.varieteOlive }} ({{ lot.origine }})
           </nb-option>
         </nb-select>
@@ -72,17 +76,29 @@
 
       <div class="form-group" *ngIf="isNewLotMode()">
         <label class="form-label">Matiere premiere ID *</label>
-        <input nbInput fullWidth type="number" formControlName="matierePremiereId" />
+        <nb-select fullWidth formControlName="matierePremiereId">
+          <nb-option *ngFor="let mp of matieresPremieres" [value]="mp.idMatierePremiere">
+            {{ mp.reference || ('#' + mp.idMatierePremiere) }} - {{ mp.nom }}
+          </nb-option>
+        </nb-select>
       </div>
 
       <div class="form-group" *ngIf="isNewLotMode()">
         <label class="form-label">Campagne *</label>
-        <input nbInput fullWidth type="number" formControlName="campagneId" />
+        <nb-select fullWidth formControlName="campagneId">
+          <nb-option *ngFor="let c of campagnes" [value]="c">
+            {{ c }}
+          </nb-option>
+        </nb-select>
       </div>
 
       <div class="form-group">
         <label class="form-label">Huilerie ID *</label>
-        <input nbInput fullWidth type="number" formControlName="huilerieId" placeholder="1" />
+        <nb-select fullWidth formControlName="huilerieId">
+          <nb-option *ngFor="let h of huileries" [value]="h.idHuilerie">
+            #{{ h.idHuilerie }} - {{ h.nom }}
+          </nb-option>
+        </nb-select>
       </div>
 
       <div class="form-actions">
@@ -108,8 +124,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let p of weighings">
-            <td>{{ p.idPesee }}</td>
+          <tr *ngFor="let p of weighings" class="row-hover">
+            <td>{{ p.reference || ('#' + p.idPesee) }}</td>
             <td>{{ p.datePesee }}</td>
             <td>{{ p.lotId }}</td>
             <td>{{ p.poidsBrut }} kg</td>
@@ -142,7 +158,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let m of movements">
+          <tr *ngFor="let m of movements" class="row-hover">
             <td>{{ m.id }}</td>
             <td>{{ movementLabel(m.typeMouvement) }}</td>
             <td>{{ m.referenceId }}</td>

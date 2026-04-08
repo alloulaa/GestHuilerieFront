@@ -1,7 +1,7 @@
 import { NbMenuItem } from '@nebular/theme';
 
 export const MENU_ITEMS: NbMenuItem[] = [
-  
+
   {
     title: 'Dashboard',
     icon: 'activity-outline',
@@ -32,6 +32,11 @@ export const MENU_ITEMS: NbMenuItem[] = [
         title: 'Consulter',
         icon: 'list-outline',
         link: '/pages/production/guides/consulter',
+      },
+      {
+        title: 'Exécuter',
+        icon: 'play-circle-outline',
+        link: '/pages/production/guides/executer',
       },
       {
         title: 'Gérer',
@@ -82,14 +87,14 @@ export const MENU_ITEMS: NbMenuItem[] = [
     icon: 'pricetags-outline',
     link: '/pages/lots/traceability',
   },
-  
+
   {
     title: 'Dashboard Admin',
     icon: 'settings-2-outline',
     link: '/pages/dashboard/admin',
   },
   {
-    title: 'Gestion des Huileries',
+    title: 'Huileries',
     icon: 'home-outline',
     link: '/pages/huileries/management',
   },

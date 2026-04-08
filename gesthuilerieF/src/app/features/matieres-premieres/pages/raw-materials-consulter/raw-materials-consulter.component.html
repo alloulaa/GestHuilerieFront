@@ -1,5 +1,14 @@
-<nb-card>
+<nb-card class="surface-card">
   <nb-card-body>
+    <div class="panel-head">
+      <div>
+        <p class="eyebrow">Consultation</p>
+        <h3>Matieres premieres</h3>
+        <p>Vue de consultation des references et caracteristiques.</p>
+      </div>
+      <span class="chip">Total: {{ rawMaterials.length }}</span>
+    </div>
+
     <div class="table-wrap">
       <table class="crud-table">
         <thead>
@@ -9,23 +18,24 @@
             <th>Type</th>
             <th>Unite</th>
             <th>Description</th>
-           
+
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of rawMaterials">
-            <td>{{ item.idMatierePremiere }}</td>
+          <tr *ngIf="rawMaterials.length === 0">
+            <td colspan="5" class="empty">Aucune matiere premiere a afficher.</td>
+          </tr>
+          <tr *ngFor="let item of rawMaterials" class="row-hover">
+            <td class="id-cell">{{ item.reference || (item.idMatierePremiere ? ('#' + item.idMatierePremiere) : '-') }}
+            </td>
             <td>{{ item.nom }}</td>
-            <td>{{ item.type }}</td>
-            <td>{{ item.uniteMesure }}</td>
+            <td class="type-cell">{{ item.type }}</td>
+            <td class="unit-cell">{{ item.uniteMesure }}</td>
             <td>{{ item.description }}</td>
-         
+
           </tr>
         </tbody>
       </table>
     </div>
   </nb-card-body>
 </nb-card>
-
-
-

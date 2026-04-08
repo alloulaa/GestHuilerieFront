@@ -101,19 +101,3 @@
 
   </nb-card-body>
 </nb-card>
-
-<div class="confirm-overlay" *ngIf="pendingMachineDeletion" (click)="cancelMachineDeletion()">
-  <nb-card class="confirm-card" (click)="$event.stopPropagation()">
-    <nb-card-header class="confirm-title">Confirmer la suppression</nb-card-header>
-    <nb-card-body>
-      <p>
-        Voulez-vous vraiment supprimer la machine
-        <strong>{{ pendingMachineDeletion.nomMachine }}</strong> ?
-      </p>
-    </nb-card-body>
-    <nb-card-footer class="confirm-actions">
-      <button nbButton status="basic" outline type="button" (click)="cancelMachineDeletion()">Annuler</button>
-      <button nbButton status="danger" type="button" (click)="confirmMachineDeletion()">Supprimer</button>
-    </nb-card-footer>
-  </nb-card>
-</div>

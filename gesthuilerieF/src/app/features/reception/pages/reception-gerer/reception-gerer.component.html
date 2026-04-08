@@ -8,7 +8,6 @@
   </nb-card-header>
   <nb-card-body>
     <p class="error" *ngIf="formErrorMessage">{{ formErrorMessage }}</p>
-  <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
 
     <form class="entity-form" [formGroup]="form" (ngSubmit)="submit()">
       <div class="form-group">
@@ -31,15 +30,32 @@
 
       <div class="form-group">
         <label class="form-label">Lot *</label>
-        <input nbInput fullWidth type="number" formControlName="lotId" placeholder="ID lot"
-          [status]="isFieldInvalid('lotId') ? 'danger' : 'basic'" />
+        <nb-select fullWidth formControlName="lotId" [status]="isFieldInvalid('lotId') ? 'danger' : 'basic'">
+          <nb-option *ngFor="let lot of lots" [value]="lot.idLot">
+            #{{ lot.idLot }} - {{ lot.varieteOlive }} ({{ lot.origine }})
+          </nb-option>
+        </nb-select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Huilerie *</label>
+        <nb-select fullWidth formControlName="huilerieId" [status]="isFieldInvalid('huilerieId') ? 'danger' : 'basic'">
+          <nb-option *ngFor="let h of huileries" [value]="h.idHuilerie">
+            #{{ h.idHuilerie }} - {{ h.nom }}
+          </nb-option>
+        </nb-select>
+      </div>
+
+      <div class="form-group" *ngIf="lastCreatedReference && !isEditMode">
+        <label class="form-label">Référence générée</label>
+        <input nbInput fullWidth type="text" [value]="lastCreatedReference" readonly />
       </div>
 
       <div class="form-actions">
         <button nbButton status="primary" type="submit">
-          {{ editingId ? 'Mettre à jour la réception' : 'Ajouter réception' }}
+          {{ isEditMode ? 'Mettre a jour reception' : 'Ajouter reception' }}
         </button>
-        <button nbButton status="basic" type="button" *ngIf="editingId" (click)="resetForm()">
+        <button nbButton status="basic" outline type="button" *ngIf="isEditMode" (click)="resetForm()">
           Annuler
         </button>
       </div>
@@ -55,43 +71,31 @@
             <th>BRUT</th>
             <th>TARE</th>
             <th>NET</th>
-                      <th>ACTIONS</th>
+            <th>ACTIONS</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let pesee of pesees; trackBy: trackByPesee">
-            <td>{{ pesee.idPesee }}</td>
+            <td>{{ pesee.reference || ('#' + pesee.idPesee) }}</td>
             <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
             <td>{{ pesee.lotId }}</td>
             <td>{{ pesee.poidsBrut }} kg</td>
             <td>{{ pesee.poidsTare }} kg</td>
             <td>{{ pesee.poidsNet }} kg</td>
-                      <td class="actions-cell">
-                        <button nbButton ghost size="small" (click)="edit(pesee)" status="warning">
-                          <nb-icon icon="edit-outline"></nb-icon>
-                        </button>
-                        <button nbButton ghost size="small" (click)="askDelete(pesee)" status="danger">
-                          <nb-icon icon="trash-2-outline"></nb-icon>
-                        </button>
-                      </td>
+            <td class="actions-cell">
+              <button nbButton ghost size="small" (click)="edit(pesee)" status="warning" title="Modifier"
+                aria-label="Modifier la réception">
+                <nb-icon icon="edit-outline"></nb-icon>
+              </button>
+              <button nbButton ghost size="small" (click)="askDelete(pesee)" status="danger" title="Supprimer"
+                aria-label="Supprimer la réception">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- DELETE CONFIRMATION MODAL -->
-    <div class="confirmation-modal" *ngIf="pendingDeletion">
-      <div class="modal-overlay"></div>
-      <div class="modal-box">
-        <div class="modal-header">Confirmer la suppression</div>
-        <div class="modal-body">
-          Êtes-vous sûr de vouloir supprimer la réception du <strong>{{ pendingDeletion.datePesee | date:'dd/MM/yyyy HH:mm' }}</strong> ?
-        </div>
-        <div class="modal-actions">
-          <button nbButton status="basic" (click)="cancelDelete()">Annuler</button>
-          <button nbButton status="danger" (click)="confirmDelete()">Supprimer</button>
-        </div>
-      </div>
-    </div>
   </nb-card-body>
 </nb-card>

@@ -183,13 +183,10 @@
             </svg>
           </span>
           <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="********" />
-          <button
-            type="button"
-            class="toggle-visibility"
-            aria-label="Afficher ou masquer le mot de passe"
-            title="Afficher ou masquer le mot de passe"
-            (click)="togglePasswordVisibility()">
-            <span class="visually-hidden">{{ showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe' }}</span>
+          <button type="button" class="toggle-visibility" aria-label="Afficher ou masquer le mot de passe"
+            title="Afficher ou masquer le mot de passe" (click)="togglePasswordVisibility()">
+            <span class="visually-hidden">{{ showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+              }}</span>
             <svg *ngIf="!showPassword" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
               <circle cx="12" cy="12" r="3" />
@@ -203,7 +200,10 @@
           </button>
         </span>
         <span class="field-error" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
-          Le mot de passe est obligatoire.
+          <span *ngIf="loginForm.get('password')?.errors?.['required']">Le mot de passe est obligatoire.</span>
+          <span *ngIf="loginForm.get('password')?.errors?.['minlength']">
+            Minimum 8 caracteres requis.
+          </span>
         </span>
       </label>
 

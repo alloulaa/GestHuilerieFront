@@ -1,0 +1,60 @@
+:host {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    pointer-events: none;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    pointer-events: auto;
+}
+
+.confirm-shell {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 1.2rem;
+    pointer-events: none;
+}
+
+.confirm-card {
+    width: min(94vw, 460px);
+    border-radius: 14px;
+    border: 1px solid rgba(108, 133, 53, 0.22);
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.28);
+    pointer-events: auto;
+    overflow: hidden;
+
+    nb-card-header {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #22304c;
+        background: linear-gradient(90deg, rgba(107, 124, 58, 0.12), rgba(107, 124, 58, 0.05));
+        border-bottom: 1px solid rgba(108, 133, 53, 0.16);
+    }
+
+    nb-card-body {
+        p {
+            margin: 0;
+            color: #334155;
+            line-height: 1.5;
+        }
+    }
+}
+
+.confirm-card.intent-danger nb-card-header {
+    background: linear-gradient(90deg, rgba(180, 58, 48, 0.12), rgba(180, 58, 48, 0.04));
+    border-bottom-color: rgba(180, 58, 48, 0.22);
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.7rem;
+}

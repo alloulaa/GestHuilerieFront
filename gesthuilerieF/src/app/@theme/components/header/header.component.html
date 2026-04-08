@@ -30,7 +30,7 @@
     </div>
 
     <nb-actions size="small">
-      <nb-action icon="person-outline" [nbContextMenu]="userMenu" nbContextMenuTag="user-menu"></nb-action>
+      <nb-action icon="person-outline" (click)="goToProfile()"></nb-action>
     </nb-actions>
   </div>
 </div>

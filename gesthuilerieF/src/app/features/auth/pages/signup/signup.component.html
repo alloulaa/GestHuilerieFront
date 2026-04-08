@@ -208,14 +208,12 @@
               <path d="M12 13.2v3.2" />
             </svg>
           </span>
-          <input [type]="showPassword ? 'text' : 'password'" formControlName="motDePasse" placeholder="Minimum 8 caracteres" />
-          <button
-            type="button"
-            class="toggle-visibility"
-            aria-label="Afficher ou masquer le mot de passe"
-            title="Afficher ou masquer le mot de passe"
-            (click)="togglePasswordVisibility()">
-            <span class="visually-hidden">{{ showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe' }}</span>
+          <input [type]="showPassword ? 'text' : 'password'" formControlName="motDePasse"
+            placeholder="Minimum 8 caracteres" />
+          <button type="button" class="toggle-visibility" aria-label="Afficher ou masquer le mot de passe"
+            title="Afficher ou masquer le mot de passe" (click)="togglePasswordVisibility()">
+            <span class="visually-hidden">{{ showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+              }}</span>
             <svg *ngIf="!showPassword" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
               <circle cx="12" cy="12" r="3" />
@@ -242,10 +240,6 @@
         <input type="checkbox" formControlName="acceptTerms" />
         J'accepte les conditions d'utilisation et la politique de confidentialite.
       </label>
-      <span class="field-error"
-        *ngIf="signupForm.get('acceptTerms')?.invalid && signupForm.get('acceptTerms')?.touched">
-        Vous devez accepter les conditions pour continuer.
-      </span>
 
       <p class="error-message" *ngIf="errorMessage">{{ errorMessage }}</p>
 

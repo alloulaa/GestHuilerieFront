@@ -3,8 +3,14 @@
     <mat-card-title>Stock - Nouveau mouvement</mat-card-title>
   </mat-card-header>
   <mat-card-content>
+    <div class="intro">
+      <p class="eyebrow">Saisie</p>
+      <h3>Enregistrement d'un mouvement de stock</h3>
+      <p>Saisissez les informations du mouvement pour mettre a jour le stock et l'historique.</p>
+    </div>
+
     <form class="grid" [formGroup]="form" (ngSubmit)="submit()">
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Type mouvement</mat-label>
         <mat-select formControlName="typeMouvement">
           <mat-option value="ARRIVAL">Entree</mat-option>
@@ -14,27 +20,27 @@
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Reference lot</mat-label>
         <input matInput type="number" formControlName="referenceId" />
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Quantite</mat-label>
         <input matInput type="number" formControlName="quantite" />
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Date mouvement</mat-label>
         <input matInput type="datetime-local" formControlName="dateMouvement" />
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="form-field wide">
         <mat-label>Commentaire</mat-label>
         <input matInput formControlName="commentaire" />
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="form-field compact">
         <mat-label>Huilerie ID</mat-label>
         <input matInput type="number" formControlName="huilerieId" />
       </mat-form-field>

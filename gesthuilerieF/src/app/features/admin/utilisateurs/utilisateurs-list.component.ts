@@ -6,6 +6,9 @@ import { RouterModule } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { AdminService } from '../../../core/services/admin.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+import { HuilerieService } from '../../machines/services/huilerie.service';
 
 @Component({
   selector: 'app-utilisateurs-list',
@@ -17,6 +20,7 @@ import { AdminService } from '../../../core/services/admin.service';
 export class UtilisateursListComponent implements OnInit {
   utilisateurs: any[] = [];
   profils: any[] = [];
+  huileries: any[] = [];
   filterText = '';
   filterProfilId: number | null = null;
   pageSize = 10;
@@ -26,12 +30,14 @@ export class UtilisateursListComponent implements OnInit {
   userForm!: FormGroup;
   isLoading = false;
   isSaving = false;
-  message: { type: 'success' | 'error'; text: string } | null = null;
 
   constructor(
     private adminService: AdminService,
-    private fb: FormBuilder
-  ) {}
+    private fb: FormBuilder,
+    private huilerieService: HuilerieService,
+    private toastService: ToastService,
+    private confirmDialogService: ConfirmDialogService,
+  ) { }
 
   get filteredUtilisateurs(): any[] {
     return this.utilisateurs
@@ -73,15 +79,18 @@ export class UtilisateursListComponent implements OnInit {
     this.isLoading = true;
     forkJoin([
       this.adminService.getUtilisateurs(),
-      this.adminService.getProfils()
+      this.adminService.getProfils(),
+      this.huilerieService.getAll(),
     ]).subscribe({
-      next: ([usersRes, profilsRes]: any[]) => {
-        this.utilisateurs = usersRes?.data ?? [];
+      next: ([usersRes, profilsRes, huileriesRes]: any[]) => {
+        const rawUsers = Array.isArray(usersRes) ? usersRes : (usersRes?.data ?? []);
+        this.utilisateurs = rawUsers;
         this.profils = profilsRes?.data ?? [];
+        this.huileries = huileriesRes ?? [];
         this.isLoading = false;
       },
       error: () => {
-        this.showMessage('error', 'Erreur lors du chargement des donnees');
+        this.toastService.error('Erreur lors du chargement des données.');
         this.isLoading = false;
       }
     });
@@ -94,14 +103,20 @@ export class UtilisateursListComponent implements OnInit {
   }
 
   onEdit(user: any): void {
+    const userId = this.getUserId(user);
+    if (userId === null) {
+      this.toastService.error('Édition impossible: identifiant utilisateur introuvable.');
+      return;
+    }
+
     this.editingUser = user;
     this.userForm.patchValue({
       nom: user.nom,
       prenom: user.prenom,
       email: user.email,
       telephone: user.telephone,
-      profilId: user.profil?.idProfil,
-      huilierieId: user.huilerie?.id
+      profilId: user.profil?.idProfil ?? user.profilId ?? user.idProfil ?? null,
+      huilierieId: user.huilerie?.idHuilerie ?? user.huilerie?.id ?? user.huilerieId ?? user.idHuilerie ?? user.huilierieId ?? null,
     });
     this.showForm = true;
   }
@@ -113,44 +128,78 @@ export class UtilisateursListComponent implements OnInit {
     }
 
     this.isSaving = true;
+    const editingUserId = this.editingUser ? this.getUserId(this.editingUser) : null;
+    if (this.editingUser && editingUserId === null) {
+      this.toastService.error('Mise à jour impossible: identifiant utilisateur introuvable.');
+      this.isSaving = false;
+      return;
+    }
+
     const call = this.editingUser
-      ? this.adminService.updateUtilisateur(this.editingUser.idUtilisateur, this.userForm.value)
+      ? this.adminService.updateUtilisateur(editingUserId as number, this.userForm.value)
       : this.adminService.createUtilisateur(this.userForm.value);
 
     call.subscribe({
       next: () => {
         this.showForm = false;
         this.loadData();
-        this.showMessage('success', 'Utilisateur enregistre');
+        this.toastService.success('Utilisateur enregistré avec succès.');
         this.isSaving = false;
       },
       error: () => {
-        this.showMessage('error', 'Erreur lors de l\'enregistrement');
+        this.toastService.error('Erreur lors de l\'enregistrement utilisateur.');
         this.isSaving = false;
       }
     });
   }
 
   onToggleActif(user: any): void {
-    this.adminService.toggleActif(user.idUtilisateur).subscribe(() => {
-      user.actif = !user.actif;
+    const userId = this.getUserId(user);
+    if (userId === null) {
+      this.toastService.error('Activation impossible: identifiant utilisateur introuvable.');
+      return;
+    }
+
+    this.adminService.toggleUserStatus(userId, !Boolean(user.actif)).subscribe({
+      next: () => {
+        user.actif = !Boolean(user.actif);
+        this.toastService.success(`Utilisateur ${user.actif ? 'activé' : 'désactivé'} avec succès.`);
+      },
+      error: () => {
+        this.toastService.error('Erreur lors du changement de statut utilisateur.');
+      },
     });
   }
 
-  onDelete(id: number): void {
-    if (confirm('Supprimer cet utilisateur ?')) {
-      this.adminService.deleteUtilisateur(id).subscribe(() => this.loadData());
+  async onDelete(id: number): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Supprimer utilisateur',
+      message: 'Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      intent: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
     }
+
+    this.adminService.deleteUtilisateur(id).subscribe({
+      next: () => {
+        this.loadData();
+        this.toastService.success('Utilisateur supprimé avec succès.');
+      },
+      error: () => {
+        this.toastService.error('Erreur lors de la suppression utilisateur.');
+      },
+    });
   }
 
   onPageChange(page: number): void {
     this.currentPage = page;
   }
-
-  showMessage(type: 'success' | 'error', text: string): void {
-    this.message = { type, text };
-    setTimeout(() => {
-      this.message = null;
-    }, 3000);
+  private getUserId(user: any): number | null {
+    const id = Number(user?.idUtilisateur ?? user?.id ?? user?.utilisateurId ?? 0);
+    return id > 0 ? id : null;
   }
 }

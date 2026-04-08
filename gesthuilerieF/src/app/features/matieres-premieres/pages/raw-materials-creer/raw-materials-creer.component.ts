@@ -21,7 +21,7 @@ import { RawMaterialService } from '../../services/raw-material.service';
   ],
 })
 export class RawMaterialsCreerComponent {
-  editingId: number | null = null;
+  editingId: string | number | null = null;
 
   readonly rawMaterialForm;
 
@@ -66,7 +66,7 @@ export class RawMaterialsCreerComponent {
   }
 
   edit(item: MatierePremiere): void {
-    this.editingId = item.idMatierePremiere;
+    this.editingId = item.reference ?? item.idMatierePremiere ?? null;
     this.rawMaterialForm.patchValue({
       nom: item.nom,
       type: item.type,

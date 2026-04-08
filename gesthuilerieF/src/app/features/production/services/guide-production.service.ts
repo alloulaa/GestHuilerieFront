@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { GuideProduction } from '../models/production.models';
+import { GuideProduction, GuideProductionCreateDTO } from '../models/production.models';
 
 @Injectable({
     providedIn: 'root',
@@ -24,11 +24,11 @@ export class GuideProductionService {
         return this.http.get<GuideProduction>(`${this.apiUrl}/${idGuideProduction}`);
     }
 
-    create(payload: Omit<GuideProduction, 'idGuideProduction' | 'reference'>): Observable<GuideProduction> {
+    create(payload: GuideProductionCreateDTO): Observable<GuideProduction> {
         return this.http.post<GuideProduction>(this.apiUrl, payload);
     }
 
-    update(idGuideProduction: number, payload: Partial<Omit<GuideProduction, 'idGuideProduction' | 'reference'>>): Observable<GuideProduction> {
+    update(idGuideProduction: number, payload: GuideProductionCreateDTO): Observable<GuideProduction> {
         return this.http.put<GuideProduction>(`${this.apiUrl}/${idGuideProduction}`, payload);
     }
 

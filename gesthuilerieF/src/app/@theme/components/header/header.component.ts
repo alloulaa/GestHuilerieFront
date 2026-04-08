@@ -1,10 +1,7 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { NbIconModule, NbActionsModule, NbContextMenuModule, NbMenuService } from '@nebular/theme';
-import { Subject, filter, takeUntil } from 'rxjs';
-
-import { AuthService } from '../../../core/auth/auth.service';
+import { NbIconModule, NbActionsModule } from '@nebular/theme';
 
 interface SearchResultItem {
   label: string;
@@ -22,13 +19,11 @@ interface SearchResultItem {
     CommonModule,
     NbIconModule,
     NbActionsModule,
-    NbContextMenuModule,
   ],
 })
 export class HeaderComponent {
   searchQuery = '';
   searchFocused = false;
-  userMenu = [{ title: 'Profile' }, { title: 'Log out' }];
   readonly searchItems: SearchResultItem[] = [
     {
       label: 'Dashboard Production',
@@ -82,7 +77,7 @@ export class HeaderComponent {
       label: 'Traçabilité des Lots',
       description: 'Recherche et suivi de l’historique des lots',
       route: '/pages/lots/traceability',
-      keywords: ['lots',  'traçabilité'],
+      keywords: ['lots', 'traçabilité'],
     },
     {
       label: 'Gestion Acces',
@@ -94,7 +89,7 @@ export class HeaderComponent {
       label: 'Affectation Utilisateurs',
       description: 'Gestion des utilisateurs et de leurs affectations',
       route: '/admin/utilisateurs',
-      keywords: ['utilisateur',  'affectation'],
+      keywords: ['utilisateur', 'affectation'],
     },
     {
       label: 'Profil utilisateur',
@@ -103,33 +98,7 @@ export class HeaderComponent {
       keywords: ['compte', 'information'],
     },
   ];
-  private destroy$ = new Subject<void>();
-
-  constructor(
-    private menuService: NbMenuService,
-    private authService: AuthService,
-    private router: Router
-  ) {
-    this.menuService
-      .onItemClick()
-      .pipe(
-        filter(({ tag }) => tag === 'user-menu'),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(({ item }) => {
-        const action = (item?.title ?? '').toLowerCase();
-
-        if (action === 'profile') {
-          this.router.navigate(['/pages/mon-profil']);
-          return;
-        }
-
-        if (action === 'log out') {
-          this.authService.logout();
-          this.router.navigate(['/login']);
-        }
-      });
-  }
+  constructor(private router: Router) { }
 
   get filteredSearchItems(): SearchResultItem[] {
     const query = this.searchQuery.trim().toLowerCase();
@@ -174,8 +143,7 @@ export class HeaderComponent {
     }
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+  goToProfile(): void {
+    void this.router.navigate(['/pages/mon-profil']);
   }
 }

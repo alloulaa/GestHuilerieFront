@@ -35,7 +35,7 @@ export class MonProfilComponent implements OnInit {
     private toastService: ToastService,
     private fb: FormBuilder,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadUserProfile();
@@ -191,9 +191,9 @@ export class MonProfilComponent implements OnInit {
       return;
     }
 
-    const { currentPassword, newPassword } = this.changePasswordForm.value;
+    const { currentPassword, newPassword, confirmPassword } = this.changePasswordForm.value;
 
-    if (newPassword !== this.changePasswordForm.value.confirmPassword) {
+    if (newPassword !== confirmPassword) {
       this.errorMessage = 'Les mots de passe ne correspondent pas';
       return;
     }
@@ -202,13 +202,46 @@ export class MonProfilComponent implements OnInit {
     this.errorMessage = null;
     this.successMessage = null;
 
-    // Note: This would require an API endpoint for changing password
-    // For now, we'll show a placeholder message
-    setTimeout(() => {
-      this.toastService.success('Mot de passe modifié avec succès');
-      this.changePasswordForm.reset();
-      this.isChangingPassword = false;
-    }, 1000);
+    const payload = {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    };
+
+    this.authService.updateProfile(payload).subscribe({
+      next: (response) => {
+        const updatedUser = response?.utilisateur ?? response?.user ?? response?.data?.utilisateur ?? response?.data?.user ?? null;
+        if (updatedUser) {
+          this.user = {
+            ...this.user,
+            ...updatedUser,
+          };
+          this.setupFullNamePersistenceHook();
+        }
+
+        this.successMessage = 'Mot de passe modifie avec succes';
+        this.toastService.success(this.successMessage);
+        this.changePasswordForm.reset();
+      },
+      error: (error) => {
+        const backendMessage = String(error?.error?.message ?? error?.error?.error ?? '').toLowerCase();
+
+        if (backendMessage.includes('mot de passe actuel incorrect')) {
+          this.errorMessage = 'Mot de passe actuel incorrect';
+        } else if (backendMessage.includes('confirmation')) {
+          this.errorMessage = 'La confirmation du nouveau mot de passe est invalide';
+        } else if (backendMessage.includes('obligatoires')) {
+          this.errorMessage = 'Ancien mot de passe, nouveau mot de passe et confirmation sont obligatoires';
+        } else {
+          this.errorMessage = error?.error?.message ?? error?.error?.error ?? 'Echec de la modification du mot de passe';
+        }
+
+        this.toastService.error(this.errorMessage ?? 'Echec de la modification du mot de passe');
+      },
+      complete: () => {
+        this.isChangingPassword = false;
+      }
+    });
   }
 
   onLogout(): void {

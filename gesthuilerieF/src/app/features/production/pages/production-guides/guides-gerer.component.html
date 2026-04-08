@@ -1,15 +1,5 @@
 <div class="guides-gerer-container">
 
-  <!-- Messages -->
-  <div class="message-box success" *ngIf="guideMessage">
-    <div>{{ guideMessage }}</div>
-    <button class="close-msg" (click)="guideMessage = ''">✕</button>
-  </div>
-  <div class="message-box error" *ngIf="guideError">
-    <div>{{ guideError }}</div>
-    <button class="close-msg" (click)="guideError = ''">✕</button>
-  </div>
-
   <!-- GUIDES SECTION -->
   <div class="section-wrapper">
     <div class="section-header">
@@ -20,7 +10,7 @@
     </div>
 
     <!-- CREATE/EDIT GUIDE FORM -->
-    <div class="form-panel" *ngIf="!guideEditingId || guideForm.valid">
+    <div class="form-panel">
       <div class="form-header">
         <h2>{{ guideEditingId ? 'Modifier le Guide' : 'Créer un Nouveau Guide' }}</h2>
         <button class="close-form-btn" *ngIf="guideEditingId" (click)="resetGuideForm()" type="button">×</button>
@@ -104,6 +94,8 @@
                   <input class="form-input param-input" type="text" formControlName="nom" placeholder="Nom" />
                   <input class="form-input param-input" type="text" formControlName="uniteMesure" placeholder="Unité" />
                   <input class="form-input param-input" type="text" formControlName="valeur" placeholder="Valeur" />
+                  <input class="form-input param-input" type="text" formControlName="description"
+                    placeholder="Description" />
                   <button *ngIf="getParametres(i).length > 1" class="remove-param-btn" type="button"
                     (click)="removeParametre(i, j)">×</button>
                 </div>
@@ -126,7 +118,7 @@
     <!-- GUIDES TABLE/CARDS -->
     <div class="list-section">
       <h3 class="section-subtitle-title">Guides Enregistrés</h3>
-      
+
       <div class="cards-grid" *ngIf="guides.length > 0">
         <div class="management-card" *ngFor="let guide of guides; trackBy: trackByGuide">
           <div class="card-header">
@@ -153,128 +145,6 @@
       <div class="empty-state" *ngIf="guides.length === 0">
         <p>Aucun guide enregistré. Créez un nouveau guide pour commencer.</p>
       </div>
-    </div>
-  </div>
-
-  <!-- DELETE CONFIRMATION MODAL for Guide -->
-  <div class="modal-overlay" *ngIf="pendingGuideDeletion"></div>
-  <div class="modal" *ngIf="pendingGuideDeletion">
-    <div class="modal-header">
-      <h3>Confirmer la suppression</h3>
-    </div>
-    <div class="modal-body">
-      Êtes-vous sûr de vouloir supprimer le guide <strong>{{ pendingGuideDeletion.nom }}</strong> et toutes ses étapes ?
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" (click)="cancelDeleteGuide()">Annuler</button>
-      <button class="btn-confirm" (click)="confirmDeleteGuide()">Supprimer définitivement</button>
-    </div>
-  </div>
-
-  <!-- EXECUTIONS SECTION -->
-  <div class="section-wrapper">
-    <div class="section-header">
-      <div class="header-content">
-        <h1>Gérer les Exécutions</h1>
-        <p>Créez les exécutions de guides de production</p>
-      </div>
-    </div>
-
-    <!-- Messages -->
-    <div class="message-box success" *ngIf="executionMessage">
-      <div>{{ executionMessage }}</div>
-      <button class="close-msg" (click)="executionMessage = ''">✕</button>
-    </div>
-    <div class="message-box error" *ngIf="executionError">
-      <div>{{ executionError }}</div>
-      <button class="close-msg" (click)="executionError = ''">✕</button>
-    </div>
-
-    <!-- CREATE/EDIT EXECUTION FORM -->
-    <div class="form-panel">
-      <div class="form-header">
-        <h2>{{ executionEditingId ? 'Modifier l\'Exécution' : 'Créer une Nouvelle Exécution' }}</h2>
-        <button class="close-form-btn" *ngIf="executionEditingId" (click)="resetExecutionForm()" type="button">×</button>
-      </div>
-      <div class="form-content">
-        <form [formGroup]="executionForm" (ngSubmit)="submitExecution()">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Code Lot *</label>
-              <input class="form-input" type="text" formControlName="codeLot" placeholder="Code du lot"
-                [class.ng-invalid]="isExecutionFieldInvalid('codeLot')" />
-            </div>
-            <div class="form-group">
-              <label>Guide Production *</label>
-              <select class="form-select" formControlName="guideProductionId"
-                [class.ng-invalid]="isExecutionFieldInvalid('guideProductionId')">
-                <option value="">-- Sélectionner un guide --</option>
-                <option *ngFor="let guide of guides" [value]="guide.idGuideProduction">
-                  {{ guide.reference }} - {{ guide.nom }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button class="btn-primary" type="submit" [disabled]="!executionForm.valid">
-              {{ executionEditingId ? '✓ Mettre à jour' : '✓ Créer l\'exécution' }}
-            </button>
-            <button class="btn-secondary" type="button" *ngIf="executionEditingId"
-              (click)="resetExecutionForm()">Annuler</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- EXECUTIONS TABLE/CARDS -->
-    <div class="list-section">
-      <h3 class="section-subtitle-title">Exécutions Enregistrées</h3>
-
-      <div class="cards-grid" *ngIf="executions.length > 0">
-        <div class="management-card" *ngFor="let execution of executions; trackBy: trackByExecution">
-          <div class="card-header">
-            <div>
-              <div class="card-title">{{ execution.reference || ('EXE-' + execution.idExecutionProduction) }}</div>
-              <div class="card-ref">Lot: {{ execution.codeLot }}</div>
-            </div>
-            <span class="card-badge">{{ execution.statut }}</span>
-          </div>
-          <div class="card-meta">
-            <div class="card-meta-row card-meta-row--spaced">
-              <span class="card-meta-label">Guide:</span>
-              <span class="card-meta-value">{{ execution.guideProductionReference || '#' + execution.guideProductionId }}</span>
-            </div>
-            <div class="card-meta-row">
-              <span class="card-meta-label">Démarrage:</span>
-              <span class="card-meta-value">{{ execution.dateDebut | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
-          </div>
-          <div class="card-actions">
-            <button class="action-btn btn-delete action-btn--full" type="button"
-              (click)="askDeleteExecution(execution)">Supprimer</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="empty-state" *ngIf="executions.length === 0">
-        <p>Aucune exécution enregistrée. Créez une nouvelle exécution pour commencer.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- DELETE CONFIRMATION MODAL for Execution -->
-  <div class="modal-overlay" *ngIf="pendingExecutionDeletion"></div>
-  <div class="modal" *ngIf="pendingExecutionDeletion">
-    <div class="modal-header">
-      <h3>Confirmer la suppression</h3>
-    </div>
-    <div class="modal-body">
-      Êtes-vous sûr de vouloir supprimer l'exécution pour le lot <strong>{{ pendingExecutionDeletion.codeLot }}</strong> ?
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" (click)="cancelDeleteExecution()">Annuler</button>
-      <button class="btn-confirm" (click)="confirmDeleteExecution()">Supprimer définitivement</button>
     </div>
   </div>
 

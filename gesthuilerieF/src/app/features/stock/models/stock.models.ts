@@ -1,10 +1,12 @@
 export interface Pesee {
-  idPesee: number;
+  idPesee?: number;
+  reference?: string;
   datePesee: string;
   poidsBrut: number;
   poidsTare: number;
   poidsNet: number;
   lotId: number;
+  huilerieId?: number;
 }
 
 export interface ReceptionPeseeCreatePayload {

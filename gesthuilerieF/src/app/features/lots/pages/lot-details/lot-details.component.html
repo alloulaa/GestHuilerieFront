@@ -1,5 +1,14 @@
-<nb-card>
-  <nb-card-header>Details du lot</nb-card-header>
+<nb-card class="details-card">
+  <nb-card-header>
+    <div class="head-wrap">
+      <div>
+        <p class="eyebrow">Tracabilite</p>
+        <h3>Details du lot</h3>
+        <p class="subtitle">Vue detaillee des pesees, analyses et du cycle de vie du lot.</p>
+      </div>
+      <a nbButton status="basic" size="small" [routerLink]="['/pages/lots/traceability']">Retour tracabilite</a>
+    </div>
+  </nb-card-header>
   <nb-card-body *ngIf="lot as currentLot; else lotNotFound">
     <div class="lot-meta">
       <div><strong>ID:</strong> {{ currentLot.idLot }}</div>
@@ -9,7 +18,7 @@
       <div><strong>Quantite restante:</strong> {{ currentLot.quantiteRestante }} kg</div>
     </div>
 
-    <h3>Liste des pesees</h3>
+    <h3 class="section-title">Liste des pesees</h3>
     <div class="table-wrap">
       <table class="pesee-table">
         <thead>
@@ -23,53 +32,35 @@
         </thead>
         <tbody>
           <tr *ngFor="let p of pesees">
-            <td>{{ p.idPesee }}</td>
+            <td>{{ p.reference || ('#' + p.idPesee) }}</td>
             <td>{{ p.datePesee }}</td>
             <td>{{ p.poidsBrut }} kg</td>
             <td>{{ p.poidsTare }} kg</td>
             <td>{{ p.poidsNet }} kg</td>
           </tr>
           <tr *ngIf="pesees.length === 0">
-            <td colspan="5">Aucune pesee pour ce lot.</td>
+            <td colspan="5" class="empty-state">Aucune pesee pour ce lot.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <h3>Cycle de vie du lot</h3>
-    <div class="timeline">
+    <h3 class="section-title">Cycle de vie du lot</h3>
+    <div class="timeline" *ngIf="events.length > 0; else noLifecycle">
       <div class="timeline-item" *ngFor="let event of events">
-        <div class="dot"></div>
-        <div class="content">
-          <strong>{{ stageLabel(event.etape) }}</strong>
-          <p>{{ event.description }}</p>
-          <small>{{ event.date }} · {{ event.reference }}</small>
+        <span class="timeline-dot"></span>
+        <div class="timeline-content">
+          <p class="timeline-step">{{ stageLabel(event.etape) }}</p>
+          <p class="timeline-desc">{{ event.description }}</p>
+          <p class="timeline-date">{{ event.date }} · {{ event.reference }}</p>
         </div>
       </div>
     </div>
+    <ng-template #noLifecycle>
+      <p class="empty-state">Aucun evenement de cycle de vie pour ce lot.</p>
+    </ng-template>
 
-    <div class="table-wrap">
-      <table class="pesee-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Etape</th>
-            <th>Description</th>
-            <th>Reference</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let event of events">
-            <td>{{ event.date }}</td>
-            <td>{{ stageLabel(event.etape) }}</td>
-            <td>{{ event.description }}</td>
-            <td>{{ event.reference }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Analyses laboratoire</h3>
+    <h3 class="section-title">Analyses laboratoire</h3>
     <div class="table-wrap">
       <table class="pesee-table">
         <thead>
@@ -94,7 +85,7 @@
             <td>{{ analysis.classeQualiteFinale }}</td>
           </tr>
           <tr *ngIf="analyses.length === 0">
-            <td colspan="7">Aucune analyse laboratoire pour ce lot.</td>
+            <td colspan="7" class="empty-state">Aucune analyse laboratoire pour ce lot.</td>
           </tr>
         </tbody>
       </table>

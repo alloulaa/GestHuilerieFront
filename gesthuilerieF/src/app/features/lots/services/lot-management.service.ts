@@ -33,7 +33,6 @@ export interface CreatePeseeInput {
 export class LotManagementService {
   private readonly lotsSubject = new BehaviorSubject<LotOlives[]>([]);
   private readonly weighingsSubject = new BehaviorSubject<Pesee[]>([]);
-  private initialized = false;
 
   readonly lots$ = this.lotsSubject.asObservable();
   readonly weighings$ = this.weighingsSubject.asObservable();
@@ -44,11 +43,7 @@ export class LotManagementService {
     private traceabilityService: TraceabilityService,
   ) { }
 
-  loadInitialData(): Observable<void> {
-    if (this.initialized) {
-      return of(void 0);
-    }
-
+  private refreshData(): Observable<void> {
     return forkJoin({
       lots: this.lotOlivesService.getAll(),
       weighings: this.weighingService.getAll(),
@@ -56,10 +51,13 @@ export class LotManagementService {
       tap(({ lots, weighings }) => {
         this.lotsSubject.next(lots);
         this.weighingsSubject.next(weighings);
-        this.initialized = true;
       }),
       map(() => void 0),
     );
+  }
+
+  loadInitialData(): Observable<void> {
+    return this.refreshData();
   }
 
   getLotById(lotId: number): Observable<LotOlives | undefined> {
@@ -103,7 +101,7 @@ export class LotManagementService {
 
     return this.weighingService.createReception(payload).pipe(
       switchMap(created =>
-        this.loadInitialData().pipe(
+        this.refreshData().pipe(
           map(() => created),
         ),
       ),
@@ -131,7 +129,7 @@ export class LotManagementService {
 
     return this.weighingService.updateReception(idPesee, payload).pipe(
       switchMap(updated =>
-        this.loadInitialData().pipe(
+        this.refreshData().pipe(
           map(() => updated),
         ),
       ),
@@ -141,7 +139,7 @@ export class LotManagementService {
   deletePesee(idPesee: number): Observable<void> {
     return this.weighingService.delete(idPesee).pipe(
       switchMap(result =>
-        this.loadInitialData().pipe(
+        this.refreshData().pipe(
           map(() => result),
         ),
       ),

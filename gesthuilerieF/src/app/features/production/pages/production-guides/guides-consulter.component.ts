@@ -2,8 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, forwardRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbIconModule } from '@nebular/theme';
-import { ExecutionProduction, GuideProduction } from '../../models/production.models';
-import { ExecutionProductionService } from '../../services/execution-production.service';
+import { GuideProduction } from '../../models/production.models';
 import { GuideProductionService } from '../../services/guide-production.service';
 
 @Component({
@@ -16,34 +15,20 @@ import { GuideProductionService } from '../../services/guide-production.service'
 export class GuidesConsulterComponent implements OnInit {
   guides: GuideProduction[] = [];
   filteredGuides: GuideProduction[] = [];
-  executions: ExecutionProduction[] = [];
-  filteredExecutions: ExecutionProduction[] = [];
 
   guideSearchValue = '';
-  executionStatusFilter = '';
   selectedGuideId: number | null = null;
-  selectedExecutionId: number | null = null;
-
-  guideMessage = '';
-  guideError = '';
-  executionMessage = '';
-  executionError = '';
-  creatingProduitFinal = false;
 
   constructor(
     @Inject(forwardRef(() => GuideProductionService))
     private guideProductionService: GuideProductionService,
-    @Inject(forwardRef(() => ExecutionProductionService))
-    private executionProductionService: ExecutionProductionService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Ensure clean filter state on first mount.
     this.guideSearchValue = '';
-    this.executionStatusFilter = '';
 
     this.reloadGuides();
-    this.reloadExecutions();
   }
 
   filterGuides(): void {
@@ -52,8 +37,8 @@ export class GuidesConsulterComponent implements OnInit {
       this.filteredGuides = [...this.guides];
       return;
     }
-    this.filteredGuides = this.guides.filter(g => 
-      g.nom.toLowerCase().includes(search) || 
+    this.filteredGuides = this.guides.filter(g =>
+      g.nom.toLowerCase().includes(search) ||
       g.reference.toLowerCase().includes(search) ||
       g.description.toLowerCase().includes(search)
     );
@@ -64,28 +49,8 @@ export class GuidesConsulterComponent implements OnInit {
     this.filteredGuides = [...this.guides];
   }
 
-  filterExecutions(): void {
-    const status = this.executionStatusFilter?.trim().toUpperCase();
-
-    if (!status || status === 'TOUS') {
-      this.filteredExecutions = [...this.executions];
-      return;
-    }
-
-    this.filteredExecutions = this.executions.filter((e) => e.statut === status);
-  }
-
-  resetExecutionFilter(): void {
-    this.executionStatusFilter = '';
-    this.filteredExecutions = [...this.executions];
-  }
-
   get selectedGuide(): GuideProduction | undefined {
     return this.guides.find((guide) => guide.idGuideProduction === this.selectedGuideId);
-  }
-
-  get selectedExecution(): ExecutionProduction | undefined {
-    return this.executions.find((execution) => execution.idExecutionProduction === this.selectedExecutionId);
   }
 
   selectGuide(guide: GuideProduction): void {
@@ -94,62 +59,6 @@ export class GuidesConsulterComponent implements OnInit {
 
   closeGuideDetails(): void {
     this.selectedGuideId = null;
-  }
-
-  selectExecution(execution: ExecutionProduction): void {
-    this.selectedExecutionId = execution.idExecutionProduction;
-  }
-
-  closeExecutionDetails(): void {
-    this.selectedExecutionId = null;
-  }
-
-  createProduitFinal(execution: ExecutionProduction): void {
-    this.creatingProduitFinal = true;
-    this.executionError = '';
-    this.executionMessage = '';
-
-    this.executionProductionService.createProduitFinal(execution.idExecutionProduction).subscribe({
-      next: (updated) => {
-        this.creatingProduitFinal = false;
-        this.executionMessage = 'Produit final généré avec succès.';
-        this.reloadExecutions(updated.idExecutionProduction);
-      },
-      error: (error) => {
-        this.creatingProduitFinal = false;
-        this.executionError = this.readHttpError(error, 'Impossible de générer le produit final.');
-      },
-    });
-  }
-
-  statusLabel(status: string): string {
-    switch (status) {
-      case 'EN_COURS':
-        return 'En cours';
-      case 'TERMINEE':
-        return 'Terminée';
-      case 'ANNULEE':
-        return 'Annulée';
-      case 'PLANIFIEE':
-        return 'Planifiée';
-      default:
-        return status;
-    }
-  }
-
-  statusClass(status: string): string {
-    switch (status) {
-      case 'EN_COURS':
-        return 'status-warn';
-      case 'TERMINEE':
-        return 'status-success';
-      case 'ANNULEE':
-        return 'status-danger';
-      case 'PLANIFIEE':
-        return 'status-neutral';
-      default:
-        return 'status-neutral';
-    }
   }
 
   stepSummary(guide: GuideProduction): string {
@@ -174,28 +83,5 @@ export class GuidesConsulterComponent implements OnInit {
         }
       }
     });
-  }
-
-  private reloadExecutions(selectExecutionId?: number): void {
-    this.executionProductionService.getAll().subscribe((items) => {
-      this.executions = items;
-      this.filteredExecutions = [...items];
-
-      const status = this.executionStatusFilter?.trim().toUpperCase();
-      if (status && status !== 'TOUS') {
-        this.filterExecutions();
-      }
-
-      if (selectExecutionId) {
-        this.selectedExecutionId = selectExecutionId;
-      }
-    });
-  }
-
-  private readHttpError(error: unknown, fallbackMessage: string): string {
-    const possibleMessage = (error as { error?: { message?: string }; message?: string })?.error?.message
-      ?? (error as { message?: string })?.message;
-
-    return possibleMessage ? String(possibleMessage) : fallbackMessage;
   }
 }

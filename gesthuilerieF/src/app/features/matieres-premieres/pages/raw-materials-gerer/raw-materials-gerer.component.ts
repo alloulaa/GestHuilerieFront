@@ -5,6 +5,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { NbCardModule, NbInputModule, NbButtonModule, NbIconModule } from '@nebular/theme';
 import { MatierePremiere } from '../../models/raw-material.models';
 import { RawMaterialService } from '../../services/raw-material.service';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-raw-materials-gerer',
@@ -22,9 +24,7 @@ import { RawMaterialService } from '../../services/raw-material.service';
 })
 export class RawMaterialsGererComponent implements OnInit {
   rawMaterials: MatierePremiere[] = [];
-  editingId: number | null = null;
-  pendingDeletion: MatierePremiere | null = null;
-  deleteErrorMessage = '';
+  editingId: string | number | null = null;
   formErrorMessage = '';
 
   readonly form;
@@ -32,6 +32,8 @@ export class RawMaterialsGererComponent implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private rawMaterialService: RawMaterialService,
+    private toastService: ToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {
     this.form = this.formBuilder.group({
       nom: ['', [Validators.required]],
@@ -75,15 +77,17 @@ export class RawMaterialsGererComponent implements OnInit {
       next: () => {
         this.resetForm();
         this.loadRawMaterials();
+        this.toastService.success(this.editingId ? 'Matière première mise à jour avec succès.' : 'Matière première créée avec succès.');
       },
       error: (error: HttpErrorResponse) => {
         this.formErrorMessage = error?.error?.message ?? 'Erreur lors de la sauvegarde.';
+        this.toastService.error(this.formErrorMessage);
       },
     });
   }
 
   edit(item: MatierePremiere): void {
-    this.editingId = item.idMatierePremiere;
+    this.editingId = item.reference ?? item.idMatierePremiere ?? null;
     this.form.patchValue({
       nom: item.nom,
       type: item.type,
@@ -92,29 +96,31 @@ export class RawMaterialsGererComponent implements OnInit {
     });
   }
 
-  askDelete(item: MatierePremiere): void {
-    this.pendingDeletion = item;
-    this.deleteErrorMessage = '';
-  }
+  async askDelete(item: MatierePremiere): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Supprimer matière première',
+      message: `Êtes-vous sûr de vouloir supprimer ${item.nom} ?`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      intent: 'danger',
+    });
 
-  cancelDelete(): void {
-    this.pendingDeletion = null;
-  }
+    if (!confirmed) {
+      return;
+    }
 
-  confirmDelete(): void {
-    if (!this.pendingDeletion) return;
-
-    const itemToDelete = this.pendingDeletion;
-    this.rawMaterialService.delete(itemToDelete.idMatierePremiere).subscribe({
+    const identifier = item.reference ?? item.idMatierePremiere ?? 0;
+    this.rawMaterialService.delete(identifier).subscribe({
       next: () => {
-        if (this.editingId === itemToDelete.idMatierePremiere) {
+        if (this.editingId === identifier) {
           this.resetForm();
         }
-        this.pendingDeletion = null;
         this.loadRawMaterials();
+        this.toastService.success('Matière première supprimée avec succès.');
       },
       error: (error: HttpErrorResponse) => {
-        this.deleteErrorMessage = error?.error?.message ?? 'Erreur lors de la suppression.';
+        const message = error?.error?.message ?? 'Erreur lors de la suppression.';
+        this.toastService.error(message);
       },
     });
   }
@@ -136,6 +142,6 @@ export class RawMaterialsGererComponent implements OnInit {
   }
 
   trackByMaterial(index: number, item: MatierePremiere): number {
-    return item.idMatierePremiere;
+    return Number(item.idMatierePremiere ?? 0);
   }
 }

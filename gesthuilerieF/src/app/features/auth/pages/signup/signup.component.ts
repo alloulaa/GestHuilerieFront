@@ -81,12 +81,12 @@ export class SignupComponent {
       }
 
       if (termsControl?.invalid) {
+        this.errorMessage = null;
         this.toastService.show(
           'info',
           'Veuillez accepter les conditions pour continuer l\'inscription.',
           5000
         );
-        this.errorMessage = 'Vous devez accepter les conditions d\'utilisation.';
         return;
       }
 
@@ -95,6 +95,16 @@ export class SignupComponent {
     }
 
     const formValue = this.signupForm.getRawValue();
+
+    if (String(formValue.motDePasse ?? '').trim().length < 8) {
+      this.toastService.show(
+        'info',
+        'Mot de passe faible. Utilisez au moins 8 caracteres avec un chiffre et un symbole special.',
+        6500
+      );
+      this.errorMessage = 'Votre mot de passe ne respecte pas les criteres de securite.';
+      return;
+    }
 
     this.isLoading = true;
     this.errorMessage = null;
@@ -105,7 +115,7 @@ export class SignupComponent {
       .subscribe({
         next: () => {
           const email = formValue.email ?? 'votre adresse';
-          this.toastService.show('success', `Un mail de verification a ete envoye a ${email}. Verifiez votre boite mail.`, 7000);
+          this.toastService.show('success', `Un mail de verification a ete envoye a ${email}. Le lien expire dans 24 heures.`, 7000);
           this.signupForm.reset({ acceptTerms: false });
         },
         error: (error) => {

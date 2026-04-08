@@ -13,12 +13,7 @@
         <button class="icon-btn" type="button" title="Ajouter" (click)="showCreateForm = !showCreateForm">＋</button>
 
         <div class="search-wrap">
-          <input
-            type="text"
-            [(ngModel)]="searchText"
-            (input)="onSearchChange()"
-            placeholder="Rechercher un profil"
-          />
+          <input type="text" [(ngModel)]="searchText" (input)="onSearchChange()" placeholder="Rechercher un profil" />
           <span class="search-icon">⌕</span>
         </div>
       </div>
@@ -37,10 +32,6 @@
         <span>Pagination</span>
         <strong>{{ currentPage }} / {{ totalPages }}</strong>
       </div>
-    </div>
-
-    <div class="message" *ngIf="message" [class.message-success]="message.type === 'success'" [class.message-error]="message.type === 'error'">
-      {{ message.text }}
     </div>
 
     <form class="form-card" *ngIf="showCreateForm" [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
@@ -78,7 +69,8 @@
             <td>{{ profil.description || '-' }}</td>
             <td>{{ profil.createdAt || profil.dateCreation || '-' }}</td>
             <td class="text-center">
-              <button class="btn-icon" type="button" title="Gérer permissions" (click)="onViewPermissions(profil.idProfil)">🔐</button>
+              <button class="btn-icon" type="button" title="Gérer permissions"
+                (click)="onViewPermissions(profil.idProfil)">🔐</button>
             </td>
             <td class="row-actions text-center">
               <button class="btn-sm btn-primary" type="button" (click)="onEdit(profil)">Modifier</button>
@@ -101,9 +93,11 @@
       </div>
 
       <div class="pager-controls">
-        <button class="btn-ghost" type="button" [disabled]="currentPage <= 1" (click)="onPageChange(currentPage - 1)">Précédent</button>
+        <button class="btn-ghost" type="button" [disabled]="currentPage <= 1"
+          (click)="onPageChange(currentPage - 1)">Précédent</button>
         <span>Page {{ currentPage }} / {{ totalPages }}</span>
-        <button class="btn-ghost" type="button" [disabled]="currentPage >= totalPages" (click)="onPageChange(currentPage + 1)">Suivant</button>
+        <button class="btn-ghost" type="button" [disabled]="currentPage >= totalPages"
+          (click)="onPageChange(currentPage + 1)">Suivant</button>
       </div>
     </footer>
   </div>

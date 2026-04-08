@@ -18,7 +18,7 @@ export class ReceptionConsulterComponent implements OnInit {
   lotSearchValue = '';
   filterMessage = '';
 
-  constructor(private lotManagementService: LotManagementService) {}
+  constructor(private lotManagementService: LotManagementService) { }
 
   ngOnInit(): void {
     this.lotManagementService.loadInitialData().subscribe(() => {
@@ -59,6 +59,6 @@ export class ReceptionConsulterComponent implements OnInit {
   }
 
   trackByPesee(index: number, pesee: Pesee): number {
-    return pesee.idPesee;
+    return pesee.idPesee ?? index;
   }
 }

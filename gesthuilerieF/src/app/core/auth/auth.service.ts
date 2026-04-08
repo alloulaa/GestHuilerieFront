@@ -24,6 +24,54 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  private decodeJwtPayload(token: string): any | null {
+    try {
+      const payloadPart = token.split('.')[1];
+      if (!payloadPart) {
+        return null;
+      }
+
+      const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
+          .join('')
+      );
+
+      return JSON.parse(jsonPayload);
+    } catch {
+      return null;
+    }
+  }
+
+  getTokenExpirationDate(token: string): Date | null {
+    const payload = this.decodeJwtPayload(token);
+    if (!payload?.exp) {
+      return null;
+    }
+
+    return new Date(payload.exp * 1000);
+  }
+
+  isTokenExpired(token: string): boolean {
+    const expirationDate = this.getTokenExpirationDate(token);
+    if (!expirationDate) {
+      return true;
+    }
+
+    return expirationDate.getTime() <= Date.now();
+  }
+
+  getTokenTimeRemainingMs(token: string): number | null {
+    const expirationDate = this.getTokenExpirationDate(token);
+    if (!expirationDate) {
+      return null;
+    }
+
+    return Math.max(0, expirationDate.getTime() - Date.now());
+  }
+
   private extractToken(payload: any): string | null {
     return (
       payload?.token ??
@@ -39,6 +87,39 @@ export class AuthService {
 
   private extractUser(payload: any): any {
     return payload?.utilisateur ?? payload?.user ?? payload?.data?.utilisateur ?? payload?.data?.user ?? payload?.data ?? payload;
+  }
+
+  private persistProfileUpdateResponse(response: any): void {
+    const existingUser = this.getCurrentUser() ?? {};
+    const user = this.extractUser(response) ?? {};
+    const token = this.extractToken(response) ?? this.getToken();
+    const refreshToken = response?.refreshToken ?? response?.data?.refreshToken ?? this.getRefreshToken();
+
+    const storedUser = {
+      ...existingUser,
+      ...user,
+      token: token ?? undefined,
+      refreshToken: refreshToken ?? undefined,
+      permissions:
+        response?.permissions ??
+        response?.data?.permissions ??
+        user?.permissions ??
+        existingUser?.permissions ??
+        [],
+    };
+
+    localStorage.setItem('currentUser', JSON.stringify(storedUser));
+
+    if (token) {
+      localStorage.setItem('huilerie_token', token);
+      localStorage.setItem('token', token);
+    }
+
+    if (refreshToken) {
+      localStorage.setItem(this.refreshTokenKey, refreshToken);
+    }
+
+    this.currentUserSubject.next(storedUser);
   }
 
   private persistAuthResponse(response: any): void {
@@ -139,6 +220,12 @@ export class AuthService {
 
   getMe(): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/me`).pipe(tap((response) => this.persistAuthResponse(response)));
+  }
+
+  updateProfile(payload: any): Observable<any> {
+    return this.http
+      .put<any>(`${this.apiUrl}/me`, payload)
+      .pipe(tap((response) => this.persistProfileUpdateResponse(response)));
   }
 
   resetPasswordRequest(email: string): Observable<any> {

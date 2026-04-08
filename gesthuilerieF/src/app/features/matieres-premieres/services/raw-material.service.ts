@@ -20,19 +20,19 @@ export class RawMaterialService {
     return this.findAll();
   }
 
-  create(payload: Omit<MatierePremiere, 'idMatierePremiere'>): Observable<MatierePremiere> {
+  create(payload: Omit<MatierePremiere, 'idMatierePremiere' | 'reference'>): Observable<MatierePremiere> {
     return this.http.post<MatierePremiere>(this.apiUrl, payload);
   }
 
-  update(idMatierePremiere: number, payload: Partial<MatierePremiere>): Observable<MatierePremiere> {
-    return this.http.put<MatierePremiere>(`${this.apiUrl}/${idMatierePremiere}`, payload);
+  update(reference: string | number, payload: Partial<MatierePremiere>): Observable<MatierePremiere> {
+    return this.http.put<MatierePremiere>(`${this.apiUrl}/${reference}`, payload);
   }
 
-  delete(idMatierePremiere: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${idMatierePremiere}`);
+  delete(reference: string | number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${reference}`);
   }
 
-  findById(idMatierePremiere: number): Observable<MatierePremiere> {
-    return this.http.get<MatierePremiere>(`${this.apiUrl}/${idMatierePremiere}`);
+  findById(reference: string | number): Observable<MatierePremiere> {
+    return this.http.get<MatierePremiere>(`${this.apiUrl}/${reference}`);
   }
 }

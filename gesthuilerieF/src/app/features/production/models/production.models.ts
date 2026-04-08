@@ -24,6 +24,24 @@ export interface ParametreEtape {
     valeur: string;
 }
 
+export interface GuideProductionCreateDTO {
+    nom: string;
+    description: string;
+    dateCreation: string;
+    huilerieId: number;
+    etapes: Array<{
+        nom: string;
+        ordre: number;
+        description: string;
+        parametres: Array<{
+            nom: string;
+            uniteMesure: string;
+            description: string;
+            valeur: string;
+        }>;
+    }>;
+}
+
 export interface ExecutionProduction {
     idExecutionProduction: number;
     reference?: string;
@@ -44,9 +62,14 @@ export interface ExecutionProduction {
     matierePremiereId?: number;
     matierePremiereNom?: string;
     produitFinalId?: number;
+    produitFinalReference?: string | null;
     produitFinalCode?: string;
     produitFinalNomProduit?: string;
     valeursReelles: ValeurReelleParametre[];
+}
+
+export interface ExecutionProductionDTO extends ExecutionProduction {
+    produitFinalReference?: string | null;
 }
 
 export interface ExecutionProductionCreate {

@@ -30,6 +30,7 @@ export class LotTraceabilityComponent implements OnInit {
   lotSearch = '';
   selectedLotForAnalysis: LotOlives | null = null;
   analysisSaveError = '';
+  lifecycleByLot: Record<number, TraceabilityEvent[]> = {};
   finalProductsByLot: Record<number, TraceabilityEvent[]> = {};
 
   readonly analysisForm;
@@ -59,6 +60,26 @@ export class LotTraceabilityComponent implements OnInit {
 
   getFinalProducts(lotId: number): TraceabilityEvent[] {
     return this.finalProductsByLot[lotId] ?? [];
+  }
+
+  getLifecycle(lotId: number): TraceabilityEvent[] {
+    return this.lifecycleByLot[lotId] ?? [];
+  }
+
+  stageLabel(stage: TraceabilityEvent['etape']): string {
+    if (stage === 'LOT_OLIVES') {
+      return 'Reception lot';
+    }
+    if (stage === 'PESEE') {
+      return 'Pesee';
+    }
+    if (stage === 'PRODUCTION') {
+      return 'Production';
+    }
+    if (stage === 'PRODUIT_FINAL') {
+      return 'Produit final';
+    }
+    return 'Stock';
   }
 
   filteredLots(): LotOlives[] {
@@ -127,16 +148,20 @@ export class LotTraceabilityComponent implements OnInit {
 
     const requests = lots.map(lot =>
       this.traceabilityService.getLotLifecycle(lot.idLot).pipe(
-        map(events => events.filter(event => event.etape === 'PRODUIT_FINAL')),
+        map(events => [...events].sort((a, b) => String(a.date).localeCompare(String(b.date)))),
         catchError(() => of([] as TraceabilityEvent[])),
       ),
     );
 
     forkJoin(requests).subscribe(resultByLot => {
+      const lifecycleMap: Record<number, TraceabilityEvent[]> = {};
       const byLot: Record<number, TraceabilityEvent[]> = {};
       lots.forEach((lot, index) => {
-        byLot[lot.idLot] = resultByLot[index] ?? [];
+        const lifecycle = resultByLot[index] ?? [];
+        lifecycleMap[lot.idLot] = lifecycle;
+        byLot[lot.idLot] = lifecycle.filter(event => event.etape === 'PRODUIT_FINAL');
       });
+      this.lifecycleByLot = lifecycleMap;
       this.finalProductsByLot = byLot;
     });
   }

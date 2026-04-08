@@ -22,7 +22,7 @@ export class ResetPasswordRequestComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -42,7 +42,7 @@ export class ResetPasswordRequestComponent implements OnInit {
 
     this.authService.resetPasswordRequest(this.form.value.email).subscribe({
       next: () => {
-        this.successMessage = 'Si ce compte existe, un email a été envoyé.';
+        this.successMessage = 'Si ce compte existe, un email a été envoyé. Le lien expire dans 30 minutes.';
         this.isLoading = false;
         this.form.reset();
       },

@@ -1,24 +1,32 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NbCardModule, NbInputModule, NbButtonModule, NbIconModule } from '@nebular/theme';
+import { NbCardModule, NbInputModule, NbButtonModule, NbIconModule, NbSelectModule } from '@nebular/theme';
 import { Pesee } from '../../../stock/models/stock.models';
 import { LotManagementService, CreatePeseeInput } from '../../../lots/services/lot-management.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ToastService } from '../../../../core/services/toast.service';
+import { LotOlives } from '../../../lots/models/lot.models';
+import { HuilerieService } from '../../../machines/services/huilerie.service';
+import { Huilerie } from '../../../machines/models/enterprise.models';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-reception-gerer',
   standalone: true,
   templateUrl: './reception-gerer.component.html',
   styleUrls: ['./reception-gerer.component.scss'],
-  imports: [CommonModule, ReactiveFormsModule, NbCardModule, NbInputModule, NbButtonModule, NbIconModule],
+  imports: [CommonModule, ReactiveFormsModule, NbCardModule, NbInputModule, NbButtonModule, NbIconModule, NbSelectModule],
 })
 export class ReceptionGererComponent implements OnInit {
   pesees: Pesee[] = [];
+  lots: LotOlives[] = [];
+  huileries: Huilerie[] = [];
   formErrorMessage = '';
+  lastCreatedReference = '';
 
   editingId: number | null = null;
-  pendingDeletion: Pesee | null = null;
+  isEditMode = false;
   successMessage = '';
 
   readonly form;
@@ -26,6 +34,9 @@ export class ReceptionGererComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private lotManagementService: LotManagementService,
+    private toastService: ToastService,
+    private huilerieService: HuilerieService,
+    private confirmDialogService: ConfirmDialogService,
   ) {
     this.form = this.fb.group({
       datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
@@ -40,15 +51,32 @@ export class ReceptionGererComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.huilerieService.getAll().subscribe((data) => {
+      this.huileries = data;
+      const selectedHuilerieId = Number(this.form.get('huilerieId')?.value);
+      const selectedExists = this.huileries.some((h) => h.idHuilerie === selectedHuilerieId);
+      if (!selectedExists && this.huileries.length > 0) {
+        this.form.patchValue({ huilerieId: this.huileries[0].idHuilerie });
+      }
+    });
+
+    this.lotManagementService.lots$.subscribe((data) => {
+      this.lots = data;
+      const selectedLotId = Number(this.form.get('lotId')?.value);
+      const selectedExists = this.lots.some((lot) => lot.idLot === selectedLotId);
+      if (!selectedExists && this.lots.length > 0) {
+        this.form.patchValue({ lotId: this.lots[0].idLot });
+      }
+    });
+
+    this.lotManagementService.weighings$.subscribe(data => {
+      this.pesees = data;
+    });
     this.loadPesees();
   }
 
   loadPesees(): void {
-    this.lotManagementService.loadInitialData().subscribe(() => {
-      this.lotManagementService.weighings$.subscribe(data => {
-        this.pesees = data;
-      });
-    });
+    this.lotManagementService.loadInitialData().subscribe();
   }
 
   submit(): void {
@@ -71,26 +99,37 @@ export class ReceptionGererComponent implements OnInit {
       varieteOlive: '',
     };
 
-    if (this.editingId) {
+    if (this.isEditMode) {
+      if (this.editingId === null) {
+        this.formErrorMessage = 'Mise a jour impossible: identifiant de reception manquant.';
+        return;
+      }
+
       this.lotManagementService.updatePesee(this.editingId, payload).subscribe({
         next: () => {
           this.resetForm();
-          this.successMessage = 'Réception mise à jour avec succès.';
+          this.toastService.success('Réception mise à jour avec succès.');
           this.loadPesees();
         },
         error: (error: HttpErrorResponse) => {
           this.formErrorMessage = error?.error?.message ?? 'Erreur lors de la mise à jour de la réception.';
+          this.toastService.error(this.formErrorMessage);
         },
       });
     } else {
       this.lotManagementService.createPesee(payload).subscribe({
-        next: () => {
+        next: (created) => {
+          this.lastCreatedReference = created.reference ?? '';
           this.resetForm();
-          this.successMessage = 'Réception créée avec succès.';
-          this.loadPesees();
+          this.toastService.show(
+            'success',
+            `Réception ${created.reference ?? '#' + created.idPesee} créée avec succès.`,
+            5000,
+          );
         },
         error: (error: HttpErrorResponse) => {
           this.formErrorMessage = error?.error?.message ?? 'Erreur lors de l\'ajout de la réception.';
+          this.toastService.error(this.formErrorMessage);
         },
       });
     }
@@ -99,45 +138,68 @@ export class ReceptionGererComponent implements OnInit {
 
 
   edit(pesee: Pesee): void {
-    this.editingId = pesee.idPesee;
+    this.editingId = pesee.idPesee ?? null;
+    this.isEditMode = true;
+    this.formErrorMessage = '';
+    this.successMessage = '';
+    this.lastCreatedReference = '';
+
+    if (this.editingId === null) {
+      this.formErrorMessage = 'Edition impossible: identifiant de reception introuvable.';
+      this.isEditMode = false;
+      return;
+    }
+
     this.form.patchValue({
       datePesee: pesee.datePesee.slice(0, 16),
       poidsBrut: pesee.poidsBrut,
       poidsTare: pesee.poidsTare,
       lotId: pesee.lotId,
+      huilerieId: pesee.huilerieId ?? Number(this.form.get('huilerieId')?.value ?? 1),
     });
+
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
   }
 
-  askDelete(pesee: Pesee): void {
-    this.pendingDeletion = pesee;
-  }
+  async askDelete(pesee: Pesee): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Supprimer réception',
+      message: `Êtes-vous sûr de vouloir supprimer la réception du ${new Date(pesee.datePesee).toLocaleString()} ?`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      intent: 'danger',
+    });
 
-  cancelDelete(): void {
-    this.pendingDeletion = null;
-  }
+    if (!confirmed) {
+      return;
+    }
 
-  confirmDelete(): void {
-    if (!this.pendingDeletion) return;
+    const peseeToDelete = pesee;
+    if (peseeToDelete.idPesee == null) {
+      this.formErrorMessage = 'Suppression impossible: identifiant de reception manquant.';
+      this.toastService.error(this.formErrorMessage);
+      return;
+    }
 
-    const peseeToDelete = this.pendingDeletion;
     this.lotManagementService.deletePesee(peseeToDelete.idPesee).subscribe({
       next: () => {
         if (this.editingId === peseeToDelete.idPesee) {
           this.resetForm();
         }
-        this.pendingDeletion = null;
-        this.loadPesees();
+        this.toastService.success('Réception supprimée avec succès.');
       },
       error: (error: HttpErrorResponse) => {
         this.formErrorMessage = error?.error?.message ?? 'Erreur lors de la suppression.';
+        this.toastService.error(this.formErrorMessage);
       },
     });
   }
 
   resetForm(): void {
     this.editingId = null;
+    this.isEditMode = false;
     this.formErrorMessage = '';
-    this.successMessage = '';
     this.form.reset({
       datePesee: new Date().toISOString().slice(0, 16),
       poidsBrut: 0,
@@ -160,6 +222,6 @@ export class ReceptionGererComponent implements OnInit {
   }
 
   trackByPesee(index: number, pesee: Pesee): number {
-    return pesee.idPesee;
+    return pesee.idPesee ?? index;
   }
 }

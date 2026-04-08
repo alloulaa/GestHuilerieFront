@@ -7,10 +7,15 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { forkJoin } from 'rxjs';
 import { LotOlives } from '../../../lots/models/lot.models';
 import { CreatePeseeInput, LotManagementService } from '../../../lots/services/lot-management.service';
 import { Pesee } from '../../../stock/models/stock.models';
 import { WeighingService } from '../../../stock/services/weighing.service';
+import { HuilerieService } from '../../../machines/services/huilerie.service';
+import { Huilerie } from '../../../machines/models/enterprise.models';
+import { RawMaterialService } from '../../../matieres-premieres/services/raw-material.service';
+import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
 
 @Component({
   selector: 'app-reception-form',
@@ -30,6 +35,11 @@ import { WeighingService } from '../../../stock/services/weighing.service';
 })
 export class ReceptionFormComponent implements OnInit {
   lots: LotOlives[] = [];
+  weighings: Pesee[] = [];
+  availableLotsForReception: LotOlives[] = [];
+  huileries: Huilerie[] = [];
+  matieresPremieres: MatierePremiere[] = [];
+  campagnes: number[] = [];
   errorMessage = '';
   showSaveSuccessPopup = false;
   savedReception: Pesee | null = null;
@@ -41,6 +51,8 @@ export class ReceptionFormComponent implements OnInit {
     private lotManagementService: LotManagementService,
     private weighingService: WeighingService,
     private router: Router,
+    private huilerieService: HuilerieService,
+    private rawMaterialService: RawMaterialService,
   ) {
     this.form = this.formBuilder.group({
       datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
@@ -55,7 +67,7 @@ export class ReceptionFormComponent implements OnInit {
       dateRecolte: [new Date().toISOString().slice(0, 10)],
       dateReception: [new Date().toISOString().slice(0, 10)],
       dureeStockageAvantBroyage: [1],
-      matierePremiereId: [1],
+      matierePremiereId: [1, [Validators.required, Validators.min(1)]],
       campagneId: [new Date().getFullYear()],
       huilerieId: [1, [Validators.required, Validators.min(1)]],
     });
@@ -80,21 +92,37 @@ export class ReceptionFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    forkJoin({
+      huileries: this.huilerieService.getAll(),
+      matieresPremieres: this.rawMaterialService.getAll(),
+    }).subscribe(({ huileries, matieresPremieres }) => {
+      this.huileries = huileries;
+      this.matieresPremieres = matieresPremieres;
+
+      const selectedHuilerieId = Number(this.form.get('huilerieId')?.value);
+      if (!this.huileries.some((h) => h.idHuilerie === selectedHuilerieId) && this.huileries.length > 0) {
+        this.form.patchValue({ huilerieId: this.huileries[0].idHuilerie });
+      }
+
+      const selectedMatiereId = Number(this.form.get('matierePremiereId')?.value);
+      if (!this.matieresPremieres.some((m) => m.idMatierePremiere === selectedMatiereId) && this.matieresPremieres.length > 0) {
+        const firstMaterial = this.matieresPremieres[0];
+        this.form.patchValue({ matierePremiereId: firstMaterial.idMatierePremiere });
+      }
+    });
+
     this.lotManagementService.loadInitialData().subscribe(() => {
       this.lotManagementService.lots$.subscribe(data => {
         this.lots = data;
+        this.campagnes = Array.from(new Set(this.lots.map((lot) => Number(lot.campagneId)).filter((id) => !Number.isNaN(id) && id > 0))).sort((a, b) => b - a);
+        this.computeAvailableLots();
+        this.selectDefaultLot();
+      });
 
-        const selectedLotId = Number(this.form.get('existingLotId')?.value);
-        const selectedLot = this.lots.find(item => item.idLot === selectedLotId);
-
-        if (!selectedLot && this.lots.length > 0) {
-          const firstLot = this.lots[0];
-          this.form.patchValue({
-            existingLotId: firstLot.idLot,
-            origine: firstLot.origine,
-            varieteOlive: firstLot.varieteOlive,
-          });
-        }
+      this.lotManagementService.weighings$.subscribe(data => {
+        this.weighings = data;
+        this.computeAvailableLots();
+        this.selectDefaultLot();
       });
     });
   }
@@ -129,7 +157,7 @@ export class ReceptionFormComponent implements OnInit {
             dateRecolte: String(raw.dateRecolte ?? ''),
             dateReception: String(raw.dateReception ?? ''),
             dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
-            matierePremiereId: Number(raw.matierePremiereId),
+            matierePremiereId: Number(raw.matierePremiereId ?? this.matieresPremieres[0]?.idMatierePremiere ?? 1),
             campagneId: Number(raw.campagneId),
           }
           : undefined,
@@ -155,7 +183,7 @@ export class ReceptionFormComponent implements OnInit {
   }
 
   onPopupGeneratePdf(): void {
-    if (this.savedReception) {
+    if (this.savedReception?.idPesee != null) {
       this.generateReceptionPdf(this.savedReception.idPesee);
     }
     this.closePopupAndGoToList();
@@ -247,5 +275,33 @@ export class ReceptionFormComponent implements OnInit {
       },
       { emitEvent: false },
     );
+  }
+
+  private selectDefaultLot(): void {
+    if (this.isNewLotMode() || this.availableLotsForReception.length === 0) {
+      return;
+    }
+
+    const availableLot = this.availableLotsForReception[0];
+
+    if (availableLot) {
+      this.form.patchValue(
+        {
+          existingLotId: availableLot.idLot,
+          origine: availableLot.origine,
+          varieteOlive: availableLot.varieteOlive,
+        },
+        { emitEvent: false },
+      );
+      return;
+    }
+
+    this.form.patchValue({ lotMode: 'new', existingLotId: null }, { emitEvent: false });
+    this.applyLotModeValidation('new');
+  }
+
+  private computeAvailableLots(): void {
+    const receivedLotIds = new Set(this.weighings.map((pesee) => Number(pesee.lotId)).filter((id) => !Number.isNaN(id)));
+    this.availableLotsForReception = this.lots.filter((lot) => !receivedLotIds.has(Number(lot.idLot)));
   }
 }

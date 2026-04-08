@@ -30,7 +30,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let pesee of filteredPesees; trackBy: trackByPesee">
-            <td>{{ pesee.idPesee }}</td>
+            <td>{{ pesee.reference || ('#' + pesee.idPesee) }}</td>
             <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
             <td>{{ pesee.lotId }}</td>
             <td>{{ pesee.poidsBrut }} kg</td>

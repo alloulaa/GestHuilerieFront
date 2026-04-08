@@ -35,7 +35,7 @@
       <mat-form-field appearance="outline" *ngIf="!isNewLotMode()">
         <mat-label>Lot existant</mat-label>
         <mat-select formControlName="existingLotId">
-          <mat-option *ngFor="let lot of lots" [value]="lot.idLot">
+          <mat-option *ngFor="let lot of availableLotsForReception" [value]="lot.idLot">
             #{{ lot.idLot }} - {{ lot.varieteOlive }} ({{ lot.origine }})
           </mat-option>
         </mat-select>
@@ -73,17 +73,29 @@
 
       <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
         <mat-label>Matiere premiere ID</mat-label>
-        <input matInput type="number" formControlName="matierePremiereId" />
+        <mat-select formControlName="matierePremiereId">
+          <mat-option *ngFor="let mp of matieresPremieres" [value]="mp.idMatierePremiere">
+            {{ mp.reference || ('#' + mp.idMatierePremiere) }} - {{ mp.nom }}
+          </mat-option>
+        </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
         <mat-label>Campagne</mat-label>
-        <input matInput type="number" formControlName="campagneId" />
+        <mat-select formControlName="campagneId">
+          <mat-option *ngFor="let c of campagnes" [value]="c">
+            {{ c }}
+          </mat-option>
+        </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Huilerie ID</mat-label>
-        <input matInput type="number" formControlName="huilerieId" />
+        <mat-select formControlName="huilerieId">
+          <mat-option *ngFor="let h of huileries" [value]="h.idHuilerie">
+            #{{ h.idHuilerie }} - {{ h.nom }}
+          </mat-option>
+        </mat-select>
       </mat-form-field>
 
       <div class="actions">
@@ -105,7 +117,7 @@
       Voulez-vous generer un PDF avec les informations de cette reception ?
     </p>
     <div class="popup-meta" *ngIf="savedReception as reception">
-      <span>ID: {{ reception.idPesee }}</span>
+      <span>Ref: {{ reception.reference || ('#' + reception.idPesee) }}</span>
       <span>Lot: {{ reception.lotId }}</span>
       <span>Net: {{ reception.poidsNet }} kg</span>
     </div>
@@ -114,4 +126,4 @@
       <button mat-stroked-button type="button" (click)="onPopupSkipPdf()">Non, continuer</button>
     </div>
   </div>
-</div> 
+</div>

@@ -1,13 +1,14 @@
-<nb-card class="panel">
+<nb-card class="panel panel--execution-form">
   <nb-card-header>Créer une exécution de production</nb-card-header>
   <nb-card-body>
     <p class="panel-hint">L’exécution envoie le lot, la machine et les valeurs réelles au backend.</p>
 
     <form class="stack-form" [formGroup]="executionForm" (ngSubmit)="submitExecution()">
-      <div class="form-grid">
+      <div class="form-grid form-grid--execution">
         <label class="field">
           <span>Guide *</span>
-          <nb-select fullWidth formControlName="guideProductionId" placeholder="Sélectionner" (selectedChange)="onGuideSelectionChange($event)">
+          <nb-select fullWidth formControlName="guideProductionId" placeholder="Sélectionner"
+            (selectedChange)="onGuideSelectionChange($event)">
             <nb-option *ngFor="let guide of guides" [value]="guide.idGuideProduction">
               {{ guide.reference }} - {{ guide.nom }}
             </nb-option>
@@ -69,11 +70,12 @@
 
         <label class="field field-wide">
           <span>Observations</span>
-          <textarea nbInput fullWidth rows="3" formControlName="observations" placeholder="Première exécution"></textarea>
+          <textarea nbInput fullWidth rows="3" formControlName="observations"
+            placeholder="Première exécution"></textarea>
         </label>
       </div>
 
-      <div class="values-box" *ngIf="executionValueRows.length > 0; else noGuideSelected">
+      <div class="values-box values-box--execution" *ngIf="executionValueRows.length > 0; else noGuideSelected">
         <div class="values-box__header">
           <div>
             <h3>Valeurs réelles</h3>
@@ -81,7 +83,8 @@
           </div>
         </div>
 
-        <div class="value-item" formArrayName="valeursReelles" *ngFor="let row of executionValueRows; let valueIndex = index">
+        <div class="value-item value-item--execution" formArrayName="valeursReelles"
+          *ngFor="let row of executionValueRows; let valueIndex = index">
           <div class="value-item__meta">
             <strong>{{ row.stepName }}</strong>
             <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
@@ -93,14 +96,15 @@
       </div>
 
       <ng-template #noGuideSelected>
-        <div class="empty-state">Sélectionne un guide pour générer les paramètres réels attendus.</div>
+        <div class="empty-state empty-state--execution">Sélectionne un guide pour générer les paramètres réels attendus.
+        </div>
       </ng-template>
 
       <div class="feedback success" *ngIf="executionMessage">{{ executionMessage }}</div>
       <div class="feedback error" *ngIf="executionError">{{ executionError }}</div>
 
-      <div class="actions-row">
-        <button nbButton status="primary" type="submit" [disabled]="submittingExecution">
+      <div class="actions-row actions-row--execution">
+        <button nbButton status="primary" class="btn-start-execution" type="submit" [disabled]="submittingExecution">
           {{ submittingExecution ? 'Démarrage...' : 'Commencer exécution' }}
         </button>
       </div>

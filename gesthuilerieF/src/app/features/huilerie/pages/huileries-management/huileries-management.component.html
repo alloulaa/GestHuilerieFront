@@ -56,9 +56,12 @@
 
       <div class="form-group">
         <label class="form-label">Entreprise ID *</label>
-        <input nbInput fullWidth type="number" formControlName="entrepriseId" placeholder="1"
-          [status]="isHuilerieFieldInvalid('entrepriseId') ? 'danger' : 'basic'"
-          [disabled]="isEditingInactiveHuilerie" />
+        <nb-select fullWidth formControlName="entrepriseId"
+          [status]="isHuilerieFieldInvalid('entrepriseId') ? 'danger' : 'basic'" [disabled]="isEditingInactiveHuilerie">
+          <nb-option *ngFor="let entrepriseId of availableEntrepriseIds" [value]="entrepriseId">
+            {{ entrepriseId }}
+          </nb-option>
+        </nb-select>
       </div>
 
       <div class="form-actions">

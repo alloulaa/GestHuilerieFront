@@ -8,6 +8,8 @@ import { HuilerieService } from '../../services/huilerie.service';
 import { MachineService } from '../../services/machine.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-oil-mills-management',
@@ -33,7 +35,6 @@ export class OilMillsManagementComponent implements OnInit {
   machineSearchHuilerieNom = '';
 
   editingMachineId: number | null = null;
-  pendingMachineDeletion: Machine | null = null;
 
   readonly machineForm;
 
@@ -41,6 +42,8 @@ export class OilMillsManagementComponent implements OnInit {
     private formBuilder: FormBuilder,
     private huilerieService: HuilerieService,
     private machineService: MachineService,
+    private toastService: ToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {
     this.machineForm = this.formBuilder.group({
       nomMachine: ['', [Validators.required]],
@@ -69,9 +72,10 @@ export class OilMillsManagementComponent implements OnInit {
         next: () => {
           this.resetMachineForm();
           this.loadData();
+          this.toastService.success('Machine mise à jour avec succès.');
         },
         error: (error: HttpErrorResponse) => {
-          alert(this.getHttpErrorMessage(error, 'Echec de mise a jour de la machine.'));
+          this.toastService.error(this.getHttpErrorMessage(error, 'Echec de mise a jour de la machine.'));
         },
       });
     } else {
@@ -79,9 +83,10 @@ export class OilMillsManagementComponent implements OnInit {
         next: () => {
           this.resetMachineForm();
           this.loadData();
+          this.toastService.success('Machine créée avec succès.');
         },
         error: (error: HttpErrorResponse) => {
-          alert(this.getHttpErrorMessage(error, 'Echec de creation de la machine.'));
+          this.toastService.error(this.getHttpErrorMessage(error, 'Echec de creation de la machine.'));
         },
       });
     }
@@ -98,32 +103,29 @@ export class OilMillsManagementComponent implements OnInit {
     });
   }
 
-  askDeleteMachine(item: Machine): void {
-    this.pendingMachineDeletion = item;
-  }
+  async askDeleteMachine(item: Machine): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Supprimer machine',
+      message: `Voulez-vous vraiment supprimer la machine ${item.nomMachine} ?`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      intent: 'danger',
+    });
 
-  cancelMachineDeletion(): void {
-    this.pendingMachineDeletion = null;
-  }
-
-  confirmMachineDeletion(): void {
-    if (!this.pendingMachineDeletion) {
+    if (!confirmed) {
       return;
     }
 
-    const machineToDelete = this.pendingMachineDeletion;
-
-    this.machineService.delete(machineToDelete.idMachine).subscribe({
+    this.machineService.delete(item.idMachine).subscribe({
       next: () => {
-        if (this.editingMachineId === machineToDelete.idMachine) {
+        if (this.editingMachineId === item.idMachine) {
           this.resetMachineForm();
         }
-        this.pendingMachineDeletion = null;
         this.loadData();
+        this.toastService.success('Machine supprimée avec succès.');
       },
       error: (error: HttpErrorResponse) => {
-        this.pendingMachineDeletion = null;
-        alert(this.getHttpErrorMessage(error, 'Echec de suppression de la machine.'));
+        this.toastService.error(this.getHttpErrorMessage(error, 'Echec de suppression de la machine.'));
       },
     });
   }

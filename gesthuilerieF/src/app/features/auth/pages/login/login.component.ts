@@ -34,7 +34,7 @@ export class LoginComponent {
   ) {
     this.loginForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email, Validators.pattern(this.strictEmailPattern)]],
-      password: ['', [Validators.required]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       rememberMe: [true],
     });
   }
@@ -48,6 +48,12 @@ export class LoginComponent {
       if (emailControl?.invalid) {
         this.errorMessage = 'Format email invalide.';
         this.toastService.show('error', 'Adresse email invalide. Exemple: abcd@gmail.com', 5500);
+        return;
+      }
+
+      if (passwordControl?.errors?.['minlength']) {
+        this.errorMessage = 'Votre mot de passe doit contenir au moins 8 caracteres.';
+        this.toastService.show('info', 'Mot de passe faible. Utilisez au moins 8 caracteres avec un chiffre et un symbole special.', 6500);
         return;
       }
 

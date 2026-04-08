@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NbButtonModule, NbCardModule, NbIconModule, NbInputModule } from '@nebular/theme';
+import { NbButtonModule, NbCardModule, NbIconModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { Huilerie } from '../../../machines/models/enterprise.models';
 import { HuilerieService } from '../../../machines/services/huilerie.service';
 
@@ -16,6 +16,7 @@ import { HuilerieService } from '../../../machines/services/huilerie.service';
     NbInputModule,
     NbButtonModule,
     NbIconModule,
+    NbSelectModule,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -24,6 +25,7 @@ import { HuilerieService } from '../../../machines/services/huilerie.service';
 export class HuileriesManagementComponent implements OnInit {
   allHuileries: Huilerie[] = [];
   huileries: Huilerie[] = [];
+  availableEntrepriseIds: number[] = [];
   huilerieErrorMessage = '';
   huilerieFilterMessage = '';
   huilerieSearchNom = '';
@@ -181,6 +183,18 @@ export class HuileriesManagementComponent implements OnInit {
     this.huilerieService.getAll().subscribe((huileries) => {
       this.allHuileries = huileries;
       this.huileries = huileries;
+      this.availableEntrepriseIds = Array.from(
+        new Set(
+          this.allHuileries
+            .map((h) => Number(h.entrepriseId))
+            .filter((id) => !Number.isNaN(id) && id > 0),
+        ),
+      ).sort((a, b) => a - b);
+
+      const selectedEntrepriseId = Number(this.huilerieForm.get('entrepriseId')?.value);
+      if (!this.availableEntrepriseIds.includes(selectedEntrepriseId) && this.availableEntrepriseIds.length > 0) {
+        this.huilerieForm.patchValue({ entrepriseId: this.availableEntrepriseIds[0] });
+      }
       this.huilerieFilterMessage = '';
     });
   }

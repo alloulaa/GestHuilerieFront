@@ -3,7 +3,10 @@
     <mat-card-title>Stock - Mouvements et historique</mat-card-title>
   </mat-card-header>
   <mat-card-content>
-    <div class="actions">
+    <div class="actions-panel">
+      <div class="stats">
+        <span class="chip">Total: {{ movements.length }}</span>
+      </div>
       <a mat-raised-button color="primary" [routerLink]="['/pages/stock/form']">Nouveau mouvement</a>
     </div>
 
@@ -31,12 +34,11 @@
           <tr *ngIf="movements.length === 0">
             <td colspan="6" class="empty-row">Aucun mouvement a afficher.</td>
           </tr>
-          <tr *ngFor="let m of movements">
+          <tr *ngFor="let m of movements" class="row-hover">
             <td>{{ m.id }}</td>
-            <td><span class="badge" [ngClass]="movementClass(m.typeMouvement)">{{ movementLabel(m.typeMouvement)
-                }}</span></td>
+            <td class="type-cell">{{ movementLabel(m.typeMouvement) }}</td>
             <td>{{ m.referenceId }}</td>
-            <td>{{ m.quantite }}</td>
+            <td class="quantite-cell">{{ m.quantite }}</td>
             <td>{{ m.dateMouvement }}</td>
             <td>{{ m.commentaire }}</td>
           </tr>

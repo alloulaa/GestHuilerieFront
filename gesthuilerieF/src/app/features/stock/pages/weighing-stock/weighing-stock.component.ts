@@ -5,6 +5,11 @@ import { NbCardModule, NbInputModule, NbButtonModule, NbSelectModule } from '@ne
 import { Pesee, StockMovement } from '../../models/stock.models';
 import { LotOlives } from '../../../lots/models/lot.models';
 import { CreatePeseeInput, LotManagementService } from '../../../lots/services/lot-management.service';
+import { HuilerieService } from '../../../machines/services/huilerie.service';
+import { Huilerie } from '../../../machines/models/enterprise.models';
+import { RawMaterialService } from '../../../matieres-premieres/services/raw-material.service';
+import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-weighing-stock',
@@ -24,6 +29,10 @@ export class WeighingStockComponent implements OnInit {
   weighings: Pesee[] = [];
   movements: StockMovement[] = [];
   lots: LotOlives[] = [];
+  availableLotsForReception: LotOlives[] = [];
+  huileries: Huilerie[] = [];
+  matieresPremieres: MatierePremiere[] = [];
+  campagnes: number[] = [];
   errorMessage = '';
 
   readonly weighingForm;
@@ -31,6 +40,8 @@ export class WeighingStockComponent implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private lotManagementService: LotManagementService,
+    private huilerieService: HuilerieService,
+    private rawMaterialService: RawMaterialService,
   ) {
     this.weighingForm = this.formBuilder.group({
       datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
@@ -45,7 +56,7 @@ export class WeighingStockComponent implements OnInit {
       dateRecolte: [new Date().toISOString().slice(0, 10)],
       dateReception: [new Date().toISOString().slice(0, 10)],
       dureeStockageAvantBroyage: [1],
-      matierePremiereId: [1],
+      matierePremiereId: [1, [Validators.required, Validators.min(1)]],
       campagneId: [new Date().getFullYear()],
       huilerieId: [1, [Validators.required]],
     });
@@ -69,21 +80,36 @@ export class WeighingStockComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    forkJoin({
+      huileries: this.huilerieService.getAll(),
+      matieresPremieres: this.rawMaterialService.getAll(),
+    }).subscribe(({ huileries, matieresPremieres }) => {
+      this.huileries = huileries;
+      this.matieresPremieres = matieresPremieres;
+
+      const selectedHuilerieId = Number(this.weighingForm.get('huilerieId')?.value);
+      if (!this.huileries.some((h) => h.idHuilerie === selectedHuilerieId) && this.huileries.length > 0) {
+        this.weighingForm.patchValue({ huilerieId: this.huileries[0].idHuilerie });
+      }
+
+      const selectedMatiereId = Number(this.weighingForm.get('matierePremiereId')?.value);
+      if (!this.matieresPremieres.some((m) => m.idMatierePremiere === selectedMatiereId) && this.matieresPremieres.length > 0) {
+        const firstMaterial = this.matieresPremieres[0];
+        this.weighingForm.patchValue({ matierePremiereId: firstMaterial.idMatierePremiere });
+      }
+    });
+
     this.lotManagementService.loadInitialData().subscribe(() => {
       this.lotManagementService.lots$.subscribe((data: LotOlives[]) => {
         this.lots = data;
-
-        const selectedLotId = Number(this.weighingForm.get('existingLotId')?.value);
-        const selectedLot = this.lots.find(item => item.idLot === selectedLotId);
-
-        if (!selectedLot && this.lots.length > 0) {
-          this.weighingForm.patchValue({
-            existingLotId: this.lots[0].idLot,
-          });
-        }
+        this.campagnes = Array.from(new Set(this.lots.map((lot) => Number(lot.campagneId)).filter((id) => !Number.isNaN(id) && id > 0))).sort((a, b) => b - a);
+        this.computeAvailableLots();
+        this.selectDefaultLot();
       });
       this.lotManagementService.weighings$.subscribe((data: Pesee[]) => {
         this.weighings = data;
+        this.computeAvailableLots();
+        this.selectDefaultLot();
       });
 
       this.patchLotIdentityFromSelection(Number(this.weighingForm.get('existingLotId')?.value));
@@ -92,7 +118,7 @@ export class WeighingStockComponent implements OnInit {
 
   submitWeighing(): void {
     alert('submitWeighing called');
-  console.log('submitWeighing called');
+    console.log('submitWeighing called');
 
     this.errorMessage = '';
 
@@ -119,7 +145,7 @@ export class WeighingStockComponent implements OnInit {
             dateRecolte: String(raw.dateRecolte ?? ''),
             dateReception: String(raw.dateReception ?? ''),
             dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
-            matierePremiereId: Number(raw.matierePremiereId),
+            matierePremiereId: Number(raw.matierePremiereId ?? this.matieresPremieres[0]?.idMatierePremiere ?? 1),
             campagneId: Number(raw.campagneId),
           }
           : undefined,
@@ -255,6 +281,34 @@ export class WeighingStockComponent implements OnInit {
       },
       { emitEvent: false },
     );
+  }
+
+  private selectDefaultLot(): void {
+    if (this.isNewLotMode() || this.availableLotsForReception.length === 0) {
+      return;
+    }
+
+    const availableLot = this.availableLotsForReception[0];
+
+    if (availableLot) {
+      this.weighingForm.patchValue(
+        {
+          existingLotId: availableLot.idLot,
+          origine: availableLot.origine,
+          varieteOlive: availableLot.varieteOlive,
+        },
+        { emitEvent: false },
+      );
+      return;
+    }
+
+    this.weighingForm.patchValue({ lotMode: 'new', existingLotId: null }, { emitEvent: false });
+    this.applyLotModeValidation('new');
+  }
+
+  private computeAvailableLots(): void {
+    const receivedLotIds = new Set(this.weighings.map((pesee) => Number(pesee.lotId)).filter((id) => !Number.isNaN(id)));
+    this.availableLotsForReception = this.lots.filter((lot) => !receivedLotIds.has(Number(lot.idLot)));
   }
 
 }

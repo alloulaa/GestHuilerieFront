@@ -5,6 +5,8 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { Router, RouterModule } from '@angular/router';
 
 import { AdminService } from '../../../core/services/admin.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-profils-list',
@@ -25,12 +27,13 @@ export class ProfilsListComponent implements OnInit {
   editingProfil: any = null;
   createForm: FormGroup;
   editForm: FormGroup;
-  message: { type: 'success' | 'error'; text: string } | null = null;
 
   constructor(
     private adminService: AdminService,
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private toastService: ToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {
     this.createForm = this.fb.group({
       nom: ['', Validators.required],
@@ -98,7 +101,7 @@ export class ProfilsListComponent implements OnInit {
         this.isLoading = false;
       },
       error: () => {
-        this.showMessage('error', 'Erreur lors du chargement des profils');
+        this.toastService.error('Erreur lors du chargement des profils.');
         this.isLoading = false;
       }
     });
@@ -115,9 +118,9 @@ export class ProfilsListComponent implements OnInit {
         this.loadProfils();
         this.showCreateForm = false;
         this.createForm.reset({ nom: '', description: '' });
-        this.showMessage('success', 'Profil cree avec succes');
+        this.toastService.success('Profil créé avec succès.');
       },
-      error: () => this.showMessage('error', 'Erreur lors de la creation')
+      error: () => this.toastService.error('Erreur lors de la création du profil.')
     });
   }
 
@@ -132,9 +135,9 @@ export class ProfilsListComponent implements OnInit {
         this.loadProfils();
         this.showEditForm = false;
         this.editingProfil = null;
-        this.showMessage('success', 'Profil modifie avec succes');
+        this.toastService.success('Profil modifié avec succès.');
       },
-      error: () => this.showMessage('error', 'Erreur lors de la modification')
+      error: () => this.toastService.error('Erreur lors de la modification du profil.')
     });
   }
 
@@ -147,26 +150,29 @@ export class ProfilsListComponent implements OnInit {
     this.showEditForm = true;
   }
 
-  onDelete(id: number): void {
-    if (confirm('Supprimer ?')) {
-      this.adminService.deleteProfil(id).subscribe({
-        next: () => {
-          this.loadProfils();
-          this.showMessage('success', 'Profil supprime avec succes');
-        },
-        error: () => this.showMessage('error', 'Erreur lors de la suppression')
-      });
+  async onDelete(id: number): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Supprimer le profil',
+      message: 'Êtes-vous sûr de vouloir supprimer ce profil ? Cette action est irréversible.',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      intent: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
     }
+
+    this.adminService.deleteProfil(id).subscribe({
+      next: () => {
+        this.loadProfils();
+        this.toastService.success('Profil supprimé avec succès.');
+      },
+      error: () => this.toastService.error('Erreur lors de la suppression du profil.')
+    });
   }
 
   onViewPermissions(id: number): void {
     this.router.navigate(['/admin/permissions', id]);
-  }
-
-  showMessage(type: 'success' | 'error', text: string): void {
-    this.message = { type, text };
-    setTimeout(() => {
-      this.message = null;
-    }, 3000);
   }
 }

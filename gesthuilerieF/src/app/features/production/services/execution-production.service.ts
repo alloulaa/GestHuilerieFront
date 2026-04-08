@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { ExecutionProduction, ExecutionProductionCreate } from '../models/production.models';
+import { ExecutionProduction, ExecutionProductionCreate, ExecutionProductionDTO } from '../models/production.models';
 
 @Injectable({
     providedIn: 'root',
 })
 export class ExecutionProductionService {
     private readonly apiUrl = `${environment.apiUrl}/execution-productions`;
+    private readonly produitFinalApiUrl = `${environment.apiUrl}/produitsFinaux`;
 
     constructor(private http: HttpClient) { }
 
@@ -32,8 +33,14 @@ export class ExecutionProductionService {
         return this.http.put<ExecutionProduction>(`${this.apiUrl}/${idExecutionProduction}`, payload);
     }
 
-    createProduitFinal(idExecutionProduction: number): Observable<ExecutionProduction> {
-        return this.http.post<ExecutionProduction>(`${this.apiUrl}/${idExecutionProduction}/produit-final`, {});
+    createProduitFinal(execution: ExecutionProduction): Observable<ExecutionProductionDTO> {
+        const dateProduction = String(execution?.dateFinReelle ?? '').trim() || new Date().toISOString().slice(0, 19);
+        const payload = {
+            executionProductionId: execution.idExecutionProduction,
+            dateProduction,
+        };
+
+        return this.http.post<ExecutionProductionDTO>(this.produitFinalApiUrl, payload);
     }
 
     delete(idExecutionProduction: number): Observable<void> {

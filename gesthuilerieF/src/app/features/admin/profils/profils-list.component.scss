@@ -10,6 +10,10 @@
   --danger: var(--admin-danger, #b3261e);
   --success: var(--admin-success, #1f7a3a);
   --danger-text: var(--admin-danger-text, #ffffff);
+  --primary-soft: #eaf1e5;
+  --primary-soft-hover: #dfead7;
+  --danger-soft: #f8ebe9;
+  --danger-soft-hover: #f3dfdc;
 
   display: block;
   font-family: 'Plus Jakarta Sans', sans-serif;
@@ -31,12 +35,12 @@
   display: grid;
   gap: 1rem;
   padding: 0.7rem;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 70%, #e9efe1), color-mix(in srgb, var(--surface) 92%, #f6f8f2));
+  background: linear-gradient(180deg, #edf2e8, #f7f9f4);
 }
 
 .management-card {
   background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--border) 78%, var(--primary));
+  border: 1px solid var(--border);
   border-radius: 22px;
   box-shadow: 0 18px 36px rgba(16, 24, 40, 0.1);
   overflow: hidden;
@@ -48,8 +52,8 @@
   align-items: center;
   gap: 1rem;
   padding: 1.2rem 1.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, var(--primary));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 76%, #eef3e6), color-mix(in srgb, var(--surface) 90%, #dce8cf));
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #f5f8f1, #e8f0de);
 }
 
 .eyebrow {
@@ -58,7 +62,7 @@
   letter-spacing: 0.12em;
   font-size: 0.72rem;
   font-weight: 700;
-  color: color-mix(in srgb, var(--primary) 78%, #334155);
+  color: var(--primary);
 }
 
 .header-copy h2 {
@@ -82,8 +86,8 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
-  background: color-mix(in srgb, var(--surface) 90%, #edf4e4);
+  border: 1px solid var(--border);
+  background: #f1f6ea;
   color: var(--primary);
   font-size: 1.15rem;
   font-weight: 700;
@@ -103,13 +107,13 @@
   border-radius: 999px;
   border: 1px solid var(--border);
   padding: 0.65rem 2rem 0.65rem 0.9rem;
-  background: color-mix(in srgb, var(--surface) 94%, #f1f5ea);
+  background: #f6f9f2;
   color: var(--text-primary);
 }
 
 .search-wrap input:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+  border-color: var(--primary);
 }
 
 .search-icon {
@@ -128,9 +132,9 @@
 }
 
 .pill {
-  border: 1px solid color-mix(in srgb, var(--border) 70%, var(--primary));
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface) 88%, #eff4e7);
+  background: #f3f7ef;
   padding: 0.6rem 0.75rem;
   display: flex;
   justify-content: space-between;
@@ -155,25 +159,25 @@
 }
 
 .message-success {
-  background: color-mix(in srgb, var(--success) 18%, var(--surface));
+  background: rgba(31, 122, 58, 0.14);
   color: var(--success);
   border: 1px solid var(--success);
 }
 
 .message-error {
-  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+  background: rgba(179, 38, 30, 0.12);
   color: var(--danger);
   border: 1px solid var(--danger);
 }
 
 .form-card {
-  border: 1px solid color-mix(in srgb, var(--border) 78%, var(--primary));
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 1rem;
   margin: 0 1rem 1rem;
   display: grid;
   gap: 0.75rem;
-  background: color-mix(in srgb, var(--surface) 92%, #eef4e6);
+  background: #f5f8f1;
 }
 
 .form-card h3 {
@@ -210,32 +214,24 @@ select {
 
 table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 8px;
+  border-collapse: collapse;
 }
 
 thead th {
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--text-primary) 82%, #0f172a);
+  color: var(--text-primary);
   padding: 0.55rem 0.75rem;
 }
 
 tbody tr {
-  background: color-mix(in srgb, var(--surface) 94%, #eef4e7);
+  background: var(--surface);
 }
 
 tbody td {
   padding: 0.85rem 0.75rem;
-}
-
-tbody td:first-child {
-  border-radius: 10px 0 0 10px;
-}
-
-tbody td:last-child {
-  border-radius: 0 10px 10px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .text-center {
@@ -243,14 +239,13 @@ tbody td:last-child {
 }
 
 .profile-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--primary) 44%, var(--border));
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   font-weight: 600;
-  color: color-mix(in srgb, var(--text-primary) 80%, var(--primary));
+  color: var(--text-primary);
 }
 
 .btn-primary,
@@ -261,22 +256,27 @@ tbody td:last-child {
   border-radius: 10px;
   cursor: pointer;
   font-family: inherit;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 120ms ease;
 }
 
 .btn-primary {
-  background: var(--primary);
-  color: var(--surface);
+  background: var(--primary-soft);
+  color: #2f4f22;
+  border-color: #a5b997;
   padding: 0.55rem 0.9rem;
+  font-weight: 600;
 }
 
 .btn-danger {
-  background: var(--danger);
-  color: var(--danger-text);
+  background: var(--danger-soft);
+  color: #8a2f2a;
+  border-color: #ddb0ab;
   padding: 0.55rem 0.9rem;
+  font-weight: 600;
 }
 
 .btn-ghost {
-  background: transparent;
+  background: #f3f7ef;
   color: var(--text-primary);
   border-color: var(--border);
   padding: 0.55rem 0.9rem;
@@ -287,8 +287,8 @@ tbody td:last-child {
 }
 
 .btn-icon {
-  border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  border: 1px solid var(--border);
+  background: #edf4e7;
   color: var(--primary);
   border-radius: 10px;
   cursor: pointer;
@@ -296,8 +296,37 @@ tbody td:last-child {
   height: 38px;
 }
 
+.btn-primary:hover,
+.btn-sm.btn-primary:hover {
+  background: var(--primary-soft-hover);
+  border-color: #97ae87;
+  transform: translateY(-1px);
+}
+
+.btn-danger:hover,
+.btn-sm.btn-danger:hover {
+  background: var(--danger-soft-hover);
+  border-color: #cf9a95;
+  transform: translateY(-1px);
+}
+
+.btn-ghost:hover {
+  background: #eaf1e2;
+  border-color: #bdccb1;
+}
+
+.btn-icon:hover,
+.icon-btn:hover {
+  background: #e4eddc;
+  border-color: #a9be99;
+}
+
+.row-actions .btn-sm {
+  min-width: 92px;
+}
+
 .paginator-footer {
-  border-top: 1px solid color-mix(in srgb, var(--border) 80%, var(--primary));
+  border-top: 1px solid var(--border);
   padding: 0.95rem 1.1rem;
   margin: 0 1rem 1rem;
   border-radius: 12px;
@@ -305,7 +334,7 @@ tbody td:last-child {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  background: color-mix(in srgb, var(--surface) 82%, #edf4e4);
+  background: #f1f6ea;
 }
 
 .page-size,

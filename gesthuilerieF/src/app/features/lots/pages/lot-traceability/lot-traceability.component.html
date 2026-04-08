@@ -1,5 +1,14 @@
-<nb-card>
-  <nb-card-header>Tracabilite des Lots</nb-card-header>
+<nb-card class="trace-card">
+  <nb-card-header>
+    <div class="head-wrap">
+      <div>
+        <p class="eyebrow">Tracabilite</p>
+        <h3>Tracabilite des lots</h3>
+        <p class="subtitle">Suivez chaque lot sur sa ligne de vie, de la reception jusqu'au produit final.</p>
+      </div>
+      <span class="count-chip">Lots: {{ filteredLots().length }}</span>
+    </div>
+  </nb-card-header>
   <nb-card-body>
     <div class="lots-panel">
       <div class="search-row">
@@ -17,24 +26,47 @@
               <th>Origine</th>
               <th>Qte Initiale</th>
               <th>Qte Restante</th>
+              <th>Ligne de vie</th>
               <th>Produits finaux</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let lot of filteredLots()">
+            <tr *ngIf="filteredLots().length === 0">
+              <td colspan="8" class="empty-state">Aucun lot trouve pour cette recherche.</td>
+            </tr>
+            <tr *ngFor="let lot of filteredLots()" class="row-hover">
               <td>{{ lot.idLot }}</td>
               <td>{{ lot.varieteOlive }}</td>
               <td>{{ lot.origine }}</td>
               <td>{{ lot.quantiteInitiale }} kg</td>
               <td>{{ lot.quantiteRestante }} kg</td>
+              <td class="timeline-cell">
+                <ng-container *ngIf="getLifecycle(lot.idLot).length > 0; else noLifecycle">
+                  <div class="timeline">
+                    <div class="timeline-item" *ngFor="let event of getLifecycle(lot.idLot)">
+                      <span class="timeline-dot"></span>
+                      <div class="timeline-content">
+                        <p class="timeline-step">{{ stageLabel(event.etape) }}</p>
+                        <p class="timeline-desc">{{ event.description }}</p>
+                        <p class="timeline-date">{{ event.date }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </ng-container>
+                <ng-template #noLifecycle>
+                  <span class="empty-mini">Aucun evenement</span>
+                </ng-template>
+              </td>
               <td>
                 <ng-container *ngIf="getFinalProducts(lot.idLot).length > 0; else noFinalProduct">
-                  <div *ngFor="let productEvent of getFinalProducts(lot.idLot)">
+                  <div class="final-product" *ngFor="let productEvent of getFinalProducts(lot.idLot)">
                     {{ productEvent.description }}
                   </div>
                 </ng-container>
-                <ng-template #noFinalProduct>Aucun</ng-template>
+                <ng-template #noFinalProduct>
+                  <span class="empty-mini">Aucun</span>
+                </ng-template>
               </td>
               <td>
                 <a nbButton status="primary" size="small" class="lot-details-btn"

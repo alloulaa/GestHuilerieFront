@@ -4,16 +4,16 @@ import { NbMenuModule } from '@nebular/theme';
 import { PermissionService } from '../../../core/services/permission.service';
 
 @Component({
-    selector: 'ngx-sidebar-menu',
-    styleUrls: ['./sidebar-menu.component.scss'],
-    templateUrl: './sidebar-menu.component.html',
-    standalone: true,
-    imports: [NbMenuModule],
+  selector: 'ngx-sidebar-menu',
+  styleUrls: ['./sidebar-menu.component.scss'],
+  templateUrl: './sidebar-menu.component.html',
+  standalone: true,
+  imports: [NbMenuModule],
 })
 export class SidebarMenuComponent {
   private allItems = MENU_ITEMS;
 
-  constructor(private permissionService: PermissionService) {}
+  constructor(private permissionService: PermissionService) { }
 
   get items() {
     return this.allItems.filter((item) => {
@@ -32,9 +32,8 @@ export class SidebarMenuComponent {
         Stock: 'STOCK',
         'Traçabilité des Lots': 'LOTS',
         'Dashboard Admin': 'DASHBOARD_ADMIN',
-        'Gestion des Huileries': 'HUILERIES',
-        'Gestion Acces': 'COMPTES_PROFILS',
-        'Affectation Utilisateurs': 'COMPTES_PROFILS'
+        Huileries: 'HUILERIES',
+        'Gestion Paramétrage': 'COMPTES_PROFILS'
       };
 
       const moduleName = titleToModule[item.title!];
@@ -42,9 +41,8 @@ export class SidebarMenuComponent {
       // Admin items visible only to admins
       if (
         item.title === 'Dashboard Admin' ||
-        item.title === 'Gestion des Huileries' ||
-        item.title === 'Gestion Acces' ||
-        item.title === 'Affectation Utilisateurs'
+        item.title === 'Huileries' ||
+        item.title === 'Gestion Paramétrage'
       ) {
         return this.permissionService.isAdmin() || this.permissionService.hasAnyPermission('COMPTES_PROFILS');
       }
@@ -52,17 +50,17 @@ export class SidebarMenuComponent {
       // Other items visible if user has any permission on the module
       if (moduleName) {
         return this.permissionService.hasAnyPermission(moduleName)
-            || this.permissionService.isAdmin();
+          || this.permissionService.isAdmin();
       }
 
-      // Default: show item
-      return true;
+      // Default: hide unmapped items to avoid leaking sections to users without permissions.
+      return false;
     });
   }
 
   isModuleVisible(moduleName: string): boolean {
     return this.permissionService.hasAnyPermission(moduleName)
-        || this.permissionService.isAdmin();
+      || this.permissionService.isAdmin();
   }
 
   isAdminSection(): boolean {

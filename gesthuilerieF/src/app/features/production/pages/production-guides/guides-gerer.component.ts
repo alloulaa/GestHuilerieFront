@@ -8,6 +8,8 @@ import { HuilerieService } from '../../../machines/services/huilerie.service';
 import { GuideProduction, ExecutionProduction } from '../../models/production.models';
 import { GuideProductionService } from '../../services/guide-production.service';
 import { ExecutionProductionService } from '../../services/execution-production.service';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-guides-gerer',
@@ -31,11 +33,8 @@ export class GuidesGererComponent implements OnInit {
 
   guideEditingId: number | null = null;
   executionEditingId: number | null = null;
-  pendingGuideDeletion: GuideProduction | null = null;
   pendingExecutionDeletion: ExecutionProduction | null = null;
 
-  guideMessage = '';
-  guideError = '';
   executionMessage = '';
   executionError = '';
 
@@ -47,6 +46,8 @@ export class GuidesGererComponent implements OnInit {
     private guideProductionService: GuideProductionService,
     private executionProductionService: ExecutionProductionService,
     private huilerieService: HuilerieService,
+    private toastService: ToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {
     this.guideForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -142,7 +143,6 @@ export class GuidesGererComponent implements OnInit {
       return;
     }
 
-    this.guideError = '';
     const raw = this.guideForm.getRawValue();
     const payload = {
       nom: String(raw.nom ?? '').trim(),
@@ -166,22 +166,22 @@ export class GuidesGererComponent implements OnInit {
       this.guideProductionService.update(this.guideEditingId, payload).subscribe({
         next: () => {
           this.resetGuideForm();
-          this.guideMessage = 'Guide mis à jour avec succès.';
           this.loadGuides();
+          this.toastService.success('Guide mis à jour avec succès.');
         },
         error: (error: HttpErrorResponse) => {
-          this.guideError = error?.error?.message ?? 'Erreur lors de la mise à jour du guide.';
+          this.toastService.error(error?.error?.message ?? 'Erreur lors de la mise à jour du guide.');
         },
       });
     } else {
       this.guideProductionService.create(payload).subscribe({
         next: () => {
           this.resetGuideForm();
-          this.guideMessage = 'Guide créé avec succès.';
           this.loadGuides();
+          this.toastService.success('Guide créé avec succès.');
         },
         error: (error: HttpErrorResponse) => {
-          this.guideError = error?.error?.message ?? 'Erreur lors de la sauvegarde du guide.';
+          this.toastService.error(error?.error?.message ?? 'Erreur lors de la sauvegarde du guide.');
         },
       });
     }
@@ -197,36 +197,36 @@ export class GuidesGererComponent implements OnInit {
     });
   }
 
-  askDeleteGuide(guide: GuideProduction): void {
-    this.pendingGuideDeletion = guide;
-  }
+  async askDeleteGuide(guide: GuideProduction): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Supprimer guide',
+      message: `Êtes-vous sûr de vouloir supprimer le guide ${guide.nom} et toutes ses étapes ?`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      intent: 'danger',
+    });
 
-  cancelDeleteGuide(): void {
-    this.pendingGuideDeletion = null;
-  }
+    if (!confirmed) {
+      return;
+    }
 
-  confirmDeleteGuide(): void {
-    if (!this.pendingGuideDeletion) return;
-
-    const guideToDelete = this.pendingGuideDeletion;
+    const guideToDelete = guide;
     this.guideProductionService.delete(guideToDelete.idGuideProduction).subscribe({
       next: () => {
         if (this.guideEditingId === guideToDelete.idGuideProduction) {
           this.resetGuideForm();
         }
-        this.pendingGuideDeletion = null;
         this.loadGuides();
+        this.toastService.success('Guide supprimé avec succès.');
       },
       error: (error: HttpErrorResponse) => {
-        this.guideError = error?.error?.message ?? 'Erreur lors de la suppression.';
+        this.toastService.error(error?.error?.message ?? 'Erreur lors de la suppression.');
       },
     });
   }
 
   resetGuideForm(): void {
     this.guideEditingId = null;
-    this.guideMessage = '';
-    this.guideError = '';
     this.guideForm.reset({
       nom: '',
       description: '',

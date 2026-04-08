@@ -20,7 +20,7 @@
     <div class="summary" *ngIf="lastReception as r; else emptyState">
       <h3>Derniere reception</h3>
       <div class="grid">
-        <div class="item"><span>ID</span><strong>{{ r.idPesee }}</strong></div>
+        <div class="item"><span>Reference</span><strong>{{ r.reference || ('#' + r.idPesee) }}</strong></div>
         <div class="item"><span>Date</span><strong>{{ r.datePesee | date:'dd/MM/yyyy HH:mm' }}</strong></div>
         <div class="item"><span>Lot</span><strong>{{ r.lotId }}</strong></div>
         <div class="item"><span>Poids net</span><strong>{{ r.poidsNet }} kg</strong></div>
@@ -35,7 +35,7 @@
       <table class="crud-table reception-table">
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Reference</th>
             <th>Date</th>
             <th>Lot</th>
             <th>Brut</th>
@@ -48,7 +48,7 @@
             <td colspan="6" class="table-empty">Aucune reception a afficher.</td>
           </tr>
           <tr *ngFor="let pesee of pesees">
-            <td>{{ pesee.idPesee }}</td>
+            <td>{{ pesee.reference || ('#' + pesee.idPesee) }}</td>
             <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
             <td>{{ pesee.lotId }}</td>
             <td>{{ pesee.poidsBrut }} kg</td>

@@ -24,7 +24,7 @@ export class RawMaterialsConsulterComponent implements OnInit {
 
   constructor(
     private rawMaterialService: RawMaterialService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadRawMaterials();
@@ -59,10 +59,11 @@ export class RawMaterialsConsulterComponent implements OnInit {
 
     const rawMaterialToDelete = this.pendingRawMaterialDeletion;
     this.deleteErrorMessage = '';
+    const identifier = rawMaterialToDelete.reference ?? rawMaterialToDelete.idMatierePremiere ?? 0;
 
-    this.rawMaterialService.delete(rawMaterialToDelete.idMatierePremiere).subscribe({
+    this.rawMaterialService.delete(identifier).subscribe({
       next: () => {
-        this.rawMaterials = this.rawMaterials.filter(current => current.idMatierePremiere !== rawMaterialToDelete.idMatierePremiere);
+        this.rawMaterials = this.rawMaterials.filter(current => (current.reference ?? current.idMatierePremiere) !== identifier);
         this.pendingRawMaterialDeletion = null;
       },
       error: (error: HttpErrorResponse) => {
