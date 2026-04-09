@@ -17,7 +17,7 @@
     <p class="error" *ngIf="filterMessage">{{ filterMessage }}</p>
 
     <div class="table-wrap">
-      <table class="crud-table">
+      <table class="reception-table">
         <thead>
           <tr>
             <th>REFERENCE</th>
@@ -29,6 +29,9 @@
           </tr>
         </thead>
         <tbody>
+          <tr *ngIf="filteredPesees.length === 0">
+            <td colspan="6" class="table-empty">Aucune reception a afficher.</td>
+          </tr>
           <tr *ngFor="let pesee of filteredPesees; trackBy: trackByPesee">
             <td>{{ pesee.reference || ('#' + pesee.idPesee) }}</td>
             <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>

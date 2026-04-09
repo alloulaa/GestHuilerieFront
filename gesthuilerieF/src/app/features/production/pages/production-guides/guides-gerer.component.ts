@@ -10,6 +10,7 @@ import { GuideProductionService } from '../../services/guide-production.service'
 import { ExecutionProductionService } from '../../services/execution-production.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-guides-gerer',
@@ -48,6 +49,7 @@ export class GuidesGererComponent implements OnInit {
     private huilerieService: HuilerieService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
+    private permissionService: PermissionService,
   ) {
     this.guideForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -56,7 +58,7 @@ export class GuidesGererComponent implements OnInit {
       huilerieId: [0, [Validators.required, Validators.min(1)]],
       etapes: this.fb.array([
         this.createEtapeGroup(1),
-        this.createEtapeGroup(2),
+   
       ]),
     });
 
@@ -69,6 +71,17 @@ export class GuidesGererComponent implements OnInit {
   ngOnInit(): void {
     this.loadReferenceData();
   }
+
+  get canUpdate(): boolean {
+    return this.permissionService.isAdmin()
+      || this.permissionService.canUpdate('PRODUCTION');
+  }
+
+  get canDelete(): boolean {
+    return this.permissionService.isAdmin()
+      || this.permissionService.canDelete('PRODUCTION');
+  }
+
   get etapes(): FormArray {
     return this.guideForm.get('etapes') as FormArray;
   }
@@ -238,7 +251,7 @@ export class GuidesGererComponent implements OnInit {
       etapesArray.removeAt(0);
     }
     etapesArray.push(this.createEtapeGroup(1));
-    etapesArray.push(this.createEtapeGroup(2));
+
   }
 
   submitExecution(): void {

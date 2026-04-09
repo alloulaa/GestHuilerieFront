@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { MENU_ITEMS } from './sidebar-menu';
-import { NbMenuModule } from '@nebular/theme';
+import { NbMenuItem, NbMenuModule } from '@nebular/theme';
 import { PermissionService } from '../../../core/services/permission.service';
 
 @Component({
@@ -12,31 +12,36 @@ import { PermissionService } from '../../../core/services/permission.service';
 })
 export class SidebarMenuComponent {
   private allItems = MENU_ITEMS;
+  private readonly filteredItems: NbMenuItem[];
 
-  constructor(private permissionService: PermissionService) { }
+  constructor(private permissionService: PermissionService) {
+    this.filteredItems = this.buildItems();
+  }
 
   get items() {
-    return this.allItems.filter((item) => {
+    return this.filteredItems;
+  }
+
+  private buildItems(): NbMenuItem[] {
+    const items = JSON.parse(JSON.stringify(this.allItems)) as NbMenuItem[];
+    const titleToModule: { [key: string]: string } = {
+      'Dashboard': 'DASHBOARD',
+      'Réception': 'RECEPTION',
+      'Guide de Production': 'PRODUCTION',
+      'Machines': 'MACHINES',
+      'Matières Premières': 'MATIERES_PREMIERES',
+      'Stock': 'STOCK',
+      'Traçabilité des Lots': 'LOTS',
+      'Dashboard Admin': 'DASHBOARD_ADMIN',
+      'Huileries': 'HUILERIES',
+      'Gestion Paramétrage': 'COMPTES_PROFILS',
+    };
+
+    return items.filter((item) => {
       // Keep group headers
       if (item.group) {
         return true;
       }
-
-      // Map menu titles to module names
-      const titleToModule: { [key: string]: string } = {
-        Dashboard: 'DASHBOARD',
-        'Réception': 'RECEPTION',
-        'Guide de Production': 'PRODUCTION',
-        Machines: 'MACHINES',
-        'Matières Premières': 'MATIERES_PREMIERES',
-        Stock: 'STOCK',
-        'Traçabilité des Lots': 'LOTS',
-        'Dashboard Admin': 'DASHBOARD_ADMIN',
-        Huileries: 'HUILERIES',
-        'Gestion Paramétrage': 'COMPTES_PROFILS'
-      };
-
-      const moduleName = titleToModule[item.title!];
 
       // Admin items visible only to admins
       if (
@@ -47,14 +52,34 @@ export class SidebarMenuComponent {
         return this.permissionService.isAdmin() || this.permissionService.hasAnyPermission('COMPTES_PROFILS');
       }
 
-      // Other items visible if user has any permission on the module
-      if (moduleName) {
-        return this.permissionService.hasAnyPermission(moduleName)
-          || this.permissionService.isAdmin();
+      const moduleName = titleToModule[item.title!];
+      if (!moduleName) {
+        return false;
       }
 
-      // Default: hide unmapped items to avoid leaking sections to users without permissions.
-      return false;
+      const isAdmin = this.permissionService.isAdmin();
+
+      // Items with children: filter each child by action-level permissions.
+      if (item.children && item.children.length > 0) {
+        item.children = item.children.filter((child) => {
+          if (child.title === 'Consulter') {
+            return isAdmin || this.permissionService.canRead(moduleName);
+          }
+          if (child.title === 'Gérer') {
+            return isAdmin || this.permissionService.canCreate(moduleName);
+          }
+          if (child.title === 'Exécuter') {
+            return isAdmin || this.permissionService.canExecute(moduleName);
+          }
+          return isAdmin;
+        });
+
+        // Hide parent when no child remains visible.
+        return item.children.length > 0;
+      }
+
+      // Items without children are visible with READ permission.
+      return isAdmin || this.permissionService.canRead(moduleName);
     });
   }
 

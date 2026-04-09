@@ -26,7 +26,7 @@
               <th>Origine</th>
               <th>Qte Initiale</th>
               <th>Qte Restante</th>
-              <th>Ligne de vie</th>
+              
               <th>Produits finaux</th>
               <th>Action</th>
             </tr>
@@ -41,23 +41,7 @@
               <td>{{ lot.origine }}</td>
               <td>{{ lot.quantiteInitiale }} kg</td>
               <td>{{ lot.quantiteRestante }} kg</td>
-              <td class="timeline-cell">
-                <ng-container *ngIf="getLifecycle(lot.idLot).length > 0; else noLifecycle">
-                  <div class="timeline">
-                    <div class="timeline-item" *ngFor="let event of getLifecycle(lot.idLot)">
-                      <span class="timeline-dot"></span>
-                      <div class="timeline-content">
-                        <p class="timeline-step">{{ stageLabel(event.etape) }}</p>
-                        <p class="timeline-desc">{{ event.description }}</p>
-                        <p class="timeline-date">{{ event.date }}</p>
-                      </div>
-                    </div>
-                  </div>
-                </ng-container>
-                <ng-template #noLifecycle>
-                  <span class="empty-mini">Aucun evenement</span>
-                </ng-template>
-              </td>
+              
               <td>
                 <ng-container *ngIf="getFinalProducts(lot.idLot).length > 0; else noFinalProduct">
                   <div class="final-product" *ngFor="let productEvent of getFinalProducts(lot.idLot)">

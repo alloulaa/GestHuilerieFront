@@ -43,7 +43,7 @@
     </form>
 
     <div class="table-wrap">
-      <table class="crud-table">
+      <table class="reception-table">
         <thead>
           <tr>
             <th>REFERENCE</th>
@@ -55,6 +55,7 @@
           </tr>
         </thead>
         <tbody>
+          <tr *ngIf="rawMaterials.length === 0"><td colspan="6" class="table-empty">Aucune matière première à afficher.</td></tr>
           <tr *ngFor="let item of rawMaterials; trackBy: trackByMaterial">
             <td>{{ item.reference || ('#' + item.idMatierePremiere) }}</td>
             <td>{{ item.nom }}</td>
@@ -63,10 +64,12 @@
             <td>{{ item.description }}</td>
             <td class="actions">
               <button nbButton ghost status="primary" size="small" type="button" (click)="edit(item)"
+                [disabled]="!canUpdate"
                 aria-label="Éditer">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
               <button nbButton ghost status="danger" size="small" type="button" (click)="askDelete(item)"
+                [disabled]="!canDelete"
                 aria-label="Supprimer">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>

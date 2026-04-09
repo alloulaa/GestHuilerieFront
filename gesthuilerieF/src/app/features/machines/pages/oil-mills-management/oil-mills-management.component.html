@@ -85,10 +85,12 @@
             <td>{{ getHuilerieName(m.huilerieId) }}</td>
             <td class="actions">
               <button nbButton ghost status="primary" size="small" type="button" (click)="editMachine(m)"
+                [disabled]="!canUpdate"
                 aria-label="Editer machine">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
               <button nbButton ghost status="danger" size="small" type="button" (click)="askDeleteMachine(m)"
+                [disabled]="!canDelete"
                 aria-label="Supprimer machine">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>

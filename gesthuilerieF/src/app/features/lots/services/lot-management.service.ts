@@ -22,7 +22,7 @@ export interface CreatePeseeInput {
     dateReception: string;
     dureeStockageAvantBroyage: number;
     matierePremiereId: number;
-    campagneId: number;
+    campagneId: number | string;
   };
 }
 

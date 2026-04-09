@@ -7,6 +7,7 @@ import { MatierePremiere } from '../../models/raw-material.models';
 import { RawMaterialService } from '../../services/raw-material.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-raw-materials-gerer',
@@ -34,6 +35,7 @@ export class RawMaterialsGererComponent implements OnInit {
     private rawMaterialService: RawMaterialService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
+    private permissionService: PermissionService,
   ) {
     this.form = this.formBuilder.group({
       nom: ['', [Validators.required]],
@@ -45,6 +47,16 @@ export class RawMaterialsGererComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRawMaterials();
+  }
+
+  get canUpdate(): boolean {
+    return this.permissionService.isAdmin()
+      || this.permissionService.canUpdate('MATIERES_PREMIERES');
+  }
+
+  get canDelete(): boolean {
+    return this.permissionService.isAdmin()
+      || this.permissionService.canDelete('MATIERES_PREMIERES');
   }
 
   loadRawMaterials(): void {

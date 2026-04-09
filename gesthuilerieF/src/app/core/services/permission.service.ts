@@ -93,6 +93,26 @@ export class PermissionService {
         || perm.canDelete || perm.canExecuted;
   }
 
+  canRead(module: string): boolean {
+    return this.hasPermission(module, 'READ');
+  }
+
+  canCreate(module: string): boolean {
+    return this.hasPermission(module, 'CREATE');
+  }
+
+  canUpdate(module: string): boolean {
+    return this.hasPermission(module, 'UPDATE');
+  }
+
+  canDelete(module: string): boolean {
+    return this.hasPermission(module, 'DELETE');
+  }
+
+  canExecute(module: string): boolean {
+    return this.hasPermission(module, 'EXECUTE');
+  }
+
   isAdmin(): boolean {
     const roles = this.extractRoleCandidates();
     return roles.some((role) => role.includes('ADMIN')) || roles.includes('ADMINISTRATEUR');

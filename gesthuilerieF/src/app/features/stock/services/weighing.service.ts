@@ -36,8 +36,8 @@ export class WeighingService {
     );
   }
 
-  generateBonPeseePdf(idPesee: number): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${idPesee}/pdf`, { responseType: 'blob' });
+  generateBonPeseePdf(reference: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${encodeURIComponent(reference)}/pdf`, { responseType: 'blob' });
   }
 
   delete(idPesee: number): Observable<void> {

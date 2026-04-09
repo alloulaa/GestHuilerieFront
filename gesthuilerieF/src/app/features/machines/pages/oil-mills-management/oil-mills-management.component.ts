@@ -10,6 +10,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-oil-mills-management',
@@ -44,6 +45,7 @@ export class OilMillsManagementComponent implements OnInit {
     private machineService: MachineService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
+    private permissionService: PermissionService,
   ) {
     this.machineForm = this.formBuilder.group({
       nomMachine: ['', [Validators.required]],
@@ -55,6 +57,16 @@ export class OilMillsManagementComponent implements OnInit {
   }
   ngOnInit(): void {
     this.loadData();
+  }
+
+  get canUpdate(): boolean {
+    return this.permissionService.isAdmin()
+      || this.permissionService.canUpdate('MACHINES');
+  }
+
+  get canDelete(): boolean {
+    return this.permissionService.isAdmin()
+      || this.permissionService.canDelete('MACHINES');
   }
 
   submitMachine(): void {
