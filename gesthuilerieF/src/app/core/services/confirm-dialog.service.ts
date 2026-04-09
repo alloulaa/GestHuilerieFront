@@ -25,20 +25,13 @@ export class ConfirmDialogService {
     private resolver: ((confirmed: boolean) => void) | null = null;
 
     confirm(options: ConfirmDialogOptions): Promise<boolean> {
-        if (this.resolver) {
-            this.resolver(false);
-            this.resolver = null;
-        }
-
-        const state: ConfirmDialogState = {
+        this.dialogSubject.next({
             title: options.title ?? 'Confirmation',
             message: options.message,
             confirmText: options.confirmText ?? 'Confirmer',
             cancelText: options.cancelText ?? 'Annuler',
-            intent: options.intent ?? 'danger',
-        };
-
-        this.dialogSubject.next(state);
+            intent: options.intent ?? 'primary',
+        });
 
         return new Promise<boolean>((resolve) => {
             this.resolver = resolve;

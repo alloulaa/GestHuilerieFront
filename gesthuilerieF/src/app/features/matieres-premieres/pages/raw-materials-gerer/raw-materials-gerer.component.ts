@@ -65,7 +65,7 @@ export class RawMaterialsGererComponent implements OnInit {
     });
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     this.formErrorMessage = '';
 
     if (this.form.invalid) {
@@ -84,6 +84,20 @@ export class RawMaterialsGererComponent implements OnInit {
     const request = this.editingId
       ? this.rawMaterialService.update(this.editingId, formData)
       : this.rawMaterialService.create(formData);
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: this.editingId ? 'Confirmer la mise à jour' : 'Confirmer la création',
+      message: this.editingId
+        ? 'Voulez-vous enregistrer les modifications de cette matière première ?'
+        : 'Voulez-vous ajouter cette matière première ?',
+      confirmText: 'Confirmer',
+      cancelText: 'Annuler',
+      intent: 'primary',
+    });
+
+    if (!confirmed) {
+      return;
+    }
 
     request.subscribe({
       next: () => {

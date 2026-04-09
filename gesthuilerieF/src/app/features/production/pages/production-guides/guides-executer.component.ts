@@ -8,9 +8,11 @@ import { LotOlives } from '../../../lots/models/lot.models';
 import { LotOlivesService } from '../../../lots/services/lot-olives.service';
 import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
 import { RawMaterialService } from '../../../matieres-premieres/services/raw-material.service';
-import { ExecutionProductionCreate, GuideProduction } from '../../models/production.models';
+import { ExecutionProduction, ExecutionProductionCreate, GuideProduction } from '../../models/production.models';
 import { ExecutionProductionService } from '../../services/execution-production.service';
 import { GuideProductionService } from '../../services/guide-production.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-guides-executer',
@@ -24,10 +26,12 @@ export class GuidesExecuterComponent implements OnInit {
   machines: Machine[] = [];
   lots: LotOlives[] = [];
   matieresPremieres: MatierePremiere[] = [];
+  executions: ExecutionProduction[] = [];
 
   executionMessage = '';
   executionError = '';
   submittingExecution = false;
+  selectedExecution: ExecutionProduction | null = null;
 
   readonly executionForm;
 
@@ -49,6 +53,8 @@ export class GuidesExecuterComponent implements OnInit {
     private lotOlivesService: LotOlivesService,
     @Inject(forwardRef(() => RawMaterialService))
     private rawMaterialService: RawMaterialService,
+    private confirmDialogService: ConfirmDialogService,
+    private toastService: ToastService,
   ) {
     this.executionForm = this.fb.group({
       dateDebut: [this.today(), [Validators.required]],
@@ -87,8 +93,26 @@ export class GuidesExecuterComponent implements OnInit {
       return '-';
     }
 
-    const matiere = this.matieresPremieres.find((item) => item.idMatierePremiere === lot.matierePremiereId);
-    return matiere?.nom ?? `#${lot.matierePremiereId}`;
+    const matiere = this.matieresPremieres.find((item) => Number(item.idMatierePremiere ?? item.id ?? 0) === Number(lot.matierePremiereId));
+    return String(matiere?.reference ?? '').trim() || String(matiere?.nom ?? '').trim() || `#${lot.matierePremiereId}`;
+  }
+
+  get executionCount(): number {
+    return this.executions.length;
+  }
+
+  executionDisplayLabel(execution: ExecutionProduction): string {
+    const lot = this.lots.find((item) => item.idLot === execution.lotOlivesId);
+    const lotLabel = lot?.reference || execution.codeLot || `LOT-${execution.lotOlivesId}`;
+    return `${lotLabel} · ${execution.guideProductionReference ?? `GP-${execution.guideProductionId}`}`;
+  }
+
+  getExecutionStatusLabel(execution: ExecutionProduction): string {
+    return String(execution.statut ?? '').trim() || '-';
+  }
+
+  isExecutionTerminated(execution: ExecutionProduction): boolean {
+    return String(execution.statut ?? '').trim().toUpperCase() === 'TERMINEE';
   }
 
   lotDisplayLabel(lot: LotOlives): string {
@@ -147,15 +171,55 @@ export class GuidesExecuterComponent implements OnInit {
       valeursReelles: this.mapValeursReellesPayload(raw.valeursReelles ?? []),
     };
 
-    this.executionProductionService.create(payload).subscribe({
-      next: () => {
-        this.submittingExecution = false;
-        this.executionMessage = 'Exécution de production créée avec succès.';
-        this.resetExecutionForm(false);
+    this.executionProductionService.create(payload)
+      .subscribe({
+        next: () => {
+          this.submittingExecution = false;
+          this.executionMessage = 'Exécution de production créée avec succès.';
+          this.toastService.success('Exécution de production créée avec succès.');
+          this.resetExecutionForm(false);
+          this.loadExecutions();
+        },
+        error: (error) => {
+          this.submittingExecution = false;
+          this.executionError = this.readHttpError(error, 'Impossible de créer l’exécution de production.');
+          this.toastService.error(this.executionError);
+        },
+      });
+  }
+
+  selectExecution(execution: ExecutionProduction): void {
+    this.selectedExecution = execution;
+  }
+
+  async finishExecution(execution: ExecutionProduction): Promise<void> {
+    if (this.isExecutionTerminated(execution)) {
+      this.selectedExecution = execution;
+      return;
+    }
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Terminer l\'exécution',
+      message: 'Cette action va créer le produit final, afficher sa référence et passer le statut à TERMINEE.',
+      confirmText: 'Terminer',
+      cancelText: 'Annuler',
+      intent: 'primary',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.executionProductionService.createProduitFinal(execution).subscribe({
+      next: (updatedExecution) => {
+        this.executionMessage = 'Produit final créé et exécution terminée.';
+        this.selectedExecution = updatedExecution ?? execution;
+        this.toastService.success('Produit final créé avec succès.');
+        this.loadExecutions();
       },
       error: (error) => {
-        this.submittingExecution = false;
-        this.executionError = this.readHttpError(error, 'Impossible de créer l’exécution de production.');
+        this.executionError = this.readHttpError(error, 'Impossible de terminer l’exécution.');
+        this.toastService.error(this.executionError);
       },
     });
   }
@@ -165,6 +229,17 @@ export class GuidesExecuterComponent implements OnInit {
     this.machineService.getAll().subscribe((items) => (this.machines = items));
     this.lotOlivesService.getAll().subscribe((items) => (this.lots = items));
     this.rawMaterialService.getAll().subscribe((items) => (this.matieresPremieres = items));
+    this.loadExecutions();
+  }
+
+  private loadExecutions(): void {
+    this.executionProductionService.getAll().subscribe((items) => {
+      this.executions = items ?? [];
+      if (this.selectedExecution) {
+        const refreshed = this.executions.find((item) => item.idExecutionProduction === this.selectedExecution?.idExecutionProduction);
+        this.selectedExecution = refreshed ?? this.selectedExecution;
+      }
+    });
   }
 
   private populateExecutionValuesFromGuide(guide: GuideProduction): void {

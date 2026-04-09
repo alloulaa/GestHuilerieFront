@@ -110,6 +110,15 @@
   gap: 0.55rem;
 }
 
+:host ::ng-deep .actions .filter-submit.mat-mdc-unelevated-button.mat-primary {
+  background: #5f7f30 !important;
+  color: #ffffff !important;
+}
+
+:host ::ng-deep .actions .filter-submit.mat-mdc-unelevated-button.mat-primary:hover {
+  background: #536f2a !important;
+}
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid rgba(118, 132, 87, 0.15);

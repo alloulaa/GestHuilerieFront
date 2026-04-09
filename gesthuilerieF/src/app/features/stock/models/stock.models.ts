@@ -7,6 +7,7 @@ export interface Pesee {
   poidsNet: number;
   lotId: number;
   huilerieId?: number;
+  bonPeseePdfPath?: string;
 }
 
 export interface ReceptionPeseeCreatePayload {
@@ -27,16 +28,20 @@ export interface ReceptionPeseeCreatePayload {
 
 export interface Stock {
   idStock: number;
+  reference?: string;
   huilerieId: number;
   typeStock: string;
   referenceId: number;
+  lotReference?: string;
   quantiteDisponible: number;
 }
 
 export interface StockMovement {
   id: number;
+  reference?: string;
   huilerieId: number;
   referenceId: number;
+  lotReference?: string;
   quantite: number;
   commentaire: string;
   dateMouvement: string;

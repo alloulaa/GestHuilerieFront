@@ -2,28 +2,28 @@
   <nb-card-header>
     <div class="head-wrap">
       <div>
-        <p class="eyebrow">Tracabilite</p>
+        <p class="eyebrow">Tracabilité</p>
         <h3>Details du lot</h3>
-        <p class="subtitle">Vue detaillee des pesees, analyses et du cycle de vie du lot.</p>
+        <p class="subtitle">Vue detaillee des pesées, analyses et du cycle de vie du lot.</p>
       </div>
       <a nbButton status="basic" size="small" [routerLink]="['/pages/lots/traceability']">Retour tracabilite</a>
     </div>
   </nb-card-header>
   <nb-card-body *ngIf="lot as currentLot; else lotNotFound">
     <div class="lot-meta">
-      <div><strong>ID:</strong> {{ currentLot.idLot }}</div>
-      <div><strong>Variete:</strong> {{ currentLot.varieteOlive }}</div>
+      <div><strong>Référence lot:</strong> {{ lotReference(currentLot) }}</div>
+      <div><strong>Varieté:</strong> {{ currentLot.varieteOlive }}</div>
       <div><strong>Origine:</strong> {{ currentLot.origine }}</div>
       <div><strong>Quantite initiale:</strong> {{ currentLot.quantiteInitiale }} kg</div>
       <div><strong>Quantite restante:</strong> {{ currentLot.quantiteRestante }} kg</div>
     </div>
 
-    <h3 class="section-title">Liste des pesees</h3>
+    <h3 class="section-title">Liste des pesées</h3>
     <div class="table-wrap">
       <table class="pesee-table">
         <thead>
           <tr>
-            <th>ID Pesee</th>
+            <th>Référence</th>
             <th>Date</th>
             <th>Brut</th>
             <th>Tare</th>
@@ -65,9 +65,9 @@
       <table class="pesee-table">
         <thead>
           <tr>
-            <th>ID Analyse</th>
+            <th>Référence analyse laboratoire</th>
             <th>Date</th>
-            <th>Acidite</th>
+            <th>Acidité</th>
             <th>Peroxyde</th>
             <th>K232</th>
             <th>K270</th>
@@ -76,7 +76,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let analysis of analyses">
-            <td>{{ analysis.idAnalyse }}</td>
+            <td>{{ analysisReference(analysis) }}</td>
             <td>{{ analysis.dateAnalyse }}</td>
             <td>{{ analysis.acidite }}</td>
             <td>{{ analysis.indicePeroxyde }}</td>

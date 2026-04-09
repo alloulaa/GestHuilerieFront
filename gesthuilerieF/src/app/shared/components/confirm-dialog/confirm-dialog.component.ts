@@ -18,7 +18,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             <p>{{ dialog.message }}</p>
           </nb-card-body>
           <nb-card-footer class="confirm-actions">
-            <button nbButton status="basic" type="button" (click)="confirmDialogService.cancel()">{{ dialog.cancelText }}</button>
+            <button nbButton status="basic" class="app-cancel-btn" type="button" (click)="confirmDialogService.cancel()">{{ dialog.cancelText }}</button>
             <button nbButton [status]="dialog.intent" type="button" (click)="confirmDialogService.accept()">{{ dialog.confirmText }}</button>
           </nb-card-footer>
         </nb-card>

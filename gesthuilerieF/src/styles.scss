@@ -2,21 +2,20 @@
 @use '@nebular/theme/styles/themes/default' as *;
 @use '@nebular/theme/styles/globals' as *;
 
-$nb-themes: nb-register-theme((
-	color-primary-100: #eef4e2,
-	color-primary-200: #dce8c5,
-	color-primary-300: #c4d69e,
-	color-primary-400: #aec378,
-	color-primary-500: #95ad4f,
-	color-primary-600: #7e9440,
-	color-primary-700: #687b32,
-	color-primary-800: #556527,
-	color-primary-900: #43501e,
-	color-primary-default: #7e9440,
-	color-primary-focus: #687b32,
-	color-primary-hover: #95ad4f,
-	color-primary-active: #556527,
-), default, default);
+$nb-themes: nb-register-theme((color-primary-100: #eef4e2,
+			color-primary-200: #dce8c5,
+			color-primary-300: #c4d69e,
+			color-primary-400: #aec378,
+			color-primary-500: #95ad4f,
+			color-primary-600: #7e9440,
+			color-primary-700: #687b32,
+			color-primary-800: #556527,
+			color-primary-900: #43501e,
+			color-primary-default: #7e9440,
+			color-primary-focus: #687b32,
+			color-primary-hover: #95ad4f,
+			color-primary-active: #556527,
+		), default, default);
 
 @include nb-install() {
 	@include nb-theme-global();
@@ -32,31 +31,251 @@ body {
 	background-color: #f8faf4;
 }
 
-/* Angular Material buttons aligned with olive palette */
-.mat-mdc-raised-button.mat-primary,
-.mat-mdc-unelevated-button.mat-primary {
-	--mdc-filled-button-container-color: var(--color-primary-600);
-	--mdc-filled-button-label-text-color: #ffffff;
+:root {
+	--app-btn-green-100: #eef4e2;
+	--app-btn-green-300: #c4d69e;
+	--app-btn-green-600: #7e9440;
+	--app-btn-green-700: #687b32;
+	--app-btn-green-800: #556527;
+	--app-danger-600: #c0392b;
+	--app-danger-700: #a93226;
+	--app-gray-100: #f3f4f6;
+	--app-gray-300: #d1d5db;
+	--app-gray-500: #6b7280;
+	--app-gray-600: #4b5563;
+	--app-gray-700: #374151;
 }
 
-.mat-mdc-raised-button.mat-primary:hover,
-.mat-mdc-unelevated-button.mat-primary:hover {
-	--mdc-filled-button-container-color: var(--color-primary-700);
+/* Unified button style for the whole application */
+button:not(.icon-edit):not(.toggle-visibility),
+a[role='button'],
+button[nbButton],
+a[nbButton],
+button[mat-raised-button],
+button[mat-flat-button],
+button[mat-stroked-button],
+a[mat-stroked-button],
+button[mat-button],
+a[mat-button] {
+	border-radius: 0.65rem !important;
+	font-weight: 600 !important;
+	letter-spacing: 0.01em;
+	transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+	box-shadow: 0 4px 12px rgba(40, 58, 28, 0.12);
+	outline: none;
+}
+
+button:not(.icon-edit):not(.toggle-visibility):hover,
+a[role='button']:hover,
+button[nbButton]:hover,
+a[nbButton]:hover,
+button[mat-raised-button]:hover,
+button[mat-flat-button]:hover,
+button[mat-stroked-button]:hover,
+a[mat-stroked-button]:hover,
+button[mat-button]:hover,
+a[mat-button]:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 8px 16px rgba(40, 58, 28, 0.16);
+}
+
+button:not(.icon-edit):not(.toggle-visibility):active,
+a[role='button']:active,
+button[nbButton]:active,
+a[nbButton]:active,
+button[mat-raised-button]:active,
+button[mat-flat-button]:active,
+button[mat-stroked-button]:active,
+a[mat-stroked-button]:active,
+button[mat-button]:active,
+a[mat-button]:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 8px rgba(40, 58, 28, 0.18);
+}
+
+button:not(.icon-edit):not(.toggle-visibility):disabled,
+button[nbButton][disabled],
+a[nbButton][aria-disabled='true'],
+button[mat-raised-button]:disabled,
+button[mat-flat-button]:disabled,
+button[mat-stroked-button]:disabled,
+button[mat-button]:disabled {
+	opacity: 0.62;
+	box-shadow: none;
+	transform: none;
+}
+
+/* Angular Material olive palette */
+.mat-mdc-raised-button,
+.mat-mdc-unelevated-button,
+button[mat-raised-button],
+button[mat-flat-button] {
+	--mdc-filled-button-container-color: var(--app-btn-green-600);
+	--mdc-filled-button-label-text-color: #ffffff;
+	--mdc-protected-button-container-color: var(--app-btn-green-600);
+	--mdc-protected-button-label-text-color: #ffffff;
+}
+
+.mat-mdc-raised-button:hover,
+.mat-mdc-unelevated-button:hover,
+button[mat-raised-button]:hover,
+button[mat-flat-button]:hover {
+	--mdc-filled-button-container-color: var(--app-btn-green-700);
+	--mdc-protected-button-container-color: var(--app-btn-green-700);
+}
+
+.mat-mdc-raised-button:active,
+.mat-mdc-unelevated-button:active,
+button[mat-raised-button]:active,
+button[mat-flat-button]:active {
+	--mdc-filled-button-container-color: var(--app-btn-green-800);
+	--mdc-protected-button-container-color: var(--app-btn-green-800);
 }
 
 .mat-mdc-outlined-button,
-.mat-mdc-stroked-button {
-	--mdc-outlined-button-outline-color: var(--color-primary-400);
-	--mdc-outlined-button-label-text-color: var(--color-primary-700);
-	border-color: var(--color-primary-400);
-	color: var(--color-primary-700);
+.mat-mdc-stroked-button,
+button[mat-stroked-button],
+a[mat-stroked-button],
+button[mat-button],
+a[mat-button] {
+	--mdc-outlined-button-outline-color: var(--app-btn-green-300);
+	--mdc-outlined-button-label-text-color: var(--app-btn-green-700);
+	border-color: var(--app-btn-green-300) !important;
+	color: var(--app-btn-green-700) !important;
+	background: color-mix(in srgb, var(--app-btn-green-100) 45%, #ffffff);
 }
 
-.mat-mdc-raised-button.mat-primary {
-  --mdc-protected-button-container-color: var(--color-primary-600);
-  --mdc-protected-button-label-text-color: #fff;
+.mat-mdc-outlined-button:hover,
+.mat-mdc-stroked-button:hover,
+button[mat-stroked-button]:hover,
+a[mat-stroked-button]:hover,
+button[mat-button]:hover,
+a[mat-button]:hover {
+	border-color: var(--app-btn-green-700) !important;
+	color: var(--app-btn-green-700) !important;
 }
 
-.mat-mdc-raised-button.mat-primary:hover {
-  --mdc-protected-button-container-color: var(--color-primary-700);
+.mat-mdc-outlined-button:active,
+.mat-mdc-stroked-button:active,
+button[mat-stroked-button]:active,
+a[mat-stroked-button]:active,
+button[mat-button]:active,
+a[mat-button]:active {
+	border-color: var(--app-btn-green-800) !important;
+	color: var(--app-btn-green-800) !important;
+}
+
+/* Nebular olive palette */
+button[nbButton],
+a[nbButton] {
+	background-color: var(--app-btn-green-600) !important;
+	border-color: var(--app-btn-green-600) !important;
+	color: #ffffff !important;
+}
+
+button[nbButton]:hover,
+a[nbButton]:hover {
+	background-color: var(--app-btn-green-700) !important;
+	border-color: var(--app-btn-green-700) !important;
+}
+
+button[nbButton]:active,
+a[nbButton]:active {
+	background-color: var(--app-btn-green-800) !important;
+	border-color: var(--app-btn-green-800) !important;
+}
+
+button[nbButton][ghost],
+a[nbButton][ghost],
+button[nbButton][outline],
+a[nbButton][outline] {
+	background: color-mix(in srgb, var(--app-btn-green-100) 45%, #ffffff) !important;
+	border-color: var(--app-btn-green-300) !important;
+	color: var(--app-btn-green-700) !important;
+}
+
+/* Gray buttons: all cancel actions + traceability add analysis */
+button.app-cancel-btn,
+a.app-cancel-btn,
+button.app-gray-btn,
+a.app-gray-btn,
+button.app-cancel-btn[nbButton],
+a.app-cancel-btn[nbButton],
+button.app-gray-btn[nbButton],
+a.app-gray-btn[nbButton] {
+	background-color: var(--app-gray-500) !important;
+	border-color: var(--app-gray-500) !important;
+	color: #ffffff !important;
+}
+
+button.app-cancel-btn:hover,
+a.app-cancel-btn:hover,
+button.app-gray-btn:hover,
+a.app-gray-btn:hover,
+button.app-cancel-btn[nbButton]:hover,
+a.app-cancel-btn[nbButton]:hover,
+button.app-gray-btn[nbButton]:hover,
+a.app-gray-btn[nbButton]:hover {
+	background-color: var(--app-gray-600) !important;
+	border-color: var(--app-gray-600) !important;
+}
+
+button.app-cancel-btn:active,
+a.app-cancel-btn:active,
+button.app-gray-btn:active,
+a.app-gray-btn:active,
+button.app-cancel-btn[nbButton]:active,
+a.app-cancel-btn[nbButton]:active,
+button.app-gray-btn[nbButton]:active,
+a.app-gray-btn[nbButton]:active {
+	background-color: var(--app-gray-700) !important;
+	border-color: var(--app-gray-700) !important;
+}
+
+.app-cancel-btn[nbButton][outline],
+.app-cancel-btn[nbButton][ghost] {
+	background-color: var(--app-gray-100) !important;
+	border-color: var(--app-gray-300) !important;
+	color: var(--app-gray-700) !important;
+}
+
+.app-cancel-btn[nbButton][outline]:hover,
+.app-cancel-btn[nbButton][ghost]:hover {
+	background-color: #e5e7eb !important;
+	border-color: #9ca3af !important;
+	color: var(--app-gray-700) !important;
+}
+
+/* Delete icons must be red across the app */
+nb-icon[icon*='trash'],
+nb-icon[icon*='remove'],
+mat-icon.delete,
+mat-icon.delete-icon,
+i.fa-trash,
+i.fa-trash-alt,
+i.fa-trash-can,
+i.bi-trash,
+i.bi-trash-fill,
+[class*='trash-icon'],
+[class*='delete-icon'] {
+	color: var(--app-danger-600) !important;
+	fill: var(--app-danger-600) !important;
+}
+
+button[status='danger'] nb-icon,
+button[title*='Supprimer'] nb-icon,
+button[aria-label*='Supprimer'] nb-icon,
+button[title*='supprimer'] nb-icon,
+button[aria-label*='supprimer'] nb-icon {
+	color: var(--app-danger-600) !important;
+	fill: var(--app-danger-600) !important;
+}
+
+button[status='danger']:hover nb-icon,
+button[title*='Supprimer']:hover nb-icon,
+button[aria-label*='Supprimer']:hover nb-icon,
+button[title*='supprimer']:hover nb-icon,
+button[aria-label*='supprimer']:hover nb-icon {
+	color: var(--app-danger-700) !important;
+	fill: var(--app-danger-700) !important;
 }

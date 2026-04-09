@@ -10,6 +10,8 @@ import { Huilerie } from '../../../machines/models/enterprise.models';
 import { RawMaterialService } from '../../../matieres-premieres/services/raw-material.service';
 import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
 import { forkJoin } from 'rxjs';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-weighing-stock',
@@ -42,6 +44,8 @@ export class WeighingStockComponent implements OnInit {
     private lotManagementService: LotManagementService,
     private huilerieService: HuilerieService,
     private rawMaterialService: RawMaterialService,
+    private toastService: ToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {
     this.weighingForm = this.formBuilder.group({
       datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
@@ -116,14 +120,14 @@ export class WeighingStockComponent implements OnInit {
     });
   }
 
-  submitWeighing(): void {
-    alert('submitWeighing called');
+  async submitWeighing(): Promise<void> {
     console.log('submitWeighing called');
 
     this.errorMessage = '';
 
     if (this.weighingForm.invalid) {
       this.weighingForm.markAllAsTouched();
+      this.toastService.error('Veuillez corriger les champs invalides avant de continuer.');
       return;
     }
 
@@ -151,6 +155,18 @@ export class WeighingStockComponent implements OnInit {
           : undefined,
     };
 
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Confirmer l\'enregistrement',
+      message: 'Voulez-vous enregistrer cette pesée ?',
+      confirmText: 'Enregistrer',
+      cancelText: 'Annuler',
+      intent: 'primary',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     this.lotManagementService.createPesee(input).subscribe({
       next: result => {
         this.weighingForm.patchValue({
@@ -163,12 +179,14 @@ export class WeighingStockComponent implements OnInit {
         });
 
         this.patchLotIdentityFromSelection(result.lotId);
+        this.toastService.success('Pesee enregistree avec succes.');
       },
       error: errorResponse => {
         this.errorMessage =
           errorResponse?.error?.message ??
           errorResponse?.message ??
           'Erreur de validation metier.';
+        this.toastService.error(this.errorMessage);
       },
     });
     console.log('form valid =', this.weighingForm.valid);
@@ -307,8 +325,9 @@ export class WeighingStockComponent implements OnInit {
   }
 
   private computeAvailableLots(): void {
-    const receivedLotIds = new Set(this.weighings.map((pesee) => Number(pesee.lotId)).filter((id) => !Number.isNaN(id)));
-    this.availableLotsForReception = this.lots.filter((lot) => !receivedLotIds.has(Number(lot.idLot)));
+    const sortedLots = [...this.lots].sort((a, b) => Number(a.idLot) - Number(b.idLot));
+    const activeTraceabilityLots = sortedLots.filter((lot) => Number(lot.quantiteRestante ?? 0) > 0);
+    this.availableLotsForReception = activeTraceabilityLots.length > 0 ? activeTraceabilityLots : sortedLots;
   }
 
 }

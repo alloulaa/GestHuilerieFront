@@ -48,8 +48,19 @@
 
   input:focus {
     border-color: var(--color-primary-400);
-    box-shadow: 0 0 0 2px rgba(51, 102, 255, 0.12);
+    box-shadow: 0 0 0 2px rgba(107, 124, 58, 0.2);
   }
+}
+
+:host ::ng-deep .actions-panel .mat-mdc-raised-button.mat-primary,
+:host ::ng-deep .filter-bar .mat-mdc-raised-button.mat-primary {
+  background: #6b7c3a !important;
+  color: #ffffff !important;
+}
+
+:host ::ng-deep .actions-panel .mat-mdc-raised-button.mat-primary:hover,
+:host ::ng-deep .filter-bar .mat-mdc-raised-button.mat-primary:hover {
+  background: #5f6f33 !important;
 }
 
 .filter-message {

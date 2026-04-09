@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, of, switchMap, tap } from 'rxjs';
 import { Stock, StockMovement } from '../models/stock.models';
 import { StockMovementService } from './stock-movement.service';
 import { environment } from 'src/environments/environment';
@@ -68,12 +68,33 @@ export class StockManagementService {
       }, 0);
   }
 
-  updateMovementType(id: number, typeMouvement: StockMovement['typeMouvement'], quantite: number): Observable<StockMovement> {
-    return this.stockMovementService.updateTypeMouvement(id, typeMouvement, quantite).pipe(
-      tap(updated => {
-        const next = this.movementsSubject.value.map(item =>
-          item.id === id ? updated : item,
-        );
+  updateMovementType(
+    id: number,
+    payload: {
+      huilerieId: number;
+      referenceId: number;
+      quantite: number;
+      commentaire: string;
+      dateMouvement: string;
+      typeMouvement: StockMovement['typeMouvement'];
+    },
+  ): Observable<StockMovement> {
+    return this.stockMovementService.updateMovement(id, payload).pipe(
+      switchMap(updated =>
+        this.stockMovementService.getAll().pipe(
+          tap(items => {
+            this.movementsSubject.next(items);
+          }),
+          map(() => updated),
+        ),
+      ),
+    );
+  }
+
+  deleteMovement(id: number): Observable<void> {
+    return this.stockMovementService.delete(id).pipe(
+      tap(() => {
+        const next = this.movementsSubject.value.filter(item => item.id !== id);
         this.movementsSubject.next(next);
       }),
     );

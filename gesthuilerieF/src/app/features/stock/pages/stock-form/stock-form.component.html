@@ -13,7 +13,7 @@
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>Type mouvement</mat-label>
         <mat-select formControlName="typeMouvement">
-          <mat-option value="ARRIVAL">Entree</mat-option>
+          <mat-option value="ARRIVAL">Entrée</mat-option>
           <mat-option value="DEPARTURE">Sortie</mat-option>
           <mat-option value="TRANSFER">Transfert</mat-option>
           <mat-option value="ADJUSTMENT">Ajustement</mat-option>
@@ -22,7 +22,10 @@
 
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>Reference lot</mat-label>
-        <input matInput type="number" formControlName="referenceId" />
+        <mat-select formControlName="referenceId">
+          <mat-option *ngFor="let lot of lots" [value]="lot.idLot">{{ lot.reference || ('LO-' + lot.idLot)
+            }}</mat-option>
+        </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field">
@@ -42,15 +45,57 @@
 
       <mat-form-field appearance="outline" class="form-field compact">
         <mat-label>Huilerie ID</mat-label>
-        <input matInput type="number" formControlName="huilerieId" />
+        <mat-select formControlName="huilerieId">
+          <mat-option *ngFor="let huilerie of huileries" [value]="huilerie.idHuilerie">{{ huilerie.idHuilerie
+            }}</mat-option>
+        </mat-select>
       </mat-form-field>
 
       <div class="actions">
-        <button mat-raised-button color="primary" type="submit">Enregistrer</button>
-        <a mat-stroked-button [routerLink]="['/pages/stock']">Retour liste</a>
+        <button mat-raised-button color="primary" class="save-btn" type="submit">{{ isEditMode ? 'Modifier' :
+          'Enregistrer' }}</button>
+        <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">Annuler modification</button>
+        <a mat-stroked-button [routerLink]="['/pages/stock/history']">Retour liste</a>
       </div>
 
-      <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
     </form>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Reference mouvement</th>
+            <th>Type</th>
+            <th>Reference lot</th>
+            <th>Quantite</th>
+            <th>Date</th>
+            <th>Commentaire</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="movements.length === 0">
+            <td colspan="7" class="empty-row">Aucun mouvement a afficher.</td>
+          </tr>
+          <tr *ngFor="let m of movements" class="row-hover">
+            <td>{{ movementReference(m) }}</td>
+            <td>{{ movementLabel(m.typeMouvement) }}</td>
+            <td>{{ lotReference(m) }}</td>
+            <td>{{ m.quantite }}</td>
+            <td>{{ m.dateMouvement }}</td>
+            <td>{{ m.commentaire }}</td>
+            <td class="row-actions">
+              <button class="btn-icon action-edit" type="button" title="Modifier" aria-label="Modifier mouvement"
+                (click)="startEdit(m)">
+                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M3 17.25V21h3.75L19.81 7.94l-3.75-3.75L3 17.25z" />
+                  <path d="M14.06 4.19l3.75 3.75" />
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </mat-card-content>
 </mat-card>

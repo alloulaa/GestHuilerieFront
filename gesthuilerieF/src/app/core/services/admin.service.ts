@@ -1,4 +1,3 @@
-// c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\core\services\admin.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, switchMap, throwError } from 'rxjs';
@@ -42,7 +41,73 @@ export interface User {
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
+
+  private extractArrayPayload(payload: any): any[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    if (Array.isArray(payload?.content)) {
+      return payload.content;
+    }
+
+    if (Array.isArray(payload?.items)) {
+      return payload.items;
+    }
+
+    if (Array.isArray(payload?.results)) {
+      return payload.results;
+    }
+
+    if (Array.isArray(payload?.data)) {
+      return payload.data;
+    }
+
+    return [];
+  }
+
+  private requestToggleStatusCandidate(candidate: {
+    method: 'PATCH' | 'PUT' | 'POST';
+    url: string;
+    body?: any;
+  }): Observable<User> {
+    return this.http.request<ApiResponseDTO<User>>(candidate.method, candidate.url, { body: candidate.body }).pipe(
+      map((response: any) => response?.data ?? response)
+    );
+  }
+
+  private tryToggleStatusCandidates(
+    candidates: Array<{
+      method: 'PATCH' | 'PUT' | 'POST';
+      url: string;
+      body?: any;
+    }>,
+    index: number,
+    debugPayload: { id: number; actif: boolean }
+  ): Observable<User> {
+    const candidate = candidates[index];
+    if (!candidate) {
+      return throwError(() => new Error('Aucune route compatible pour changer le statut utilisateur.'));
+    }
+
+    return this.requestToggleStatusCandidate(candidate).pipe(
+      catchError((error) => {
+        const shouldTryNext = [401, 403, 404, 405].includes(Number(error?.status ?? 0));
+
+        if (shouldTryNext && index < candidates.length - 1) {
+          return this.tryToggleStatusCandidates(candidates, index + 1, debugPayload);
+        }
+
+        const thrower = this.logAndThrow('toggleUserStatus', candidate.url, {
+          ...debugPayload,
+          method: candidate.method,
+          body: candidate.body,
+        });
+        return thrower(error);
+      })
+    );
+  }
 
   private normalizeUtilisateurPayload(payload: any): any {
     const profilId = payload?.profilId ?? payload?.idProfil ?? payload?.profil?.idProfil ?? null;
@@ -73,11 +138,11 @@ export class AdminService {
 
   // Modules endpoints (used by permissions editor)
   getModules(): Observable<{ data: any[] }> {
-    const url = `${API_URL}/api/admin/modules`;
+    const url = `${API_URL}/api/admin/modules?page=0&size=1000&limit=1000`;
     return this.http
       .get<ApiResponseDTO<any[]>>(url)
       .pipe(
-        map((response) => ({ data: response?.data ?? [] })),
+        map((response) => ({ data: this.extractArrayPayload(response?.data) })),
         catchError(this.logAndThrow('getModules', url))
       );
   }
@@ -253,13 +318,23 @@ export class AdminService {
   }
 
   toggleUserStatus(id: number, actif: boolean): Observable<User> {
-    const url = `${API_URL}/api/admin/utilisateurs/${id}/activer`;
-    return this.http
-      .put<ApiResponseDTO<User>>(url, { actif })
-      .pipe(
-        map((response) => response.data),
-        catchError(this.logAndThrow('toggleUserStatus', url, { id, actif }))
-      );
+    const action = actif ? 'activer' : 'desactiver';
+    const payload = { actif };
+    const adminBaseUrl = `${API_URL}/api/admin/utilisateurs/${id}/${action}`;
+    const legacyBaseUrl = `${API_URL}/api/utilisateur/${id}/${action}`;
+
+    const candidates: Array<{ method: 'PATCH' | 'PUT' | 'POST'; url: string; body?: any }> = [
+      { method: 'PATCH', url: adminBaseUrl, body: payload },
+      { method: 'PUT', url: adminBaseUrl, body: payload },
+      { method: 'POST', url: adminBaseUrl, body: payload },
+      { method: 'POST', url: adminBaseUrl },
+      { method: 'PATCH', url: legacyBaseUrl, body: payload },
+      { method: 'PUT', url: legacyBaseUrl, body: payload },
+      { method: 'POST', url: legacyBaseUrl, body: payload },
+      { method: 'POST', url: legacyBaseUrl },
+    ];
+
+    return this.tryToggleStatusCandidates(candidates, 0, { id, actif });
   }
 
   // Legacy aliases used by existing admin components
@@ -307,16 +382,11 @@ export class AdminService {
 
   toggleActif(id: number): Observable<any> {
     const getUserUrl = `${API_URL}/api/admin/utilisateurs/${id}`;
-    const toggleUrl = `${API_URL}/api/admin/utilisateurs/${id}/activer`;
     return this.getUserById(id).pipe(
-      switchMap((user) =>
-        this.http
-          .put<ApiResponseDTO<any>>(toggleUrl, { actif: !user?.actif })
-          .pipe(
-            map((response) => response.data),
-            catchError(this.logAndThrow('toggleActif', toggleUrl, { id, actif: !user?.actif }))
-          )
-      ),
+      switchMap((user) => {
+        const nextActif = !user?.actif;
+        return this.toggleUserStatus(id, nextActif);
+      }),
       catchError(this.logAndThrow('toggleActif_getUserById', getUserUrl, { id }))
     );
   }

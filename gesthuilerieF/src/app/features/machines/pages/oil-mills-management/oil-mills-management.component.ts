@@ -69,7 +69,7 @@ export class OilMillsManagementComponent implements OnInit {
       || this.permissionService.canDelete('MACHINES');
   }
 
-  submitMachine(): void {
+  async submitMachine(): Promise<void> {
     this.machineFilterMessage = '';
 
     if (this.machineForm.invalid) {
@@ -78,6 +78,20 @@ export class OilMillsManagementComponent implements OnInit {
     }
 
     const payload = this.buildMachinePayload();
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: this.editingMachineId !== null ? 'Confirmer la mise à jour' : 'Confirmer la création',
+      message: this.editingMachineId !== null
+        ? 'Voulez-vous enregistrer les modifications de cette machine ?'
+        : 'Voulez-vous ajouter cette machine ?',
+      confirmText: 'Confirmer',
+      cancelText: 'Annuler',
+      intent: 'primary',
+    });
+
+    if (!confirmed) {
+      return;
+    }
 
     if (this.editingMachineId !== null) {
       this.machineService.update(this.editingMachineId, payload).subscribe({

@@ -116,7 +116,7 @@ export const APP_ROUTES: Routes = [
       // Stock
       {
         path: 'stock',
-        loadComponent: () => import('./features/stock/pages/stock-list/stock-list.component').then(c => c.StockListComponent),
+        loadComponent: () => import('./features/stock/pages/stock-overview/stock-overview.component').then(c => c.StockOverviewComponent),
       },
       {
         path: 'stock/form',

@@ -5,6 +5,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RouterModule } from '@angular/router';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-reset-password-request',
@@ -21,7 +22,8 @@ export class ResetPasswordRequestComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastService: ToastService
   ) { }
 
   ngOnInit(): void {
@@ -43,11 +45,13 @@ export class ResetPasswordRequestComponent implements OnInit {
     this.authService.resetPasswordRequest(this.form.value.email).subscribe({
       next: () => {
         this.successMessage = 'Si ce compte existe, un email a été envoyé. Le lien expire dans 30 minutes.';
+        this.toastService.success(this.successMessage);
         this.isLoading = false;
         this.form.reset();
       },
       error: () => {
         this.errorMessage = 'Erreur lors de l\'envoi. Réessayez.';
+        this.toastService.error(this.errorMessage);
         this.isLoading = false;
       }
     });

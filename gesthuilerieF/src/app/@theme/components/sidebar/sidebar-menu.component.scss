@@ -2,8 +2,8 @@
   display: block;
 }
 
-::ng-deep nb-menu .menu-item > a .menu-icon,
-::ng-deep nb-menu .menu-item > a.active .menu-icon {
+::ng-deep nb-menu .menu-item>a .menu-icon,
+::ng-deep nb-menu .menu-item>a.active .menu-icon {
   display: inline-flex !important;
   opacity: 1 !important;
   visibility: visible !important;

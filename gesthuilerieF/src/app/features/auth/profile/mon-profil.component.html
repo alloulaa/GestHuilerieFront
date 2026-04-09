@@ -39,7 +39,7 @@
             >
               Sauvegarder
             </button>
-            <button class="btn-cancel" type="button" (click)="nameEditToggle.checked = false">Annuler</button>
+            <button class="btn-cancel app-cancel-btn" type="button" (click)="nameEditToggle.checked = false">Annuler</button>
           </div>
         </div>
 
@@ -99,7 +99,27 @@
         <form [formGroup]="changePasswordForm" (ngSubmit)="onChangePassword()" class="password-form">
           <div class="form-group">
             <label>Mot de passe actuel</label>
-            <input type="password" formControlName="currentPassword" placeholder="Entrez votre mot de passe" />
+            <div class="password-field">
+              <input [type]="showCurrentPassword ? 'text' : 'password'" formControlName="currentPassword" placeholder="Entrez votre mot de passe" />
+              <button
+                type="button"
+                class="toggle-visibility"
+                aria-label="Afficher ou masquer le mot de passe actuel"
+                title="Afficher ou masquer le mot de passe actuel"
+                (click)="togglePasswordVisibility('current')"
+              >
+                <svg *ngIf="!showCurrentPassword" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <svg *ngIf="showCurrentPassword" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 3l18 18" />
+                  <path d="M10.6 10.7A3 3 0 0 0 12 15a3 3 0 0 0 2.3-5.3" />
+                  <path d="M6.7 6.8C4.5 8.2 3 10.5 2 12c1.5 2.3 4.7 6 10 6 2.1 0 3.8-.6 5.2-1.4" />
+                  <path d="M9.9 4.2A11.6 11.6 0 0 1 12 4c6.5 0 10 6 10 6-.5.9-1.4 2.2-2.7 3.4" />
+                </svg>
+              </button>
+            </div>
             <span class="error" *ngIf="changePasswordForm.get('currentPassword')?.touched && changePasswordForm.get('currentPassword')?.invalid">
               Requis
             </span>
@@ -107,7 +127,27 @@
 
           <div class="form-group">
             <label>Nouveau mot de passe</label>
-            <input type="password" formControlName="newPassword" placeholder="Au moins 8 caractères" />
+            <div class="password-field">
+              <input [type]="showNewPassword ? 'text' : 'password'" formControlName="newPassword" placeholder="Au moins 8 caractères" />
+              <button
+                type="button"
+                class="toggle-visibility"
+                aria-label="Afficher ou masquer le nouveau mot de passe"
+                title="Afficher ou masquer le nouveau mot de passe"
+                (click)="togglePasswordVisibility('new')"
+              >
+                <svg *ngIf="!showNewPassword" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <svg *ngIf="showNewPassword" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 3l18 18" />
+                  <path d="M10.6 10.7A3 3 0 0 0 12 15a3 3 0 0 0 2.3-5.3" />
+                  <path d="M6.7 6.8C4.5 8.2 3 10.5 2 12c1.5 2.3 4.7 6 10 6 2.1 0 3.8-.6 5.2-1.4" />
+                  <path d="M9.9 4.2A11.6 11.6 0 0 1 12 4c6.5 0 10 6 10 6-.5.9-1.4 2.2-2.7 3.4" />
+                </svg>
+              </button>
+            </div>
             <span class="error" *ngIf="changePasswordForm.get('newPassword')?.touched && changePasswordForm.get('newPassword')?.invalid">
               Au moins 8 caractères
             </span>
@@ -115,14 +155,34 @@
 
           <div class="form-group">
             <label>Confirmer le mot de passe</label>
-            <input type="password" formControlName="confirmPassword" placeholder="Confirmez le mot de passe" />
+            <div class="password-field">
+              <input [type]="showConfirmPassword ? 'text' : 'password'" formControlName="confirmPassword" placeholder="Confirmez le mot de passe" />
+              <button
+                type="button"
+                class="toggle-visibility"
+                aria-label="Afficher ou masquer la confirmation du mot de passe"
+                title="Afficher ou masquer la confirmation du mot de passe"
+                (click)="togglePasswordVisibility('confirm')"
+              >
+                <svg *ngIf="!showConfirmPassword" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <svg *ngIf="showConfirmPassword" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 3l18 18" />
+                  <path d="M10.6 10.7A3 3 0 0 0 12 15a3 3 0 0 0 2.3-5.3" />
+                  <path d="M6.7 6.8C4.5 8.2 3 10.5 2 12c1.5 2.3 4.7 6 10 6 2.1 0 3.8-.6 5.2-1.4" />
+                  <path d="M9.9 4.2A11.6 11.6 0 0 1 12 4c6.5 0 10 6 10 6-.5.9-1.4 2.2-2.7 3.4" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div class="password-actions">
             <button type="submit" [disabled]="isChangingPassword">
               {{ isChangingPassword ? 'Traitement...' : 'Modifier le mot de passe' }}
             </button>
-            <button class="btn-cancel" type="button" (click)="passwordToggle.checked = false">Annuler</button>
+            <button class="btn-cancel app-cancel-btn" type="button" (click)="passwordToggle.checked = false">Annuler</button>
           </div>
         </form>
       </div>

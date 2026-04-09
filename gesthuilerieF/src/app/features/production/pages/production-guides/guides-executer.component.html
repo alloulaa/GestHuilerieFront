@@ -1,7 +1,6 @@
 <nb-card class="panel panel--execution-form">
   <nb-card-header>Créer une exécution de production</nb-card-header>
   <nb-card-body>
-    <p class="panel-hint">L’exécution envoie le lot, la machine et les valeurs réelles au backend.</p>
 
     <form class="stack-form" [formGroup]="executionForm" (ngSubmit)="submitExecution()">
       <div class="form-grid form-grid--execution">
@@ -75,7 +74,7 @@
         </label>
       </div>
 
-      <div class="values-box values-box--execution" *ngIf="executionValueRows.length > 0; else noGuideSelected">
+      <div class="values-box values-box--execution" *ngIf="executionValueRows.length > 0">
         <div class="values-box__header">
           <div>
             <h3>Valeurs réelles</h3>
@@ -95,11 +94,6 @@
         </div>
       </div>
 
-      <ng-template #noGuideSelected>
-        <div class="empty-state empty-state--execution">Sélectionne un guide pour générer les paramètres réels attendus.
-        </div>
-      </ng-template>
-
       <div class="feedback success" *ngIf="executionMessage">{{ executionMessage }}</div>
       <div class="feedback error" *ngIf="executionError">{{ executionError }}</div>
 
@@ -109,5 +103,74 @@
         </button>
       </div>
     </form>
+
+    <div class="values-box values-box--execution execution-list-block">
+      <div class="values-box__header">
+        <div>
+          <h3>Exécutions enregistrées</h3>
+          <p>{{ executionCount }} exécution(s) trouvée(s)</p>
+        </div>
+      </div>
+
+      <div class="execution-cards-grid" *ngIf="executions.length > 0; else emptyExecutions">
+        <article class="execution-card" *ngFor="let execution of executions"
+          [class.execution-card--selected]="selectedExecution?.idExecutionProduction === execution.idExecutionProduction">
+          <header class="execution-card__header">
+            <div>
+              <h4>{{ execution.codeLot }}</h4>
+              <p>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</p>
+            </div>
+            <span class="execution-card__status">{{ getExecutionStatusLabel(execution) }}</span>
+          </header>
+
+          <div class="execution-card__meta">
+            <p><strong>Machine:</strong> {{ execution.machineNom || ('#' + execution.machineId) }}</p>
+            <p><strong>Produit final:</strong> {{ execution.produitFinalReference || '-' }}</p>
+          </div>
+
+          <div class="execution-card__actions">
+            <button type="button" class="btn-icon action-eye" title="Voir détails" aria-label="Voir détails"
+              (click)="selectExecution(execution)">
+              <svg class="action-icon action-eye-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+            </button>
+            <button type="button" class="btn-finish" (click)="finishExecution(execution)"
+              [disabled]="isExecutionTerminated(execution)">
+              Terminer
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #emptyExecutions>
+        <p class="empty-state">Aucune exécution enregistrée.</p>
+      </ng-template>
+
+      <article class="execution-detail-card" *ngIf="selectedExecution as execution">
+        <div class="execution-detail-card__header">
+          <div>
+            <h3>Détails de l'exécution</h3>
+            <p>{{ execution.codeLot }}</p>
+          </div>
+          <span class="execution-card__status">{{ execution.statut }}</span>
+        </div>
+        <div class="execution-detail-grid">
+          <div class="execution-detail-item"><span>Guide</span><strong>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</strong>
+          </div>
+          <div class="execution-detail-item"><span>Machine</span><strong>{{ execution.machineNom || ('#' + execution.machineId) }}</strong></div>
+          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotOlivesReference || ('#' + execution.lotOlivesId) }}</strong></div>
+          <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-' }}</strong></div>
+          <div class="execution-detail-item"><span>Rendement</span><strong>{{ execution.rendement }}</strong></div>
+          <div class="execution-detail-item"><span>Date début</span><strong>{{ execution.dateDebut || '-' }}</strong></div>
+        </div>
+        <div class="execution-detail-observations-card">
+          <h4>Observations</h4>
+          <p>{{ execution.observations || '-' }}</p>
+        </div>
+      </article>
+    </div>
   </nb-card-body>
 </nb-card>

@@ -139,6 +139,116 @@
   align-items: center;
 }
 
+.add-analysis-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid #95a874;
+  background: linear-gradient(180deg, #7d9450, #6b7f3a);
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(55, 71, 35, 0.22);
+  transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.add-analysis-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 18px rgba(55, 71, 35, 0.28);
+  filter: brightness(1.02);
+}
+
+.add-analysis-action:active {
+  transform: translateY(0);
+  filter: brightness(0.94);
+}
+
+.analysis-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 26, 18, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.analysis-modal {
+  width: min(520px, 100%);
+  background: linear-gradient(160deg, #f8faef 0%, #ffffff 60%);
+  border: 1px solid var(--color-primary-300);
+  border-radius: 1rem;
+  border-top: 4px solid var(--color-primary-500);
+  box-shadow: 0 22px 44px rgba(20, 24, 16, 0.24);
+  padding: 1rem 1rem 1.1rem;
+
+  h3 {
+    margin: 0 0 0.8rem;
+    color: var(--color-primary-800);
+  }
+}
+
+.analysis-modal-head {
+  margin-bottom: 0.55rem;
+}
+
+.analysis-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--color-primary-700);
+}
+
+.analysis-form {
+  display: grid;
+  gap: 0.7rem;
+
+  label {
+    display: grid;
+    gap: 0.3rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--color-primary-900);
+  }
+
+  input[nbInput] {
+    border: 1px solid var(--color-primary-200);
+    border-radius: 0.65rem;
+    background: #ffffff;
+    min-height: 2.45rem;
+  }
+
+  input[nbInput]:focus {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(107, 127, 58, 0.16);
+  }
+}
+
+.analysis-actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .analysis-actions button[nbButton][status='primary'] {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #fff !important;
+}
+
+:host ::ng-deep .analysis-actions button[nbButton][status='primary']:hover {
+  background: #5f7035 !important;
+  border-color: #5f7035 !important;
+}
+
+.analysis-error {
+  margin: 0;
+  color: var(--color-danger-700);
+}
+
 .table-empty {
   text-align: center;
   padding: 1rem;
@@ -203,12 +313,32 @@
 
 .olive-card {
   border-top: 4px solid var(--color-primary-500);
+  border-radius: 1rem;
+  box-shadow: 0 12px 26px rgba(16, 24, 40, 0.08);
+}
+
+:host ::ng-deep .olive-card .mat-mdc-card-header {
+  padding-bottom: 0.35rem;
+}
+
+:host ::ng-deep .olive-card .mat-mdc-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-primary-900);
+}
+
+:host ::ng-deep .olive-card .mat-mdc-card-content {
+  padding-top: 0.45rem;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.95rem 0.9rem;
+}
+
+.grid mat-form-field {
+  grid-column: span 3;
 }
 
 .actions {
@@ -216,6 +346,29 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  margin-top: 0.15rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--separator);
+}
+
+:host ::ng-deep .actions .mat-mdc-raised-button.mat-primary,
+:host ::ng-deep .actions button[mat-raised-button][color='primary'] {
+  --mdc-protected-button-container-color: var(--primary-color);
+  --mdc-protected-button-label-text-color: #fff;
+  --mdc-filled-button-container-color: var(--primary-color);
+  --mdc-filled-button-label-text-color: #fff;
+}
+
+:host ::ng-deep .actions .mat-mdc-raised-button.mat-primary:hover,
+:host ::ng-deep .actions button[mat-raised-button][color='primary']:hover {
+  --mdc-protected-button-container-color: #5f7035;
+  --mdc-filled-button-container-color: #5f7035;
+}
+
+:host ::ng-deep .actions .mat-mdc-raised-button.mat-primary:active,
+:host ::ng-deep .actions button[mat-raised-button][color='primary']:active {
+  --mdc-protected-button-container-color: #4f5f2c;
+  --mdc-filled-button-container-color: #4f5f2c;
 }
 
 .grid .error {
@@ -223,11 +376,52 @@
   margin: 0;
 }
 
+:host ::ng-deep .grid .mat-mdc-form-field {
+  width: 100%;
+}
+
+:host ::ng-deep .grid .mat-mdc-text-field-wrapper {
+  background: #fff;
+}
+
+:host ::ng-deep .grid .mdc-notched-outline__leading,
+:host ::ng-deep .grid .mdc-notched-outline__notch,
+:host ::ng-deep .grid .mdc-notched-outline__trailing {
+  border-color: var(--border-color) !important;
+}
+
+:host ::ng-deep .grid .mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+:host ::ng-deep .grid .mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+:host ::ng-deep .grid .mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+  border-color: var(--primary-color) !important;
+}
+
+@media (max-width: 1200px) {
+  .grid mat-form-field {
+    grid-column: span 4;
+  }
+}
+
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .grid mat-form-field {
+    grid-column: span 6;
+  }
+
+  .actions button,
+  .actions a {
+    width: 100%;
+  }
+}
+
 .save-popup-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(20, 28, 18, 0.38);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
   display: grid;
   place-items: center;
   z-index: 1000;
@@ -241,10 +435,12 @@
   border-radius: 1rem;
   box-shadow: 0 18px 42px rgba(38, 52, 32, 0.24);
   padding: 1rem 1rem 1.1rem;
+  border-top: 4px solid var(--color-primary-500);
 
   h3 {
     margin: 0.45rem 0 0.45rem;
     color: var(--color-primary-800);
+    font-size: 1.08rem;
   }
 
   p {
@@ -288,4 +484,44 @@
   display: flex;
   gap: 0.55rem;
   flex-wrap: wrap;
+
+  button {
+    min-width: 165px;
+  }
+}
+
+:host ::ng-deep .popup-actions .mat-mdc-raised-button.mat-primary,
+:host ::ng-deep .popup-actions button[mat-raised-button][color='primary'] {
+  --mdc-protected-button-container-color: var(--primary-color);
+  --mdc-protected-button-label-text-color: #fff;
+  --mdc-filled-button-container-color: var(--primary-color);
+  --mdc-filled-button-label-text-color: #fff;
+}
+
+:host ::ng-deep .popup-actions .mat-mdc-raised-button.mat-primary:hover,
+:host ::ng-deep .popup-actions button[mat-raised-button][color='primary']:hover {
+  --mdc-protected-button-container-color: #5f7035;
+  --mdc-filled-button-container-color: #5f7035;
+}
+
+:host ::ng-deep .popup-actions .mat-mdc-raised-button.mat-primary:active,
+:host ::ng-deep .popup-actions button[mat-raised-button][color='primary']:active {
+  --mdc-protected-button-container-color: #4f5f2c;
+  --mdc-filled-button-container-color: #4f5f2c;
+}
+
+:host ::ng-deep .popup-actions button.app-cancel-btn {
+  background: #6b7280 !important;
+  border-color: #6b7280 !important;
+  color: #fff !important;
+}
+
+:host ::ng-deep .popup-actions button.app-cancel-btn:hover {
+  background: #4b5563 !important;
+  border-color: #4b5563 !important;
+}
+
+:host ::ng-deep .popup-actions button.app-cancel-btn:active {
+  background: #374151 !important;
+  border-color: #374151 !important;
 }

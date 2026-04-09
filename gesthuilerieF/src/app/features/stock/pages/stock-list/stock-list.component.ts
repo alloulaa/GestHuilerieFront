@@ -28,7 +28,7 @@ export class StockListComponent implements OnInit {
 
   constructor(
     private stockManagementService: StockManagementService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.stockManagementService.loadInitialData().subscribe(() => {
@@ -75,6 +75,14 @@ export class StockListComponent implements OnInit {
     return 'muted';
   }
 
+  movementReference(movement: StockMovement): string {
+    return movement.reference || (`MS-${movement.id}`);
+  }
+
+  lotReference(movement: StockMovement): string {
+    return movement.lotReference || (`LO-${movement.referenceId}`);
+  }
+
   private applyLotFilter(): void {
     const search = String(this.lotIdFilter ?? '').trim();
     this.filterMessage = '';
@@ -84,18 +92,15 @@ export class StockListComponent implements OnInit {
       return;
     }
 
-    const lotId = Number(search);
-    if (Number.isNaN(lotId) || lotId <= 0) {
-      this.filterMessage = 'Veuillez saisir un lot ID valide.';
-      this.movements = this.allMovements;
-      return;
-    }
-
-    const filtered = this.allMovements.filter((movement) => Number(movement.referenceId) === lotId);
+    const searchLower = search.toLowerCase();
+    const filtered = this.allMovements.filter((movement) => {
+      const lotRef = this.lotReference(movement).toLowerCase();
+      return lotRef.includes(searchLower) || String(movement.referenceId).includes(searchLower);
+    });
     this.movements = filtered;
 
     if (filtered.length === 0) {
-      this.filterMessage = 'Aucun mouvement trouve pour ce lot.';
+      this.filterMessage = 'Aucun mouvement trouve pour cette reference de lot.';
     }
   }
 

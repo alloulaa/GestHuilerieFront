@@ -7,13 +7,12 @@
       <div class="stats">
         <span class="chip">Total: {{ movements.length }}</span>
       </div>
-      <a mat-raised-button color="primary" [routerLink]="['/pages/stock/form']">Nouveau mouvement</a>
     </div>
 
     <div class="filter-bar">
-      <input type="number" [(ngModel)]="lotIdFilter" name="lotIdFilter" placeholder="Filtrer par Lot ID" />
+      <input [(ngModel)]="lotIdFilter" name="lotIdFilter" placeholder="Filtrer par reference lot" />
       <button mat-raised-button color="primary" type="button" (click)="filterByLotId()">Filtrer</button>
-      <button mat-stroked-button type="button" (click)="resetLotFilter()">Reset</button>
+      <button mat-stroked-button type="button" (click)="resetLotFilter()">Réinitialiser</button>
     </div>
 
     <p class="filter-message" *ngIf="filterMessage">{{ filterMessage }}</p>
@@ -22,9 +21,9 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Reference mouvement</th>
             <th>Type</th>
-            <th>Reference</th>
+            <th>Reference lot</th>
             <th>Quantite</th>
             <th>Date</th>
             <th>Commentaire</th>
@@ -35,9 +34,9 @@
             <td colspan="6" class="empty-row">Aucun mouvement a afficher.</td>
           </tr>
           <tr *ngFor="let m of movements" class="row-hover">
-            <td>{{ m.id }}</td>
+            <td>{{ movementReference(m) }}</td>
             <td class="type-cell">{{ movementLabel(m.typeMouvement) }}</td>
-            <td>{{ m.referenceId }}</td>
+            <td>{{ lotReference(m) }}</td>
             <td class="quantite-cell">{{ m.quantite }}</td>
             <td>{{ m.dateMouvement }}</td>
             <td>{{ m.commentaire }}</td>

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { NbButtonModule, NbCardModule, NbIconModule } from '@nebular/theme';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -21,6 +21,7 @@ import { RawMaterialService } from '../../../matieres-premieres/services/raw-mat
 import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AnalyseLaboratoireService } from '../../../lots/services/analyse-laboratoire.service';
 
 @Component({
   selector: 'app-reception-gerer',
@@ -53,23 +54,26 @@ export class ReceptionGererComponent implements OnInit {
   lastCreatedReference = '';
   showSaveSuccessPopup = false;
   savedReception: Pesee | null = null;
+  selectedLotForAnalysis: LotOlives | null = null;
+  analysisSaveError = '';
 
   editingId: number | null = null;
   isEditMode = false;
   successMessage = '';
 
   readonly form;
+  readonly analysisForm;
 
   constructor(
     private fb: FormBuilder,
     private lotManagementService: LotManagementService,
     private weighingService: WeighingService,
     private toastService: ToastService,
-    private router: Router,
     private huilerieService: HuilerieService,
     private rawMaterialService: RawMaterialService,
     private confirmDialogService: ConfirmDialogService,
     private permissionService: PermissionService,
+    private analyseLaboratoireService: AnalyseLaboratoireService,
   ) {
     this.form = this.fb.group({
       datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
@@ -103,6 +107,13 @@ export class ReceptionGererComponent implements OnInit {
 
     this.form.get('existingLotId')?.valueChanges.subscribe((id) => {
       this.patchLotIdentityFromSelection(Number(id));
+    });
+
+    this.analysisForm = this.fb.group({
+      acidite: [0.6, [Validators.required, Validators.min(0), Validators.max(10)]],
+      indicePeroxyde: [8.0, [Validators.required, Validators.min(0), Validators.max(100)]],
+      k232: [1.9, [Validators.required, Validators.min(0), Validators.max(10)]],
+      k270: [0.18, [Validators.required, Validators.min(0), Validators.max(10)]],
     });
 
     this.applyLotModeValidation('existing');
@@ -198,7 +209,7 @@ export class ReceptionGererComponent implements OnInit {
     this.lotManagementService.loadInitialData().subscribe();
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     this.errorMessage = '';
 
     console.log('[reception-gerer] submit start');
@@ -216,14 +227,23 @@ export class ReceptionGererComponent implements OnInit {
         }
       });
       this.form.markAllAsTouched();
+      this.toastService.error('Veuillez corriger les champs invalides avant de continuer.');
       return;
     }
 
     const raw = this.form.getRawValue();
+    const poidsBrut = Number(raw.poidsBrut ?? 0);
+    const poidsTare = Number(raw.poidsTare ?? 0);
+
+    if (poidsTare > poidsBrut) {
+      this.toastService.info('Le poids tare ne peut pas etre superieur au poids brut.');
+      return;
+    }
+
     const payload: CreatePeseeInput = {
       datePesee: raw.datePesee ?? new Date().toISOString(),
-      poidsBrut: Number(raw.poidsBrut) || 0,
-      poidsTare: Number(raw.poidsTare) || 0,
+      poidsBrut: poidsBrut || 0,
+      poidsTare: poidsTare || 0,
       huilerieId: Number(raw.huilerieId) || 1,
       lotMode: raw.lotMode === 'new' ? 'new' : 'existing',
       existingLotId: raw.existingLotId ? Number(raw.existingLotId) : undefined,
@@ -252,9 +272,24 @@ export class ReceptionGererComponent implements OnInit {
           : undefined,
     };
 
+    const confirmed = await this.confirmDialogService.confirm({
+      title: this.isEditMode ? 'Confirmer la mise à jour' : 'Confirmer l\'enregistrement',
+      message: this.isEditMode
+        ? 'Voulez-vous enregistrer les modifications de cette réception ?'
+        : 'Voulez-vous enregistrer cette réception ?',
+      confirmText: this.isEditMode ? 'Mettre à jour' : 'Enregistrer',
+      cancelText: 'Annuler',
+      intent: 'primary',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     if (this.isEditMode) {
       if (this.editingId === null) {
         this.errorMessage = 'Mise a jour impossible: identifiant de reception manquant.';
+        this.toastService.error(this.errorMessage);
         return;
       }
 
@@ -320,6 +355,7 @@ export class ReceptionGererComponent implements OnInit {
       },
       error: () => {
         this.errorMessage = 'Impossible de generer le PDF.';
+        this.toastService.error(this.errorMessage);
       },
     });
   }
@@ -334,6 +370,7 @@ export class ReceptionGererComponent implements OnInit {
 
     if (this.editingId === null) {
       this.errorMessage = 'Edition impossible: identifiant de reception introuvable.';
+      this.toastService.error(this.errorMessage);
       this.isEditMode = false;
       return;
     }
@@ -385,6 +422,67 @@ export class ReceptionGererComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error?.error?.message ?? 'Erreur lors de la suppression.';
         this.toastService.error(this.errorMessage);
+      },
+    });
+  }
+
+  openAddAnalysis(pesee: Pesee): void {
+    const lotId = Number(pesee.lotId);
+    if (!Number.isFinite(lotId) || lotId <= 0) {
+      this.toastService.error('Lot introuvable pour ajouter une analyse.');
+      return;
+    }
+
+    const lot = this.availableLotsForReception.find((item) => Number(item.idLot) === lotId)
+      ?? this.lots.find((item) => Number(item.idLot) === lotId);
+
+    if (!lot) {
+      this.toastService.error('Lot introuvable pour ajouter une analyse.');
+      return;
+    }
+
+    this.analysisSaveError = '';
+    this.selectedLotForAnalysis = lot;
+    this.analysisForm.reset({
+      acidite: 0.6,
+      indicePeroxyde: 8.0,
+      k232: 1.9,
+      k270: 0.18,
+    });
+  }
+
+  closeAddAnalysis(): void {
+    this.selectedLotForAnalysis = null;
+    this.analysisSaveError = '';
+  }
+
+  saveAnalysis(): void {
+    if (!this.selectedLotForAnalysis) {
+      return;
+    }
+
+    if (this.analysisForm.invalid) {
+      this.analysisForm.markAllAsTouched();
+      return;
+    }
+
+    this.analysisSaveError = '';
+    const raw = this.analysisForm.getRawValue();
+
+    this.analyseLaboratoireService.addToStore({
+      lotId: this.selectedLotForAnalysis.idLot,
+      acidite: Number(raw.acidite),
+      indicePeroxyde: Number(raw.indicePeroxyde),
+      k232: Number(raw.k232),
+      k270: Number(raw.k270),
+    }).subscribe({
+      next: () => {
+        this.toastService.success('Analyse enregistree avec succes.');
+        this.closeAddAnalysis();
+      },
+      error: () => {
+        this.analysisSaveError = 'Impossible d\'enregistrer l\'analyse.';
+        this.toastService.error(this.analysisSaveError);
       },
     });
   }
@@ -473,7 +571,8 @@ export class ReceptionGererComponent implements OnInit {
       return;
     }
 
-    const lot = this.lots.find((item) => item.idLot === lotId);
+    const lot = this.availableLotsForReception.find((item) => item.idLot === lotId)
+      ?? this.lots.find((item) => item.idLot === lotId);
     if (!lot) {
       return;
     }
@@ -488,11 +587,11 @@ export class ReceptionGererComponent implements OnInit {
   }
 
   private selectDefaultLot(): void {
-    if (this.isNewLotMode() || this.lots.length === 0) {
+    if (this.isNewLotMode() || this.availableLotsForReception.length === 0) {
       return;
     }
 
-    const availableLot = this.lots[0];
+    const availableLot = this.availableLotsForReception[0];
     if (availableLot) {
       this.form.patchValue(
         {
@@ -510,8 +609,9 @@ export class ReceptionGererComponent implements OnInit {
   }
 
   private computeAvailableLots(): void {
-    const receivedLotIds = new Set(this.weighings.map((pesee) => Number(pesee.lotId)).filter((id) => !Number.isNaN(id)));
-    this.availableLotsForReception = this.lots.filter((lot) => !receivedLotIds.has(Number(lot.idLot)));
+    const sortedLots = [...this.lots].sort((a, b) => Number(a.idLot) - Number(b.idLot));
+    const activeTraceabilityLots = sortedLots.filter((lot) => Number(lot.quantiteRestante ?? 0) > 0);
+    this.availableLotsForReception = activeTraceabilityLots.length > 0 ? activeTraceabilityLots : sortedLots;
   }
 
   private buildCampaignSeasonsFromLots(): string[] {

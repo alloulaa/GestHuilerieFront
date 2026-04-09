@@ -107,9 +107,21 @@ export class ProfilsListComponent implements OnInit {
     });
   }
 
-  onCreateSubmit(): void {
+  async onCreateSubmit(): Promise<void> {
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
+      return;
+    }
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Confirmer la création',
+      message: 'Voulez-vous créer ce profil ? ',
+      confirmText: 'Confirmer',
+      cancelText: 'Annuler',
+      intent: 'primary',
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -124,9 +136,21 @@ export class ProfilsListComponent implements OnInit {
     });
   }
 
-  onEditSubmit(): void {
+  async onEditSubmit(): Promise<void> {
     if (!this.editingProfil?.idProfil || this.editForm.invalid) {
       this.editForm.markAllAsTouched();
+      return;
+    }
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Confirmer la modification',
+      message: 'Voulez-vous enregistrer les modifications de ce profil ? ',
+      confirmText: 'Confirmer',
+      cancelText: 'Annuler',
+      intent: 'primary',
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -168,11 +192,27 @@ export class ProfilsListComponent implements OnInit {
         this.loadProfils();
         this.toastService.success('Profil supprimé avec succès.');
       },
-      error: () => this.toastService.error('Erreur lors de la suppression du profil.')
+      error: (error) => this.toastService.error(this.getDeleteProfilErrorMessage(error))
     });
   }
 
   onViewPermissions(id: number): void {
     this.router.navigate(['/admin/permissions', id]);
+  }
+
+  private getDeleteProfilErrorMessage(error: any): string {
+    const backendMessage = String(error?.error?.message ?? error?.error?.error ?? error?.message ?? '').toLowerCase();
+    const profileAssigned =
+      error?.status === 409 ||
+      backendMessage.includes('attribu') ||
+      backendMessage.includes('utilisateur') ||
+      backendMessage.includes('foreign key') ||
+      backendMessage.includes('constraint');
+
+    if (profileAssigned) {
+      return 'Impossible de supprimer ce profil: il est attribue a un ou plusieurs utilisateurs.';
+    }
+
+    return 'Erreur lors de la suppression du profil.';
   }
 }

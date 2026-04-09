@@ -1,0 +1,34 @@
+<mat-card class="olive-card">
+    <mat-card-header>
+        <mat-card-title>Stock - Donnees de base</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+        <div class="stats">
+            <span class="chip">Total: {{ stocks.length }}</span>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>REFERENCE STOCK</th>
+                        <th>QUANTITE DISPONIBLE</th>
+                        <th>TYPE STOCK</th>
+                        <th>REFERENCE LOT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngIf="stocks.length === 0">
+                        <td colspan="5" class="empty-row">Aucune donnee de stock a afficher.</td>
+                    </tr>
+                    <tr *ngFor="let stock of stocks" class="row-hover">
+                        <td>{{ stockReference(stock) }}</td>
+                        <td>{{ stock.quantiteDisponible }}</td>
+                        <td>{{ stock.typeStock }}</td>
+                        <td>{{ lotReference(stock) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </mat-card-content>
+</mat-card>

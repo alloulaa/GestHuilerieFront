@@ -44,7 +44,7 @@
           <mat-form-field appearance="outline" *ngIf="!isNewLotMode()">
             <mat-label>Lot existant</mat-label>
             <mat-select formControlName="existingLotId">
-              <mat-option *ngFor="let lot of lots" [value]="lot.idLot">
+              <mat-option *ngFor="let lot of availableLotsForReception" [value]="lot.idLot">
                 #{{ lot.idLot }} - {{ lot.varieteOlive }} ({{ lot.origine }})
               </mat-option>
             </mat-select>
@@ -112,18 +112,17 @@
             <a mat-stroked-button [routerLink]="['/pages/reception']">Retour liste</a>
           </div>
 
-          <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
         </form>
       </mat-card-content>
     </mat-card>
 
     <div class="save-popup-backdrop" *ngIf="showSaveSuccessPopup">
       <div class="save-popup" role="dialog" aria-modal="true" aria-labelledby="savePopupTitle">
-        <div class="popup-badge">Reception enregistree</div>
-        <h3 id="savePopupTitle">Enregistrement reussi</h3>
+        <div class="popup-badge">Reception enregistrée</div>
+        <h3 id="savePopupTitle">Enregistrement réussi</h3>
         <p>
-          La reception a ete enregistree avec succes.
-          Voulez-vous generer un PDF avec les informations de cette reception ?
+          La reception a été enregistrée avec succès.
+          Voulez-vous enregistrer le PDF qui contient les informations de cette récéption ?
         </p>
         <div class="popup-meta" *ngIf="savedReception as reception">
           <span>Ref: {{ reception.reference || ('#' + reception.idPesee) }}</span>
@@ -131,8 +130,10 @@
           <span>Net: {{ reception.poidsNet }} kg</span>
         </div>
         <div class="popup-actions">
-          <button mat-raised-button color="primary" type="button" (click)="onPopupGeneratePdf()">Generer PDF</button>
-          <button mat-stroked-button type="button" (click)="onPopupSkipPdf()">Non, continuer</button>
+          <button mat-raised-button color="primary" type="button" (click)="onPopupGeneratePdf()">Enregistrer
+            PDF</button>
+          <button mat-stroked-button type="button" class="app-cancel-btn" (click)="onPopupSkipPdf()">Non,
+            continuer</button>
         </div>
       </div>
     </div>
@@ -162,20 +163,63 @@
             <td>{{ pesee.poidsTare }} kg</td>
             <td>{{ pesee.poidsNet }} kg</td>
             <td class="actions-cell">
+              <button nbButton size="tiny" class="add-analysis-action" type="button"
+                (click)="openAddAnalysis(pesee)" title="Ajouter analyse" aria-label="Ajouter analyse pour ce lot">
+                <nb-icon icon="plus-outline"></nb-icon>
+                <span>Ajouter analyse</span>
+              </button>
               <button nbButton ghost size="small" (click)="edit(pesee)" status="warning" title="Modifier"
-                [disabled]="!canUpdate"
-                aria-label="Modifier la réception">
+                [disabled]="!canUpdate" aria-label="Modifier la réception">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
               <button nbButton ghost size="small" (click)="askDelete(pesee)" status="danger" title="Supprimer"
-                [disabled]="!canDelete"
-                aria-label="Supprimer la réception">
+                [disabled]="!canDelete" aria-label="Supprimer la réception">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="analysis-backdrop" *ngIf="selectedLotForAnalysis as selectedLot">
+      <div class="analysis-modal" role="dialog" aria-modal="true">
+        <div class="analysis-modal-head">
+          <p class="analysis-kicker">Controle qualite</p>
+          <h3>Nouvelle analyse laboratoire - Lot {{ selectedLot.idLot }}</h3>
+        </div>
+
+        <form [formGroup]="analysisForm" (ngSubmit)="saveAnalysis()" class="analysis-form">
+          <label>
+            Acidite (%)
+            <input nbInput type="number" step="0.01" formControlName="acidite" />
+          </label>
+
+          <label>
+            Indice Peroxyde
+            <input nbInput type="number" step="0.1" formControlName="indicePeroxyde" />
+          </label>
+
+          <label>
+            K232
+            <input nbInput type="number" step="0.01" formControlName="k232" />
+          </label>
+
+          <label>
+            K270
+            <input nbInput type="number" step="0.01" formControlName="k270" />
+          </label>
+
+          <p class="analysis-error" *ngIf="analysisSaveError">{{ analysisSaveError }}</p>
+
+          <div class="analysis-actions">
+            <button nbButton status="primary" type="submit">Enregistrer analyse</button>
+            <button nbButton status="basic" class="app-cancel-btn" type="button" (click)="closeAddAnalysis()">
+              Annuler
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
   </nb-card-body>

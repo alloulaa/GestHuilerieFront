@@ -1,11 +1,9 @@
-// c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\features\auth\profile\mon-profil.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../../core/auth/auth.service';
-import { AdminService } from '../../../core/services/admin.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import { ToastService } from '../../../core/services/toast.service';
 
@@ -21,6 +19,9 @@ export class MonProfilComponent implements OnInit {
   userPermissions: any[] = [];
   changePasswordForm!: FormGroup;
   isChangingPassword = false;
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
   isSavingFullName = false;
   isLoading = true;
   errorMessage: string | null = null;
@@ -30,7 +31,6 @@ export class MonProfilComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
-    private adminService: AdminService,
     private permissionService: PermissionService,
     private toastService: ToastService,
     private fb: FormBuilder,
@@ -86,9 +86,11 @@ export class MonProfilComponent implements OnInit {
   }
 
   private persistFullName(newFullName: string): void {
-    const userId = this.resolveUserId();
-    if (!userId) {
-      this.toastService.error('Impossible de sauvegarder le nom: identifiant utilisateur introuvable.');
+    const [prenom, ...nomParts] = newFullName.trim().split(/\s+/);
+    const nom = nomParts.join(' ').trim();
+
+    if (!prenom || !nom) {
+      this.toastService.error('Saisissez un prenom et un nom.');
       this.revertFullName();
       return;
     }
@@ -96,18 +98,25 @@ export class MonProfilComponent implements OnInit {
     this.isSavingFullName = true;
 
     const payload = {
-      ...this.user,
-      fullName: newFullName,
-      name: newFullName,
-      nomComplet: newFullName,
+      prenom,
+      nom,
     };
 
-    this.adminService.updateUtilisateur(userId, payload).subscribe({
-      next: (updatedUser) => {
+    this.authService.updateProfile(payload).subscribe({
+      next: (response) => {
+        const updatedUser =
+          response?.utilisateur ??
+          response?.user ??
+          response?.data?.utilisateur ??
+          response?.data?.user ??
+          null;
+
         this.syncFullNameInProgress = true;
         this.user = {
           ...this.user,
-          ...(updatedUser ?? {}),
+          ...updatedUser,
+          prenom,
+          nom,
           fullName: newFullName,
           name: newFullName,
           nomComplet: newFullName,
@@ -119,8 +128,10 @@ export class MonProfilComponent implements OnInit {
         this.setupFullNamePersistenceHook();
         this.toastService.success('Nom complet mis a jour avec succes');
       },
-      error: () => {
-        this.toastService.error('Echec de la mise a jour du nom complet');
+      error: (error) => {
+        this.toastService.error(
+          error?.error?.message ?? error?.error?.error ?? 'Echec de la mise a jour du nom complet'
+        );
         this.revertFullName();
       },
       complete: () => {
@@ -128,7 +139,6 @@ export class MonProfilComponent implements OnInit {
       },
     });
   }
-
   private revertFullName(): void {
     this.syncFullNameInProgress = true;
     this.user.fullName = this.lastPersistedFullName;
@@ -183,6 +193,20 @@ export class MonProfilComponent implements OnInit {
       newPassword: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', [Validators.required]]
     });
+  }
+
+  togglePasswordVisibility(field: 'current' | 'new' | 'confirm'): void {
+    if (field === 'current') {
+      this.showCurrentPassword = !this.showCurrentPassword;
+      return;
+    }
+
+    if (field === 'new') {
+      this.showNewPassword = !this.showNewPassword;
+      return;
+    }
+
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   onChangePassword(): void {

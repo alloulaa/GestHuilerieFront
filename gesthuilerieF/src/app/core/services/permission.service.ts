@@ -14,7 +14,7 @@ interface PermissionFlat {
 
 @Injectable({ providedIn: 'root' })
 export class PermissionService {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   private getPermissions(): PermissionFlat[] {
     const user = this.authService.getCurrentUser();
@@ -48,6 +48,14 @@ export class PermissionService {
       return ['LOTS', 'LOTS_TRACABILITE', 'LOTS_TRACEABILITE', 'LOTS_TRAÇABILITE'];
     }
 
+    if (
+      normalized === 'STOCK' ||
+      normalized === 'MOUVEMENT_STOCK' ||
+      normalized === 'STOCK_MOUVEMENT'
+    ) {
+      return ['STOCK', 'MOUVEMENT_STOCK', 'STOCK_MOUVEMENT'];
+    }
+
     return [normalized];
   }
 
@@ -76,10 +84,10 @@ export class PermissionService {
     const perm = this.getPermissions().find((p) => aliases.includes(this.normalizeModuleKey(p.module)));
     if (!perm) return false;
     switch (action) {
-      case 'CREATE':  return perm.canCreate;
-      case 'READ':    return perm.canRead;
-      case 'UPDATE':  return perm.canUpdate;
-      case 'DELETE':  return perm.canDelete;
+      case 'CREATE': return perm.canCreate;
+      case 'READ': return perm.canRead;
+      case 'UPDATE': return perm.canUpdate;
+      case 'DELETE': return perm.canDelete;
       case 'EXECUTE': return perm.canExecuted;
       default: return false;
     }
@@ -90,7 +98,7 @@ export class PermissionService {
     const perm = this.getPermissions().find((p) => aliases.includes(this.normalizeModuleKey(p.module)));
     if (!perm) return false;
     return perm.canCreate || perm.canRead || perm.canUpdate
-        || perm.canDelete || perm.canExecuted;
+      || perm.canDelete || perm.canExecuted;
   }
 
   canRead(module: string): boolean {

@@ -10,11 +10,13 @@ export interface LotOlives {
   quantiteInitiale: number;
   quantiteRestante: number;
   matierePremiereId: number;
+  matierePremiereReference?: string;
   campagneId: number;
 }
 
 export interface AnalyseLaboratoire {
   idAnalyse: number;
+  reference?: string;
   acidite: number;
   indicePeroxyde: number;
   k232: number;

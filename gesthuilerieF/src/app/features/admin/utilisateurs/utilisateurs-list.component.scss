@@ -279,6 +279,47 @@ tbody tr:hover {
   min-width: 90px;
 }
 
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #edf4e7;
+  color: var(--primary);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 120ms ease;
+}
+
+.btn-icon:hover {
+  background: #e4eddc;
+  border-color: #a9be99;
+  transform: translateY(-1px);
+}
+
+.btn-icon.action-delete {
+  background: #f8ebe9;
+  border-color: #ddb0ab;
+  color: #8a2f2a;
+}
+
+.btn-icon.action-delete:hover {
+  background: #f3dfdc;
+  border-color: #cf9a95;
+}
+
+.action-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .message {
   border-radius: 8px;
   padding: 0.65rem 0.8rem;

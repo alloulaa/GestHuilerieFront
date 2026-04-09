@@ -30,7 +30,7 @@
         <button nbButton status="primary" type="submit">
           {{ editingId ? 'Mettre a jour' : 'Creer' }}
         </button>
-        <button *ngIf="editingId" nbButton status="basic" outline type="button" (click)="resetForm()">Annuler</button>
+        <button *ngIf="editingId" nbButton status="basic" outline class="app-cancel-btn" type="button" (click)="resetForm()">Annuler</button>
       </div>
     </form>
   </nb-card-body>

@@ -2,9 +2,9 @@
   <nb-card-header>
     <div class="head-wrap">
       <div>
-        <p class="eyebrow">Tracabilite</p>
-        <h3>Tracabilite des lots</h3>
-        <p class="subtitle">Suivez chaque lot sur sa ligne de vie, de la reception jusqu'au produit final.</p>
+        <p class="eyebrow">Tracabilité</p>
+        <h3>Tracabilité des lots</h3>
+        <p class="subtitle">Suivez chaque lot sur sa ligne de vie, de la récéption jusqu'au produit final.</p>
       </div>
       <span class="count-chip">Lots: {{ filteredLots().length }}</span>
     </div>
@@ -14,38 +14,38 @@
       <div class="search-row">
         <label class="form-label" for="lotSearch">Recherche lot</label>
         <input id="lotSearch" nbInput fullWidth [value]="lotSearch" (input)="lotSearch = $any($event.target).value"
-          placeholder="ID, variete ou origine" />
+          placeholder="Reference, variete ou origine" />
       </div>
 
       <div class="table-wrap">
         <table class="history-table lots-table">
           <thead>
             <tr>
-              <th>ID Lot</th>
-              <th>Variete</th>
+              <th>Réference lot</th>
+              <th>Varieté</th>
               <th>Origine</th>
               <th>Qte Initiale</th>
               <th>Qte Restante</th>
-              
+
               <th>Produits finaux</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngIf="filteredLots().length === 0">
-              <td colspan="8" class="empty-state">Aucun lot trouve pour cette recherche.</td>
+              <td colspan="7" class="empty-state">Aucun lot trouve pour cette recherche.</td>
             </tr>
             <tr *ngFor="let lot of filteredLots()" class="row-hover">
-              <td>{{ lot.idLot }}</td>
+              <td>{{ lotReference(lot) }}</td>
               <td>{{ lot.varieteOlive }}</td>
               <td>{{ lot.origine }}</td>
               <td>{{ lot.quantiteInitiale }} kg</td>
               <td>{{ lot.quantiteRestante }} kg</td>
-              
+
               <td>
                 <ng-container *ngIf="getFinalProducts(lot.idLot).length > 0; else noFinalProduct">
                   <div class="final-product" *ngFor="let productEvent of getFinalProducts(lot.idLot)">
-                    {{ productEvent.description }}
+                    {{ productEvent.reference || productEvent.description }}
                   </div>
                 </ng-container>
                 <ng-template #noFinalProduct>
@@ -55,8 +55,6 @@
               <td>
                 <a nbButton status="primary" size="small" class="lot-details-btn"
                   [routerLink]="['/pages/lots', lot.idLot]">Voir details</a>
-                <button nbButton status="basic" size="small" class="add-analysis-btn" type="button"
-                  (click)="openAddAnalysis(lot)">Ajouter analyse</button>
               </td>
             </tr>
           </tbody>
@@ -65,34 +63,3 @@
     </div>
   </nb-card-body>
 </nb-card>
-
-<div class="analysis-backdrop" *ngIf="selectedLotForAnalysis as selectedLot">
-  <div class="analysis-modal">
-    <h3>Nouvelle analyse laboratoire - Lot {{ selectedLot.idLot }}</h3>
-    <form [formGroup]="analysisForm" (ngSubmit)="saveAnalysis()" class="analysis-form">
-      <label>
-        Acidite (%)
-        <input nbInput type="number" step="0.01" formControlName="acidite" />
-      </label>
-      <label>
-        Indice Peroxyde
-        <input nbInput type="number" step="0.1" formControlName="indicePeroxyde" />
-      </label>
-      <label>
-        K232
-        <input nbInput type="number" step="0.01" formControlName="k232" />
-      </label>
-      <label>
-        K270
-        <input nbInput type="number" step="0.01" formControlName="k270" />
-      </label>
-
-      <p class="analysis-error" *ngIf="analysisSaveError">{{ analysisSaveError }}</p>
-
-      <div class="analysis-actions">
-        <button nbButton status="primary" type="submit">Enregistrer analyse</button>
-        <button nbButton status="basic" type="button" (click)="closeAddAnalysis()">Annuler</button>
-      </div>
-    </form>
-  </div>
-</div>

@@ -68,7 +68,7 @@
         <button nbButton status="primary" type="submit" [disabled]="isEditingInactiveHuilerie">
           {{ editingHuilerieId ? 'Mettre a jour huilerie' : 'Creer huilerie' }}
         </button>
-        <button *ngIf="editingHuilerieId" nbButton status="basic" outline type="button"
+          <button *ngIf="editingHuilerieId" nbButton status="basic" outline class="app-cancel-btn" type="button"
           (click)="resetHuilerieForm()">Annuler</button>
       </div>
 

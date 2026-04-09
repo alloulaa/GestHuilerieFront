@@ -241,8 +241,6 @@
         J'accepte les conditions d'utilisation et la politique de confidentialite.
       </label>
 
-      <p class="error-message" *ngIf="errorMessage">{{ errorMessage }}</p>
-
       <button type="submit" [disabled]="isLoading">
         <span *ngIf="!isLoading">Creer mon compte</span>
         <span *ngIf="isLoading">Creation en cours...</span>

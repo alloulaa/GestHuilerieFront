@@ -59,7 +59,7 @@
         <button nbButton status="primary" type="submit">
           {{ editingMachineId ? 'Mettre a jour machine' : 'Ajouter machine' }}
         </button>
-        <button *ngIf="editingMachineId" nbButton status="basic" outline type="button"
+        <button *ngIf="editingMachineId" nbButton status="basic" outline class="app-cancel-btn" type="button"
           (click)="resetMachineForm()">Annuler</button>
       </div>
     </form>

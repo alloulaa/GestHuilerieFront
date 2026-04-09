@@ -108,7 +108,7 @@
             <button class="btn-primary" type="submit" [disabled]="!guideForm.valid">
               {{ guideEditingId ? '✓ Mettre à jour' : '✓ Créer le guide' }}
             </button>
-            <button class="btn-secondary" type="button" *ngIf="guideEditingId"
+            <button class="btn-secondary app-cancel-btn" type="button" *ngIf="guideEditingId"
               (click)="resetGuideForm()">Annuler</button>
           </div>
         </form>

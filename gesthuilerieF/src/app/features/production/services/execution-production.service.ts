@@ -25,6 +25,10 @@ export class ExecutionProductionService {
         return this.http.get<ExecutionProduction>(`${this.apiUrl}/${idExecutionProduction}`);
     }
 
+    buildCodeLot(lotId: number): Observable<string> {
+        return this.http.get(`${this.apiUrl}/build-code-lot/${lotId}`, { responseType: 'text' });
+    }
+
     create(payload: ExecutionProductionCreate): Observable<ExecutionProduction> {
         return this.http.post<ExecutionProduction>(this.apiUrl, payload);
     }
@@ -35,8 +39,12 @@ export class ExecutionProductionService {
 
     createProduitFinal(execution: ExecutionProduction): Observable<ExecutionProductionDTO> {
         const dateProduction = String(execution?.dateFinReelle ?? '').trim() || new Date().toISOString().slice(0, 19);
+        const quantiteProduite = Number(execution?.rendement ?? 0);
+        const produitNomFallback = String(execution?.lotOlivesVariete ?? '').trim();
         const payload = {
             executionProductionId: execution.idExecutionProduction,
+            nomProduit: produitNomFallback ? `Huile ${produitNomFallback}` : `Huile lot ${execution.codeLot ?? execution.idExecutionProduction}`,
+            quantiteProduite,
             dateProduction,
         };
 

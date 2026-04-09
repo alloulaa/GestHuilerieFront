@@ -32,10 +32,6 @@
       </div>
     </div>
 
-    <div class="message" *ngIf="message" [class.message-success]="message.type === 'success'" [class.message-error]="message.type === 'error'">
-      {{ message.text }}
-    </div>
-
     <div class="permission-grid">
       <article class="permission-module" [class.row-dirty]="row.dirty" *ngFor="let row of permissionRows">
         <h3>{{ row.moduleNom }}</h3>
@@ -52,18 +48,21 @@
           </label>
 
           <label class="switch-item">
-            <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="onCheckboxChange(row)" />
+            <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="onCheckboxChange(row)"
+              [disabled]="!row.canCreate" />
             <span>Modifier</span>
           </label>
 
           <label class="switch-item">
-            <input type="checkbox" [(ngModel)]="row.canDelete" (change)="onCheckboxChange(row)" />
+            <input type="checkbox" [(ngModel)]="row.canDelete" (change)="onCheckboxChange(row)"
+              [disabled]="!row.canCreate" />
             <span>Supprimer</span>
           </label>
 
           <label class="switch-item">
-            <input type="checkbox" [(ngModel)]="row.canExecuted" (change)="onCheckboxChange(row)" />
-            <span>Exécuter</span>
+            <input type="checkbox" [(ngModel)]="row.canExecuted" (change)="onCheckboxChange(row)"
+              [disabled]="!row.canCreate" />
+            <span>{{ isStockMovementModule(row.moduleNom) ? 'Analyser' : 'Exécuter' }}</span>
           </label>
         </div>
       </article>

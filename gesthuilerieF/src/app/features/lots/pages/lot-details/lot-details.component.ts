@@ -64,4 +64,12 @@ export class LotDetailsComponent implements OnInit {
     }
     return 'Stock';
   }
+
+  lotReference(lot: LotOlives): string {
+    return lot.reference || (`LO-${lot.idLot}`);
+  }
+
+  analysisReference(analysis: AnalyseLaboratoire): string {
+    return analysis.reference || (`AL-${analysis.idAnalyse}`);
+  }
 }

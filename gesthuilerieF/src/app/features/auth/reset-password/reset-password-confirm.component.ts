@@ -34,6 +34,7 @@ export class ResetPasswordConfirmComponent implements OnInit {
     this.token = this.route.snapshot.queryParamMap.get('token');
     if (!this.token) {
       this.errorMessage = 'Lien invalide ou expiré';
+      this.toastService.error(this.errorMessage);
       return;
     }
 
@@ -77,6 +78,7 @@ export class ResetPasswordConfirmComponent implements OnInit {
   onSubmit(): void {
     if (!this.token) {
       this.errorMessage = 'Lien invalide ou expiré';
+      this.toastService.error(this.errorMessage);
       return;
     }
 
@@ -112,6 +114,7 @@ export class ResetPasswordConfirmComponent implements OnInit {
         } else {
           this.errorMessage = 'Erreur. Réessayez.';
         }
+        this.toastService.error(this.errorMessage);
       }
     });
   }

@@ -61,7 +61,7 @@
         <button nbButton status="primary" type="submit">
           {{ editingLotId ? 'Mettre a jour lot' : 'Creer lot' }}
         </button>
-        <button *ngIf="editingLotId" nbButton status="basic" outline type="button"
+          <button *ngIf="editingLotId" nbButton status="basic" outline class="app-cancel-btn" type="button"
           (click)="resetLotForm()">Annuler</button>
       </div>
     </form>
@@ -136,7 +136,7 @@
         <button nbButton status="primary" type="submit">
           {{ editingAnalysisId ? 'Mettre a jour analyse' : 'Ajouter analyse' }}
         </button>
-        <button *ngIf="editingAnalysisId" nbButton status="basic" outline type="button"
+          <button *ngIf="editingAnalysisId" nbButton status="basic" outline class="app-cancel-btn" type="button"
           (click)="resetAnalysisForm()">Annuler</button>
       </div>
     </form>

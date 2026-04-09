@@ -30,14 +30,16 @@ export class WeighingService {
     );
   }
 
-  updateReception(idPesee: number, payload: Partial<ReceptionPeseeCreatePayload>): Observable<Pesee> {
+  updateReception(idPesee: number, payload: ReceptionPeseeCreatePayload): Observable<Pesee> {
     return this.http.put<any>(`${this.apiUrl}/${idPesee}`, payload).pipe(
       map((item) => this.normalizePesee(item)),
     );
   }
 
   generateBonPeseePdf(reference: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${encodeURIComponent(reference)}/pdf`, { responseType: 'blob' });
+    return this.http.get(`${this.apiUrl}/${reference}/pdf`, {
+      responseType: 'blob',
+    });
   }
 
   delete(idPesee: number): Observable<void> {
@@ -58,6 +60,7 @@ export class WeighingService {
       poidsNet: Number(raw?.poidsNet ?? Math.max(0, brut - tare)),
       lotId: Number(raw?.lotId ?? raw?.lotOlivesId ?? 0),
       huilerieId: raw?.huilerieId != null ? Number(raw.huilerieId) : undefined,
+      bonPeseePdfPath: raw?.bonPeseePdfPath ?? undefined,
     };
   }
 }

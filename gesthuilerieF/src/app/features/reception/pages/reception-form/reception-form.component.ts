@@ -16,6 +16,7 @@ import { HuilerieService } from '../../../machines/services/huilerie.service';
 import { Huilerie } from '../../../machines/models/enterprise.models';
 import { RawMaterialService } from '../../../matieres-premieres/services/raw-material.service';
 import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-reception-form',
@@ -53,6 +54,7 @@ export class ReceptionFormComponent implements OnInit {
     private router: Router,
     private huilerieService: HuilerieService,
     private rawMaterialService: RawMaterialService,
+    private toastService: ToastService,
   ) {
     this.form = this.formBuilder.group({
       datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
@@ -180,6 +182,7 @@ export class ReceptionFormComponent implements OnInit {
     if (this.form.invalid) {
       console.log('❌ FORM INVALID - Marking all as touched');
       this.form.markAllAsTouched();
+      this.toastService.error('Veuillez corriger les champs invalides avant de continuer.');
       return;
     }
 
@@ -215,7 +218,9 @@ export class ReceptionFormComponent implements OnInit {
     this.lotManagementService.createPesee(payload).subscribe({
       next: result => {
         this.savedReception = result;
-        this.showSaveSuccessPopup = true;
+        this.showSaveSuccessPopup = false;
+        this.toastService.success('Reception enregistree avec succes.');
+        this.router.navigateByUrl('/pages/reception');
       },
 
       error: errorResponse => {
@@ -227,6 +232,7 @@ export class ReceptionFormComponent implements OnInit {
           errorResponse?.error?.error ??
           errorResponse?.message ??
           'Erreur de validation.';
+        this.toastService.error(this.errorMessage);
       },
     });
   }
@@ -266,6 +272,7 @@ export class ReceptionFormComponent implements OnInit {
       },
       error: () => {
         this.errorMessage = 'Impossible de generer le PDF.';
+        this.toastService.error(this.errorMessage);
       },
     });
   }
