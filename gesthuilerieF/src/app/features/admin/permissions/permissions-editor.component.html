@@ -48,21 +48,18 @@
           </label>
 
           <label class="switch-item">
-            <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="onCheckboxChange(row)"
-              [disabled]="!row.canCreate" />
+            <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="onCheckboxChange(row)" />
             <span>Modifier</span>
           </label>
 
           <label class="switch-item">
-            <input type="checkbox" [(ngModel)]="row.canDelete" (change)="onCheckboxChange(row)"
-              [disabled]="!row.canCreate" />
+            <input type="checkbox" [(ngModel)]="row.canDelete" (change)="onCheckboxChange(row)" />
             <span>Supprimer</span>
           </label>
 
           <label class="switch-item">
-            <input type="checkbox" [(ngModel)]="row.canExecuted" (change)="onCheckboxChange(row)"
-              [disabled]="!row.canCreate" />
-            <span>{{ isStockMovementModule(row.moduleNom) ? 'Analyser' : 'Exécuter' }}</span>
+            <input type="checkbox" [(ngModel)]="row.canExecuted" (change)="onCheckboxChange(row)" />
+            <span>Exécuter</span>
           </label>
         </div>
       </article>

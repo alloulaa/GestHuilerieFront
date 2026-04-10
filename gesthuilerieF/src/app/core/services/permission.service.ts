@@ -48,14 +48,6 @@ export class PermissionService {
       return ['LOTS', 'LOTS_TRACABILITE', 'LOTS_TRACEABILITE', 'LOTS_TRAÇABILITE'];
     }
 
-    if (
-      normalized === 'STOCK' ||
-      normalized === 'MOUVEMENT_STOCK' ||
-      normalized === 'STOCK_MOUVEMENT'
-    ) {
-      return ['STOCK', 'MOUVEMENT_STOCK', 'STOCK_MOUVEMENT'];
-    }
-
     return [normalized];
   }
 

@@ -31,7 +31,6 @@ export class SidebarMenuComponent {
       'Machines': 'MACHINES',
       'Matières Premières': 'MATIERES_PREMIERES',
       'Stock': 'STOCK',
-      'Stock mouvement': 'STOCK_MOUVEMENT',
       'Traçabilité des Lots': 'LOTS',
       'Dashboard Admin': 'DASHBOARD_ADMIN',
       'Huileries': 'HUILERIES',

@@ -158,13 +158,18 @@
           <span class="execution-card__status">{{ execution.statut }}</span>
         </div>
         <div class="execution-detail-grid">
-          <div class="execution-detail-item"><span>Guide</span><strong>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</strong>
+          <div class="execution-detail-item"><span>Guide</span><strong>{{ execution.guideProductionReference || ('#' +
+              execution.guideProductionId) }}</strong>
           </div>
-          <div class="execution-detail-item"><span>Machine</span><strong>{{ execution.machineNom || ('#' + execution.machineId) }}</strong></div>
-          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotOlivesReference || ('#' + execution.lotOlivesId) }}</strong></div>
-          <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-' }}</strong></div>
+          <div class="execution-detail-item"><span>Machine</span><strong>{{ execution.machineNom || ('#' +
+              execution.machineId) }}</strong></div>
+          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotOlivesReference || ('#' +
+              execution.lotOlivesId) }}</strong></div>
+          <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
+              }}</strong></div>
           <div class="execution-detail-item"><span>Rendement</span><strong>{{ execution.rendement }}</strong></div>
-          <div class="execution-detail-item"><span>Date début</span><strong>{{ execution.dateDebut || '-' }}</strong></div>
+          <div class="execution-detail-item"><span>Date début</span><strong>{{ execution.dateDebut || '-' }}</strong>
+          </div>
         </div>
         <div class="execution-detail-observations-card">
           <h4>Observations</h4>

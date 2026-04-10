@@ -83,22 +83,6 @@ export const MENU_ITEMS: NbMenuItem[] = [
     link: '/pages/stock',
   },
   {
-    title: 'Stock mouvement',
-    icon: 'swap-outline',
-    children: [
-      {
-        title: 'Consulter',
-        icon: 'list-outline',
-        link: '/pages/stock/history',
-      },
-      {
-        title: 'Gérer',
-        icon: 'settings-outline',
-        link: '/pages/stock/form',
-      },
-    ],
-  },
-  {
     title: 'Traçabilité des Lots',
     icon: 'pricetags-outline',
     link: '/pages/lots/traceability',
