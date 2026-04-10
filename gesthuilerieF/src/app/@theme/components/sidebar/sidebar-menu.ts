@@ -17,10 +17,27 @@ export const MENU_ITEMS: NbMenuItem[] = [
         icon: 'list-outline',
         link: '/pages/reception/consulter',
       },
+      
       {
         title: 'Gérer',
         icon: 'settings-outline',
         link: '/pages/reception/gerer',
+      },
+    ],
+  },
+  {
+     title: 'Stock mouvement',
+    icon: 'swap-outline',
+    children: [
+      {
+        title: 'Consulter',
+        icon: 'list-outline',
+        link: '/pages/stock/history',
+      },
+      {
+        title: 'Gérer',
+        icon: 'settings-outline',
+        link: '/pages/stock/form',
       },
     ],
   },

@@ -34,6 +34,7 @@ export class SidebarMenuComponent {
       'Traçabilité des Lots': 'LOTS',
       'Dashboard Admin': 'DASHBOARD_ADMIN',
       'Huileries': 'HUILERIES',
+      'Stock mouvement': 'STOCK_MOUVEMENT',
       'Gestion Paramétrage': 'COMPTES_PROFILS',
     };
 

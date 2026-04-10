@@ -12,6 +12,7 @@ import { StockManagementService } from '../../services/stock-management.service'
 import { EMPTY, switchMap } from 'rxjs';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 import { LotOlives } from '../../../lots/models/lot.models';
 import { LotOlivesService } from '../../../lots/services/lot-olives.service';
 import { HuilerieService } from '../../../machines/services/huilerie.service';
@@ -48,6 +49,7 @@ export class StockFormComponent {
     private huilerieService: HuilerieService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
+    private permissionService: PermissionService,
   ) {
     this.form = this.formBuilder.group({
       typeMouvement: ['ARRIVAL', [Validators.required]],
@@ -211,5 +213,9 @@ export class StockFormComponent {
       return new Date().toISOString().slice(0, 16);
     }
     return value.length >= 16 ? value.slice(0, 16) : value;
+  }
+
+  canUpdateStockMovement(): boolean {
+    return this.permissionService.canUpdate('STOCK_MOUVEMENT');
   }
 }

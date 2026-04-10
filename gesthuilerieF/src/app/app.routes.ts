@@ -124,8 +124,7 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: 'stock/history',
-        loadComponent: () => import('./features/stock/pages/stock-list/stock-list.component').then(c => c.StockListComponent),
-      },
+loadComponent: () => import('./features/stock/pages/stock-overview/stock-overview.component').then(c => c.StockOverviewComponent),      },
       {
         path: 'stock/weighing',
         loadComponent: () => import('./features/stock/pages/weighing-stock/weighing-stock.component').then(c => c.WeighingStockComponent),

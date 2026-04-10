@@ -5,7 +5,7 @@ import { NbButtonModule, NbCardModule, NbIconModule, NbInputModule, NbSelectModu
 import { HttpErrorResponse } from '@angular/common/http';
 import { Huilerie } from '../../../machines/models/enterprise.models';
 import { HuilerieService } from '../../../machines/services/huilerie.service';
-import { GuideProduction, ExecutionProduction } from '../../models/production.models';
+import { EtapeProduction, ExecutionProduction, GuideProduction, ParametreEtape } from '../../models/production.models';
 import { GuideProductionService } from '../../services/guide-production.service';
 import { ExecutionProductionService } from '../../services/execution-production.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -74,12 +74,12 @@ export class GuidesGererComponent implements OnInit {
 
   get canUpdate(): boolean {
     return this.permissionService.isAdmin()
-      || this.permissionService.canUpdate('PRODUCTION');
+      || this.permissionService.canUpdate('GUIDE_PRODUCTION');
   }
 
   get canDelete(): boolean {
     return this.permissionService.isAdmin()
-      || this.permissionService.canDelete('PRODUCTION');
+      || this.permissionService.canDelete('GUIDE_PRODUCTION');
   }
 
   get etapes(): FormArray {
@@ -201,12 +201,48 @@ export class GuidesGererComponent implements OnInit {
   }
 
   editGuide(guide: GuideProduction): void {
+    const etapesArray = this.guideForm.get('etapes') as FormArray;
+    while (etapesArray.length > 0) {
+      etapesArray.removeAt(0);
+    }
+
+    const sourceEtapes = Array.isArray(guide.etapes) ? guide.etapes : [];
+    if (sourceEtapes.length === 0) {
+      etapesArray.push(this.createEtapeGroup(1));
+    } else {
+      sourceEtapes.forEach((etape, index) => {
+        etapesArray.push(this.createEtapeGroupFromGuide(etape, index + 1));
+      });
+    }
+
     this.guideEditingId = guide.idGuideProduction;
     this.guideForm.patchValue({
       nom: guide.nom,
       description: guide.description,
       dateCreation: guide.dateCreation.slice(0, 10),
       huilerieId: guide.huilerieId,
+    });
+  }
+
+  private createEtapeGroupFromGuide(etape: EtapeProduction, ordreFallback: number) {
+    const parametres = Array.isArray(etape.parametres) && etape.parametres.length > 0
+      ? etape.parametres.map(param => this.createParametreGroupFromGuide(param))
+      : [this.createParametreGroup()];
+
+    return this.fb.group({
+      nom: [String(etape.nom ?? '').trim(), [Validators.required]],
+      ordre: [Number(etape.ordre ?? ordreFallback), [Validators.required]],
+      description: [String(etape.description ?? '').trim(), [Validators.required]],
+      parametres: this.fb.array(parametres),
+    });
+  }
+
+  private createParametreGroupFromGuide(parametre: ParametreEtape) {
+    return this.fb.group({
+      nom: [String(parametre.nom ?? '').trim(), [Validators.required]],
+      uniteMesure: [String(parametre.uniteMesure ?? '').trim(), [Validators.required]],
+      valeur: [String(parametre.valeur ?? '').trim(), [Validators.required]],
+      description: [String(parametre.description ?? '').trim(), [Validators.required]],
     });
   }
 
