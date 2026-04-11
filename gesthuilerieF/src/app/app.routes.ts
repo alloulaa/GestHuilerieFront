@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { SidebarComponent } from './@theme/components/sidebar/sidebar.component';
 import { AuthGuard } from './core/auth/auth.guard';
+import { RoleGuard } from './core/guards/role.guard';
 
 export const APP_ROUTES: Routes = [
   {
@@ -26,7 +27,8 @@ export const APP_ROUTES: Routes = [
   {
     path: 'pages',
     component: SidebarComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, RoleGuard],
+    canActivateChild: [RoleGuard],
     children: [
       // Dashboard
       {
