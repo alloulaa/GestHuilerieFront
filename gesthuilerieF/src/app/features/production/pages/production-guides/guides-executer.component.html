@@ -4,7 +4,7 @@
 
     <form class="stack-form" [formGroup]="executionForm" (ngSubmit)="submitExecution()">
       <div class="form-grid form-grid--execution">
-        <label class="field">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('guideProductionId')">
           <span>Guide *</span>
           <nb-select fullWidth formControlName="guideProductionId" placeholder="Sélectionner"
             (selectedChange)="onGuideSelectionChange($event)">
@@ -14,12 +14,12 @@
           </nb-select>
         </label>
 
-        <label class="field">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('dateDebut')">
           <span>Date début *</span>
           <input nbInput fullWidth type="date" formControlName="dateDebut" />
         </label>
 
-        <label class="field">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('dateFinPrevue')">
           <span>Date fin prévue *</span>
           <input nbInput fullWidth type="date" formControlName="dateFinPrevue" />
         </label>
@@ -29,7 +29,7 @@
           <input nbInput fullWidth type="date" formControlName="dateFinReelle" />
         </label>
 
-        <label class="field">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('statut')">
           <span>Statut *</span>
           <nb-select fullWidth formControlName="statut">
             <nb-option value="EN_COURS">En cours</nb-option>
@@ -39,12 +39,12 @@
           </nb-select>
         </label>
 
-        <label class="field">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('rendement')">
           <span>Rendement *</span>
           <input nbInput fullWidth type="number" step="0.01" min="0" formControlName="rendement" placeholder="0.0" />
         </label>
 
-        <label class="field">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('machineId')">
           <span>Machine *</span>
           <nb-select fullWidth formControlName="machineId" placeholder="Sélectionner">
             <nb-option *ngFor="let machine of machines" [value]="machine.idMachine">
@@ -53,7 +53,7 @@
           </nb-select>
         </label>
 
-        <label class="field">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('lotOlivesId')">
           <span>Lot d'olives *</span>
           <nb-select fullWidth formControlName="lotOlivesId" placeholder="Sélectionner">
             <nb-option *ngFor="let lot of lots" [value]="lot.idLot">
@@ -88,7 +88,7 @@
             <strong>{{ row.stepName }}</strong>
             <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
           </div>
-          <div [formGroupName]="valueIndex" class="value-item__input">
+          <div [formGroupName]="valueIndex" class="value-item__input" [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
             <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
           </div>
         </div>
@@ -125,6 +125,7 @@
 
           <div class="execution-card__meta">
             <p><strong>Machine:</strong> {{ execution.machineNom || ('#' + execution.machineId) }}</p>
+            <p><strong>Date fin réelle:</strong> {{ formatExecutionDate(execution.dateFinReelle) }}</p>
             <p><strong>Produit final:</strong> {{ execution.produitFinalReference || '-' }}</p>
           </div>
 
@@ -165,6 +166,7 @@
               execution.machineId) }}</strong></div>
           <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotOlivesReference || ('#' +
               execution.lotOlivesId) }}</strong></div>
+            <div class="execution-detail-item"><span>Date fin réelle</span><strong>{{ formatExecutionDate(execution.dateFinReelle) }}</strong></div>
           <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
               }}</strong></div>
           <div class="execution-detail-item"><span>Rendement</span><strong>{{ execution.rendement }}</strong></div>

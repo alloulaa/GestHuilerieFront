@@ -8,8 +8,8 @@ import { Stock } from '../models/stock.models';
     providedIn: 'root',
 })
 export class StockService {
-    private readonly apiUrl = `${environment.apiUrl}/stock`;
-    private readonly fallbackApiUrl = `${environment.apiUrl}/stocks`;
+    private readonly apiUrl = `${environment.apiUrl}/stocks`;
+    private readonly fallbackApiUrl = `${environment.apiUrl}/stock`;
 
     constructor(private http: HttpClient) { }
 

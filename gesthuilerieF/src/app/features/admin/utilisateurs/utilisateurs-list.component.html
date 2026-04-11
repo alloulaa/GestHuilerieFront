@@ -80,7 +80,6 @@
             <th>Prenom</th>
             <th>Email</th>
             <th>Profil</th>
-            <th>Statut</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -90,14 +89,8 @@
             <td>{{ user.prenom }}</td>
             <td>{{ user.email }}</td>
             <td>{{ getUserProfilName(user) }}</td>
-            <td>
-              <span [class]="isUserActive(user) ? 'badge-actif' : 'badge-inactif'">{{ isUserActive(user) ? 'Actif' :
-                'Inactif' }}</span>
-            </td>
             <td class="row-actions">
-              <button type="button" class="switch" (click)="onToggleActif(user)">{{ isUserActive(user) ? 'Desactiver' :
-                'Activer'
-                }}</button>
+
               <button class="btn-icon action-edit" type="button" title="Modifier" aria-label="Modifier utilisateur"
                 (click)="onEdit(user)">&#9998;</button>
               <button class="btn-icon action-delete" type="button" title="Supprimer" aria-label="Supprimer utilisateur"

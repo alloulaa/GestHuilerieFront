@@ -2,9 +2,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
 
 :host {
-  --success-color: var(--toast-success, #b43a30);
+  --success-color: var(--toast-success, #1f7a3a);
   --error-color: var(--toast-error, #b43a30);
-  --info-color: var(--toast-info, #b43a30);
+  --info-color: var(--toast-info, #2f6bb2);
   --surface: var(--toast-surface, #fffcf6);
   --text: var(--toast-text, #28361b);
 
@@ -13,9 +13,9 @@
 }
 
 :host-context(.dark-theme) {
-  --success-color: var(--toast-success-dark, #ff8f84);
+  --success-color: var(--toast-success-dark, #7fe49f);
   --error-color: var(--toast-error-dark, #ff8f84);
-  --info-color: var(--toast-info-dark, #ff8f84);
+  --info-color: var(--toast-info-dark, #89b7ff);
   --surface: var(--toast-surface-dark, #2d3a1f);
   --text: var(--toast-text-dark, #edf5dd);
 }
@@ -38,12 +38,12 @@
   gap: 0.85rem;
   padding: 0.9rem 0.95rem;
   border-radius: 14px;
-  border: 1px solid rgba(180, 58, 48, 0.28);
+  border: 1px solid rgba(81, 104, 56, 0.26);
   background:
     linear-gradient(155deg, rgba(255, 255, 255, 0.72), rgba(247, 242, 229, 0.88)),
     var(--surface);
   box-shadow:
-    0 18px 32px -24px rgba(110, 30, 24, 0.46),
+    0 18px 32px -24px rgba(40, 70, 34, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(8px);
   animation: slideIn 260ms ease-out;

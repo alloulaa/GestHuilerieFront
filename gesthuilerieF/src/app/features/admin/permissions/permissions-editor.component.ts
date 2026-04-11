@@ -38,7 +38,9 @@ export class PermissionsEditorComponent implements OnInit {
   constructor(
     private adminService: AdminService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService,
+    private confirmDialogService: ConfirmDialogService
   ) { }
 
 
@@ -161,10 +163,28 @@ export class PermissionsEditorComponent implements OnInit {
     });
   }
 
-  onBack(): void {
-    this.router.navigate(['/admin/profils']);
+  async onBack(): Promise<void> {
+    if (!this.hasPendingChanges) {
+      this.router.navigate(['/admin/profils']);
+      return;
+    }
+
+    this.toastService.info('Les modifications ne seront pas enregistrées.');
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Annulation',
+      message: 'Les modifications ne seront pas enregistrées. Voulez-vous quitter sans enregistrer ?',
+      confirmText: 'Continuer',
+      cancelText: 'Annuler',
+      intent: 'danger',
+    });
+
+    if (confirmed) {
+      this.router.navigate(['/admin/profils']);
+    }
   }
- showMessage(type: 'success' | 'error', text: string): void {
+
+  showMessage(type: 'success' | 'error', text: string): void {
     this.message = { type, text };
     setTimeout(() => {
       this.message = null;

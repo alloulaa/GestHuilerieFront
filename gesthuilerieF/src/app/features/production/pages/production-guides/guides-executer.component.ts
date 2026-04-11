@@ -111,6 +111,14 @@ export class GuidesExecuterComponent implements OnInit {
     return String(execution.statut ?? '').trim() || '-';
   }
 
+  formatExecutionDate(dateValue: string | null | undefined): string {
+    if (!dateValue) {
+      return '-';
+    }
+
+    return String(dateValue).split('T')[0] || '-';
+  }
+
   isExecutionTerminated(execution: ExecutionProduction): boolean {
     return String(execution.statut ?? '').trim().toUpperCase() === 'TERMINEE';
   }
@@ -139,6 +147,7 @@ export class GuidesExecuterComponent implements OnInit {
   submitExecution(): void {
     if (this.executionForm.invalid) {
       this.executionForm.markAllAsTouched();
+      this.executionMessage = '';
       return;
     }
 
@@ -198,6 +207,8 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
+    const dateFinReelle = this.today();
+
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Terminer l\'exécution',
       message: 'Cette action va créer le produit final, afficher sa référence et passer le statut à TERMINEE.',
@@ -213,7 +224,11 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionProductionService.createProduitFinal(execution).subscribe({
       next: (updatedExecution) => {
         this.executionMessage = 'Produit final créé et exécution terminée.';
-        this.selectedExecution = updatedExecution ?? execution;
+        this.selectedExecution = {
+          ...(updatedExecution ?? execution),
+          dateFinReelle: updatedExecution?.dateFinReelle ?? execution.dateFinReelle ?? dateFinReelle,
+          statut: updatedExecution?.statut ?? 'TERMINEE',
+        };
         this.toastService.success('Produit final créé avec succès.');
         this.loadExecutions();
       },
@@ -237,7 +252,12 @@ export class GuidesExecuterComponent implements OnInit {
       this.executions = items ?? [];
       if (this.selectedExecution) {
         const refreshed = this.executions.find((item) => item.idExecutionProduction === this.selectedExecution?.idExecutionProduction);
-        this.selectedExecution = refreshed ?? this.selectedExecution;
+        this.selectedExecution = refreshed
+          ? {
+            ...refreshed,
+            dateFinReelle: refreshed.dateFinReelle ?? this.selectedExecution.dateFinReelle,
+          }
+          : this.selectedExecution;
       }
     });
   }
@@ -309,5 +329,15 @@ export class GuidesExecuterComponent implements OnInit {
       ?? (error as { message?: string })?.message;
 
     return possibleMessage ? String(possibleMessage) : fallbackMessage;
+  }
+
+  isExecutionFieldInvalid(controlName: string): boolean {
+    const control = this.executionForm.get(controlName);
+    return !!control && control.invalid && (control.touched || control.dirty);
+  }
+
+  isValeurReelleInvalid(index: number): boolean {
+    const control = this.valeursReelles.at(index)?.get('valeurReelle');
+    return !!control && control.invalid && (control.touched || control.dirty);
   }
 }

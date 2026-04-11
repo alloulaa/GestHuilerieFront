@@ -41,11 +41,25 @@ export class PermissionService {
     }
 
     if (
+      normalized === 'COMPTES_PROFILS' ||
+      normalized === 'GESTION_PARAMETRAGE' ||
+      normalized === 'PARAMETRES' ||
+      normalized === 'PROFILS' ||
+      normalized === 'UTILISATEURS'
+    ) {
+      return ['COMPTES_PROFILS', 'GESTION_PARAMETRAGE', 'PARAMETRES', 'PROFILS', 'UTILISATEURS'];
+    }
+
+    if (
       normalized === 'LOTS' ||
       normalized === 'LOTS_TRACABILITE' ||
       normalized === 'LOTS_TRACEABILITE'
     ) {
       return ['LOTS', 'LOTS_TRACABILITE', 'LOTS_TRACEABILITE', 'LOTS_TRAÇABILITE'];
+    }
+
+    if (normalized === 'STOCK_MOUVEMENT' || normalized === 'STOCK_MOUVEMENTS' || normalized === 'MOUVEMENTS') {
+      return ['STOCK_MOUVEMENT', 'STOCK_MOUVEMENTS', 'MOUVEMENTS'];
     }
 
     return [normalized];

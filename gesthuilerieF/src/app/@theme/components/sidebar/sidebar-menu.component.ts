@@ -27,15 +27,29 @@ export class SidebarMenuComponent {
     const titleToModule: { [key: string]: string } = {
       'Dashboard': 'DASHBOARD',
       'Réception': 'RECEPTION',
-      'Guide de Production': 'PRODUCTION',
+      'Guide de Production': 'GUIDE_PRODUCTION',
       'Machines': 'MACHINES',
       'Matières Premières': 'MATIERES_PREMIERES',
       'Stock': 'STOCK',
-      'Traçabilité des Lots': 'LOTS',
+      'Traçabilité des Lots': 'LOTS_TRAÇABILITE',
       'Dashboard Admin': 'DASHBOARD_ADMIN',
       'Huileries': 'HUILERIES',
       'Stock mouvement': 'STOCK_MOUVEMENT',
       'Gestion Paramétrage': 'COMPTES_PROFILS',
+    };
+
+    const hasAnyModulePermission = (moduleNames: string[]): boolean => {
+      return moduleNames.some((moduleName) => this.permissionService.hasAnyPermission(moduleName));
+    };
+
+    const hasReadModulePermission = (moduleNames: string[]): boolean => {
+      return moduleNames.some((moduleName) => this.permissionService.canRead(moduleName));
+    };
+
+    const adminConfigModuleAliases = ['COMPTES_PROFILS', 'UTILISATEURS', 'PROFILS', 'PARAMETRES'];
+    const adminChildToModules: { [key: string]: string[] } = {
+      'Gestion Profils & Permissions': ['COMPTES_PROFILS', 'PROFILS', 'PARAMETRES'],
+      'Gestion Utilisateurs': ['COMPTES_PROFILS', 'UTILISATEURS'],
     };
 
     return items.filter((item) => {
@@ -45,12 +59,25 @@ export class SidebarMenuComponent {
       }
 
       // Admin items visible only to admins
-      if (
-        item.title === 'Dashboard Admin' ||
-        item.title === 'Huileries' ||
-        item.title === 'Gestion Paramétrage'
-      ) {
-        return this.permissionService.isAdmin() || this.permissionService.hasAnyPermission('COMPTES_PROFILS');
+      if (item.title === 'Dashboard Admin') {
+        return this.permissionService.isAdmin() || this.permissionService.canRead('DASHBOARD_ADMIN');
+      }
+
+      if (item.title === 'Huileries') {
+        return this.permissionService.isAdmin() || this.permissionService.canRead('HUILERIES');
+      }
+
+      if (item.title === 'Gestion Paramétrage') {
+        if (item.children && item.children.length > 0) {
+          const isAdmin = this.permissionService.isAdmin();
+          item.children = item.children.filter((child) => {
+            const childModules = adminChildToModules[child.title ?? ''] ?? adminConfigModuleAliases;
+            return isAdmin || hasAnyModulePermission(childModules);
+          });
+          return item.children.length > 0;
+        }
+
+        return this.permissionService.isAdmin() || hasAnyModulePermission(adminConfigModuleAliases);
       }
 
       const moduleName = titleToModule[item.title!];
@@ -64,7 +91,7 @@ export class SidebarMenuComponent {
       if (item.children && item.children.length > 0) {
         item.children = item.children.filter((child) => {
           if (child.title === 'Consulter') {
-            return isAdmin || this.permissionService.canRead(moduleName);
+            return isAdmin || hasReadModulePermission([moduleName]);
           }
           if (child.title === 'Gérer') {
             return isAdmin || this.permissionService.canCreate(moduleName);

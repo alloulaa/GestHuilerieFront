@@ -105,6 +105,23 @@
   opacity: 0.8;
 }
 
+.field.field-invalid > span,
+.value-item__input.field-invalid {
+  color: #b03030;
+}
+
+.field.field-invalid input[nbInput],
+.field.field-invalid textarea[nbInput],
+.value-item__input.field-invalid input[nbInput] {
+  border-color: rgba(176, 48, 48, 0.75) !important;
+  box-shadow: 0 0 0 2px rgba(176, 48, 48, 0.14);
+}
+
+.field.field-invalid ::ng-deep button.select-button {
+  border-color: rgba(176, 48, 48, 0.75) !important;
+  box-shadow: 0 0 0 2px rgba(176, 48, 48, 0.14);
+}
+
 .field-wide {
   grid-column: 1 / -1;
 }

@@ -31,6 +31,15 @@
   color: var(--color-primary-700);
 }
 
+.brand-logo {
+  width: clamp(3rem, 4.2vw, 4rem);
+  height: clamp(3rem, 4.2vw, 4rem);
+  border-radius: 0.45rem;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
 .search-shell {
   position: relative;
   display: flex;

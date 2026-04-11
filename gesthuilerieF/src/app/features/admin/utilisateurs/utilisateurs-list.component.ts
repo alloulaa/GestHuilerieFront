@@ -64,6 +64,7 @@ export class UtilisateursListComponent implements OnInit {
     this.loadData();
   }
 
+  
   initForm(): void {
     this.userForm = this.fb.group({
       nom: ['', Validators.required],
