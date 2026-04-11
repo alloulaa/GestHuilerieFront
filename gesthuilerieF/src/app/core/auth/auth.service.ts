@@ -294,6 +294,16 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
+
+    const normalized = String(token).trim().toLowerCase();
+    if (!normalized || normalized === 'null' || normalized === 'undefined') {
+      return false;
+    }
+
+    return !this.isTokenExpired(token);
   }
 }
