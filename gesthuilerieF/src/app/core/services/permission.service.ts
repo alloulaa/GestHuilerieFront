@@ -69,15 +69,63 @@ export class PermissionService {
     const user = this.authService.getCurrentUser();
     const candidates: unknown[] = [
       user?.role,
+      user?.roleName,
+      user?.nomRole,
+      user?.profile,
+      user?.profileName,
+      user?.profil,
+      user?.profilName,
+      user?.profilNom,
+      user?.nomProfil,
+      user?.type,
+      user?.userType,
       user?.profil?.nom,
       user?.profil?.name,
+      user?.profil?.profil,
+      user?.profil?.code,
+      user?.profil?.label,
+      user?.profil?.libelle,
+      user?.profil?.type,
       user?.utilisateur?.role,
+      user?.utilisateur?.roleName,
+      user?.utilisateur?.nomRole,
+      user?.utilisateur?.profile,
+      user?.utilisateur?.profileName,
+      user?.utilisateur?.profil,
+      user?.utilisateur?.profilName,
+      user?.utilisateur?.profilNom,
+      user?.utilisateur?.nomProfil,
+      user?.utilisateur?.type,
+      user?.utilisateur?.userType,
       user?.utilisateur?.profil?.nom,
       user?.utilisateur?.profil?.name,
+      user?.utilisateur?.profil?.profil,
+      user?.utilisateur?.profil?.code,
+      user?.utilisateur?.profil?.label,
+      user?.utilisateur?.profil?.libelle,
+      user?.utilisateur?.profil?.type,
     ];
 
     if (Array.isArray(user?.roles)) {
-      candidates.push(...user.roles);
+      for (const role of user.roles) {
+        if (typeof role === 'string') {
+          candidates.push(role);
+          continue;
+        }
+
+        if (role && typeof role === 'object') {
+          const roleObj = role as Record<string, unknown>;
+          candidates.push(
+            roleObj['name'],
+            roleObj['nom'],
+            roleObj['code'],
+            roleObj['label'],
+            roleObj['libelle'],
+            roleObj['type'],
+            roleObj['role']
+          );
+        }
+      }
     }
 
     return candidates
@@ -128,8 +176,13 @@ export class PermissionService {
   }
 
   isAdmin(): boolean {
+    const user = this.authService.getCurrentUser();
+    if (user?.isAdmin === true || user?.utilisateur?.isAdmin === true) {
+      return true;
+    }
+
     const roles = this.extractRoleCandidates();
-    return roles.some((role) => role.includes('ADMIN')) || roles.includes('ADMINISTRATEUR');
+    return roles.some((role) => role.includes('ADMIN') || role.includes('ADMINISTRATEUR'));
   }
 
   getVisibleModules(): string[] {
