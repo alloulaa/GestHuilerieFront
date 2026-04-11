@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Stock } from '../../models/stock.models';
-import { StockService } from '../../services/stock.service';
+import { StockMovement } from '../../models/stock.models';
+import { StockManagementService } from '../../services/stock-management.service';
 import { MatCardModule } from '@angular/material/card';
 
 @Component({
@@ -12,26 +12,36 @@ import { MatCardModule } from '@angular/material/card';
     imports: [CommonModule, MatCardModule],
 })
 export class StockOverviewComponent implements OnInit {
-    stocks: Stock[] = [];
+    movements: StockMovement[] = [];
 
-    constructor(private stockService: StockService) { }
+    constructor(private stockManagementService: StockManagementService) { }
 
     ngOnInit(): void {
-        this.stockService.getAll().subscribe({
-            next: data => {
-                this.stocks = data;
-            },
-            error: () => {
-                this.stocks = [];
-            },
+        this.stockManagementService.loadInitialData().subscribe(() => {
+            this.stockManagementService.movements$.subscribe(data => {
+                this.movements = data;
+            });
         });
     }
 
-    lotReference(stock: Stock): string {
-        return stock.lotReference || (`LO-${stock.referenceId}`);
+    movementReference(movement: StockMovement): string {
+        return movement.reference || (`MS-${movement.id}`);
     }
 
-    stockReference(stock: Stock): string {
-        return stock.reference || (`ST-${stock.idStock}`);
+    lotReference(movement: StockMovement): string {
+        return movement.lotReference || (`LO-${movement.referenceId}`);
+    }
+
+    movementLabel(type: StockMovement['typeMouvement']): string {
+        if (type === 'ARRIVAL') {
+            return 'Entree';
+        }
+        if (type === 'DEPARTURE') {
+            return 'Sortie';
+        }
+        if (type === 'TRANSFER') {
+            return 'Transfert';
+        }
+        return 'Ajustement';
     }
 }

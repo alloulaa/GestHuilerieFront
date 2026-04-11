@@ -1,31 +1,35 @@
 <mat-card class="olive-card">
     <mat-card-header>
-        <mat-card-title>Stock - Donnees de base</mat-card-title>
+        <mat-card-title>Stock - Historique des mouvements</mat-card-title>
     </mat-card-header>
     <mat-card-content>
         <div class="stats">
-            <span class="chip">Total: {{ stocks.length }}</span>
+            <span class="chip">Total: {{ movements.length }}</span>
         </div>
 
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
-                        <th>REFERENCE STOCK</th>
-                        <th>QUANTITE DISPONIBLE</th>
-                        <th>TYPE STOCK</th>
-                        <th>REFERENCE LOT</th>
+                        <th>Reference mouvement</th>
+                        <th>Type</th>
+                        <th>Reference lot</th>
+                        <th>Quantite</th>
+                        <th>Date</th>
+                        <th>Commentaire</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngIf="stocks.length === 0">
-                        <td colspan="5" class="empty-row">Aucune donnee de stock a afficher.</td>
+                    <tr *ngIf="movements.length === 0">
+                        <td colspan="6" class="empty-row">Aucun mouvement a afficher.</td>
                     </tr>
-                    <tr *ngFor="let stock of stocks" class="row-hover">
-                        <td>{{ stockReference(stock) }}</td>
-                        <td>{{ stock.quantiteDisponible }}</td>
-                        <td>{{ stock.typeStock }}</td>
-                        <td>{{ lotReference(stock) }}</td>
+                    <tr *ngFor="let m of movements" class="row-hover">
+                        <td>{{ movementReference(m) }}</td>
+                        <td>{{ movementLabel(m.typeMouvement) }}</td>
+                        <td>{{ lotReference(m) }}</td>
+                        <td>{{ m.quantite }}</td>
+                        <td>{{ m.dateMouvement }}</td>
+                        <td>{{ m.commentaire }}</td>
                     </tr>
                 </tbody>
             </table>
