@@ -117,6 +117,10 @@ export class HeaderComponent {
   ) { }
 
   get filteredSearchItems(): SearchResultItem[] {
+    if (this.isSearchLocked) {
+      return [];
+    }
+
     const query = this.searchQuery.trim().toLowerCase();
 
     if (!query) {
@@ -132,6 +136,29 @@ export class HeaderComponent {
       .slice(0, 6);
   }
 
+  get isSearchLocked(): boolean {
+    if (this.permissionService.isAdmin()) {
+      return false;
+    }
+
+    const modules = [
+      'DASHBOARD',
+      'RECEPTION',
+      'GUIDE_PRODUCTION',
+      'MACHINES',
+      'MATIERES_PREMIERES',
+      'STOCK',
+      'STOCK_MOUVEMENT',
+      'LOTS_TRAÇABILITE',
+      'HUILERIES',
+      'DASHBOARD_ADMIN',
+      'COMPTES_PROFILS',
+      'UTILISATEURS',
+    ];
+
+    return !modules.some((moduleName) => this.permissionService.hasAnyPermission(moduleName));
+  }
+
   onSearchFocus(): void {
     this.searchFocused = true;
   }
@@ -143,16 +170,28 @@ export class HeaderComponent {
   }
 
   clearSearch(): void {
+    if (this.isSearchLocked) {
+      return;
+    }
+
     this.searchQuery = '';
   }
 
   openSearchResult(item: SearchResultItem): void {
+    if (this.isSearchLocked) {
+      return;
+    }
+
     this.searchQuery = item.label;
     this.searchFocused = false;
     void this.router.navigate([item.route]);
   }
 
   onSearchEnter(): void {
+    if (this.isSearchLocked) {
+      return;
+    }
+
     const [firstResult] = this.filteredSearchItems;
 
     if (firstResult) {

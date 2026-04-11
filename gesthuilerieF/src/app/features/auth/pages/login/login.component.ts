@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
@@ -28,6 +29,7 @@ export class LoginComponent {
   constructor(
     private formBuilder: FormBuilder,
     private authService: AuthService,
+    private permissionService: PermissionService,
     private router: Router,
     private route: ActivatedRoute,
     private toastService: ToastService
@@ -91,6 +93,12 @@ export class LoginComponent {
             }
           }
           this.toastService.show('success', 'Connexion reussie. Bienvenue !', 3500);
+
+          if (!this.hasAssignedPermissions()) {
+            this.router.navigateByUrl('/access-pending');
+            return;
+          }
+
           this.router.navigateByUrl(returnUrl);
         },
         error: (error) => {
@@ -126,5 +134,27 @@ export class LoginComponent {
           this.toastService.show('error', this.errorMessage ?? 'Erreur de connexion, reessayez', 6000);
         },
       });
+  }
+
+  private hasAssignedPermissions(): boolean {
+    if (this.permissionService.isAdmin()) {
+      return true;
+    }
+
+    const modules = [
+      'DASHBOARD',
+      'RECEPTION',
+      'GUIDE_PRODUCTION',
+      'MACHINES',
+      'MATIERES_PREMIERES',
+      'STOCK',
+      'STOCK_MOUVEMENT',
+      'LOTS_TRAÇABILITE',
+      'HUILERIES',
+      'DASHBOARD_ADMIN',
+      'COMPTES_PROFILS',
+    ];
+
+    return modules.some((moduleName) => this.permissionService.hasAnyPermission(moduleName));
   }
 }

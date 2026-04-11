@@ -11,13 +11,15 @@
       <nb-icon icon="search-outline" class="search-ico"></nb-icon>
       <input class="global-search" type="search" [value]="searchQuery" (input)="searchQuery = $any($event.target).value"
         (focus)="onSearchFocus()" (blur)="onSearchBlur()" (keydown.enter)="onSearchEnter()"
-        placeholder="Rechercher un module, un champ, une info..." aria-label="Recherche globale" />
+        [disabled]="isSearchLocked"
+        [placeholder]="isSearchLocked ? 'Recherche indisponible: en attente de permissions' : 'Rechercher un module, un champ, une info...'"
+        aria-label="Recherche globale" />
       <button *ngIf="searchQuery" type="button" class="clear-search" (click)="clearSearch()"
         aria-label="Effacer la recherche">
         <nb-icon icon="close-outline"></nb-icon>
       </button>
 
-      <div class="search-results" *ngIf="(searchFocused || searchQuery.length > 0) && filteredSearchItems.length > 0">
+      <div class="search-results" *ngIf="!isSearchLocked && (searchFocused || searchQuery.length > 0) && filteredSearchItems.length > 0">
         <button type="button" class="search-result" *ngFor="let item of filteredSearchItems"
           (mousedown)="$event.preventDefault()" (click)="openSearchResult(item)">
           <nb-icon icon="search-outline"></nb-icon>

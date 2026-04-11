@@ -111,6 +111,7 @@ export class GuidesGererComponent implements OnInit {
 
   createEtapeGroup(ordre: number) {
     return this.fb.group({
+      idEtapeProduction: [null as number | null],
       nom: ['', [Validators.required]],
       ordre: [ordre, [Validators.required]],
       description: ['', [Validators.required]],
@@ -120,6 +121,7 @@ export class GuidesGererComponent implements OnInit {
 
   createParametreGroup() {
     return this.fb.group({
+      idParametreEtape: [null as number | null],
       nom: ['', [Validators.required]],
       uniteMesure: ['', [Validators.required]],
       valeur: ['', [Validators.required]],
@@ -163,10 +165,12 @@ export class GuidesGererComponent implements OnInit {
       dateCreation: String(raw.dateCreation ?? this.today()),
       huilerieId: Number(raw.huilerieId),
       etapes: (raw.etapes ?? []).map((e: any) => ({
+        ...(e.idEtapeProduction ? { idEtapeProduction: Number(e.idEtapeProduction) } : {}),
         nom: String(e.nom ?? '').trim(),
         ordre: Number(e.ordre),
         description: String(e.description ?? '').trim(),
         parametres: (e.parametres ?? []).map((p: any) => ({
+          ...(p.idParametreEtape ? { idParametreEtape: Number(p.idParametreEtape) } : {}),
           nom: String(p.nom ?? '').trim(),
           uniteMesure: String(p.uniteMesure ?? '').trim(),
           description: String(p.description ?? '').trim(),
@@ -176,7 +180,28 @@ export class GuidesGererComponent implements OnInit {
     };
 
     if (this.guideEditingId) {
-      this.guideProductionService.update(this.guideEditingId, payload).subscribe({
+      const existingGuide = this.guides.find((g) => g.idGuideProduction === this.guideEditingId);
+      const selectedHuilerie = this.huileries.find((h) => h.idHuilerie === payload.huilerieId);
+      const normalizedEtapes = payload.etapes.map((etape: any) => ({
+        ...etape,
+        ...(etape.idEtapeProduction ? { idEtapeProduction: Number(etape.idEtapeProduction), idEtape: Number(etape.idEtapeProduction), etapeProductionId: Number(etape.idEtapeProduction) } : {}),
+        parametres: (etape.parametres ?? []).map((parametre: any) => ({
+          ...parametre,
+          ...(parametre.idParametreEtape ? { idParametreEtape: Number(parametre.idParametreEtape), idParametre: Number(parametre.idParametreEtape), parametreEtapeId: Number(parametre.idParametreEtape) } : {}),
+        })),
+      }));
+
+      const updatePayload = {
+        ...payload,
+        etapes: normalizedEtapes,
+        idGuideProduction: this.guideEditingId,
+        id: this.guideEditingId,
+        guideProductionId: this.guideEditingId,
+        reference: existingGuide?.reference,
+        huilerieNom: selectedHuilerie?.nom,
+      };
+
+      this.guideProductionService.update(this.guideEditingId, updatePayload as any).subscribe({
         next: () => {
           this.resetGuideForm();
           this.loadGuides();
@@ -230,6 +255,7 @@ export class GuidesGererComponent implements OnInit {
       : [this.createParametreGroup()];
 
     return this.fb.group({
+      idEtapeProduction: [etape.idEtapeProduction ?? null],
       nom: [String(etape.nom ?? '').trim(), [Validators.required]],
       ordre: [Number(etape.ordre ?? ordreFallback), [Validators.required]],
       description: [String(etape.description ?? '').trim(), [Validators.required]],
@@ -239,6 +265,7 @@ export class GuidesGererComponent implements OnInit {
 
   private createParametreGroupFromGuide(parametre: ParametreEtape) {
     return this.fb.group({
+      idParametreEtape: [parametre.idParametreEtape ?? null],
       nom: [String(parametre.nom ?? '').trim(), [Validators.required]],
       uniteMesure: [String(parametre.uniteMesure ?? '').trim(), [Validators.required]],
       valeur: [String(parametre.valeur ?? '').trim(), [Validators.required]],

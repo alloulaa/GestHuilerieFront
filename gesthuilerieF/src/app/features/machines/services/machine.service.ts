@@ -16,11 +16,13 @@ type MachineApiDto = {
 };
 
 type MachineApiPayload = {
+  idMachine?: number;
   nomMachine: string;
   typeMachine: string;
   etatMachine: string;
   capacite: number;
   huilerieNom: string;
+  huilerieId?: number;
 };
 
 @Injectable({
@@ -114,7 +116,11 @@ export class MachineService {
 
         return this.toApi(merged, huileries);
       }), switchMap((body) =>
-        this.http.put<MachineApiDto>(`${this.apiUrl}/${idMachine}`, body),
+        this.http.put<MachineApiDto>(`${this.apiUrl}/${idMachine}`, {
+          ...body,
+          idMachine,
+          huilerieId: payload.huilerieId,
+        }),
       ),
       switchMap((updated) =>
         this.huilerieService.getAll().pipe(

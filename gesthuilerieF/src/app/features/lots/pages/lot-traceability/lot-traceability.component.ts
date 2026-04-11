@@ -4,9 +4,8 @@ import { NgFor, NgIf } from '@angular/common';
 import { LotOlives, TraceabilityEvent } from '../../models/lot.models';
 import { LotManagementService } from '../../services/lot-management.service';
 import { RouterModule } from '@angular/router';
-import { TraceabilityService } from '../../services/traceability.service';
-import { catchError } from 'rxjs/operators';
-import { forkJoin, map, of } from 'rxjs';
+import { ExecutionProductionService } from '../../../production/services/execution-production.service';
+import { ExecutionProduction } from '../../../production/models/production.models';
 
 @Component({
   selector: 'app-lot-traceability',
@@ -23,6 +22,8 @@ import { forkJoin, map, of } from 'rxjs';
   ],
 })
 export class LotTraceabilityComponent implements OnInit {
+  private readonly executionCacheKey = 'execution-productions-cache';
+
   lots: LotOlives[] = [];
   lotSearch = '';
   lifecycleByLot: Record<number, TraceabilityEvent[]> = {};
@@ -30,7 +31,7 @@ export class LotTraceabilityComponent implements OnInit {
 
   constructor(
     private lotManagementService: LotManagementService,
-    private traceabilityService: TraceabilityService,
+    private executionProductionService: ExecutionProductionService,
   ) { }
 
   ngOnInit(): void {
@@ -90,24 +91,55 @@ export class LotTraceabilityComponent implements OnInit {
       return;
     }
 
-    const requests = lots.map(lot =>
-      this.traceabilityService.getLotLifecycle(lot.idLot).pipe(
-        map(events => [...events].sort((a, b) => String(a.date).localeCompare(String(b.date)))),
-        catchError(() => of([] as TraceabilityEvent[])),
-      ),
-    );
+    const cachedExecutions = this.readCachedExecutions();
+    const executions = cachedExecutions.length > 0 ? cachedExecutions : [];
 
-    forkJoin(requests).subscribe(resultByLot => {
-      const lifecycleMap: Record<number, TraceabilityEvent[]> = {};
+    const lifecycleMap: Record<number, TraceabilityEvent[]> = {};
       const byLot: Record<number, TraceabilityEvent[]> = {};
-      lots.forEach((lot, index) => {
-        const lifecycle = resultByLot[index] ?? [];
-        lifecycleMap[lot.idLot] = lifecycle;
-        byLot[lot.idLot] = lifecycle.filter(event => event.etape === 'PRODUIT_FINAL');
+
+      const finalProductsFromExecutions = (executions ?? [])
+        .filter((execution) => Number(execution.lotOlivesId ?? 0) > 0)
+        .filter((execution) => !!String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim())
+        .map((execution) => ({
+          lotId: Number(execution.lotOlivesId),
+          event: {
+            date: String(execution.dateFinReelle ?? execution.dateFinPrevue ?? execution.dateDebut ?? ''),
+            etape: 'PRODUIT_FINAL' as const,
+            description: String(execution.produitFinalNomProduit ?? execution.observations ?? 'Produit final créé').trim(),
+            reference: String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim(),
+          },
+        }));
+
+      lots.forEach((lot) => {
+        const executionFinalProducts = finalProductsFromExecutions
+          .filter((entry) => entry.lotId === lot.idLot)
+          .map((entry) => entry.event);
+
+        const mergedFinalProducts = [...executionFinalProducts]
+          .filter((event, position, all) => {
+            const key = `${event.reference}|${event.date}`;
+            return all.findIndex((candidate) => `${candidate.reference}|${candidate.date}` === key) === position;
+          });
+
+        lifecycleMap[lot.idLot] = [];
+        byLot[lot.idLot] = mergedFinalProducts;
       });
       this.lifecycleByLot = lifecycleMap;
       this.finalProductsByLot = byLot;
-    });
+  }
+
+  private readCachedExecutions(): ExecutionProduction[] {
+    try {
+      const raw = localStorage.getItem(this.executionCacheKey);
+      if (!raw) {
+        return [];
+      }
+
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed as ExecutionProduction[] : [];
+    } catch {
+      return [];
+    }
   }
 
 }

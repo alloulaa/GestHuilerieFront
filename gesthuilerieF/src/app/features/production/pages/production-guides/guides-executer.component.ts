@@ -22,6 +22,8 @@ import { ToastService } from '../../../../core/services/toast.service';
   imports: [CommonModule, ReactiveFormsModule, NbCardModule, NbButtonModule, NbInputModule, NbSelectModule],
 })
 export class GuidesExecuterComponent implements OnInit {
+  private readonly executionCacheKey = 'execution-productions-cache';
+
   guides: GuideProduction[] = [];
   machines: Machine[] = [];
   lots: LotOlives[] = [];
@@ -71,6 +73,7 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.restoreCachedExecutions();
     this.loadReferenceData();
   }
 
@@ -165,7 +168,7 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionError = '';
     this.executionMessage = '';
 
-    const payload: ExecutionProductionCreate = {
+    const payload: ExecutionProductionCreate & Record<string, unknown> = {
       codeLot: selectedLot.reference ?? `LOT-${selectedLot.idLot}`,
       dateDebut: String(raw.dateDebut ?? this.today()),
       dateFinPrevue: String(raw.dateFinPrevue ?? this.tomorrow()),
@@ -174,27 +177,46 @@ export class GuidesExecuterComponent implements OnInit {
       rendement: Number(raw.rendement ?? 0),
       observations: String(raw.observations ?? '').trim(),
       guideProductionId: Number(raw.guideProductionId),
+      guideId: Number(raw.guideProductionId),
+      idGuideProduction: Number(raw.guideProductionId),
       machineId: Number(raw.machineId),
+      idMachine: Number(raw.machineId),
       lotOlivesId: Number(raw.lotOlivesId),
+      lotId: Number(raw.lotOlivesId),
+      idLotOlives: Number(raw.lotOlivesId),
       matierePremiereId,
+      idMatierePremiere: matierePremiereId,
       valeursReelles: this.mapValeursReellesPayload(raw.valeursReelles ?? []),
     };
 
-    this.executionProductionService.create(payload)
-      .subscribe({
-        next: () => {
-          this.submittingExecution = false;
-          this.executionMessage = 'Exécution de production créée avec succès.';
-          this.toastService.success('Exécution de production créée avec succès.');
-          this.resetExecutionForm(false);
-          this.loadExecutions();
-        },
-        error: (error) => {
-          this.submittingExecution = false;
-          this.executionError = this.readHttpError(error, 'Impossible de créer l’exécution de production.');
-          this.toastService.error(this.executionError);
-        },
-      });
+    this.executionProductionService.buildCodeLot(selectedLot.idLot).subscribe({
+      next: (uniqueCodeLot) => {
+        payload.codeLot = String(uniqueCodeLot ?? '').trim() || payload.codeLot;
+
+        this.executionProductionService.create(payload as any)
+          .subscribe({
+            next: (createdExecution) => {
+              this.submittingExecution = false;
+              this.executionMessage = 'Exécution de production créée avec succès.';
+              this.toastService.success('Exécution de production créée avec succès.');
+              this.executions = [createdExecution, ...this.executions];
+              this.saveExecutionCache(this.executions);
+              this.selectedExecution = createdExecution;
+              this.resetExecutionForm(false);
+            },
+            error: (error) => {
+              this.submittingExecution = false;
+              this.executionError = this.readHttpError(error, 'Impossible de créer l’exécution de production.');
+              this.toastService.error(this.executionError);
+            },
+          });
+      },
+      error: (error) => {
+        this.submittingExecution = false;
+        this.executionError = this.readHttpError(error, 'Impossible de générer un code lot unique.');
+        this.toastService.error(this.executionError);
+      },
+    });
   }
 
   selectExecution(execution: ExecutionProduction): void {
@@ -221,16 +243,28 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
-    this.executionProductionService.createProduitFinal(execution).subscribe({
-      next: (updatedExecution) => {
-        this.executionMessage = 'Produit final créé et exécution terminée.';
-        this.selectedExecution = {
-          ...(updatedExecution ?? execution),
-          dateFinReelle: updatedExecution?.dateFinReelle ?? execution.dateFinReelle ?? dateFinReelle,
-          statut: updatedExecution?.statut ?? 'TERMINEE',
+    const executionToFinalize: ExecutionProduction = {
+      ...execution,
+      dateFinReelle,
+      statut: 'TERMINEE',
+    };
+
+    this.executionProductionService.createProduitFinal(executionToFinalize).subscribe({
+      next: (executionWithProduct) => {
+        const mergedExecution: ExecutionProduction = {
+          ...executionToFinalize,
+          ...(executionWithProduct ?? {}),
+          dateFinReelle: executionWithProduct?.dateFinReelle ?? executionToFinalize.dateFinReelle,
+          statut: executionWithProduct?.statut ?? executionToFinalize.statut,
         };
+
+        this.executionMessage = 'Produit final créé et exécution terminée.';
+        this.selectedExecution = mergedExecution;
+        this.executions = this.executions.map((item) =>
+          item.idExecutionProduction === mergedExecution.idExecutionProduction ? mergedExecution : item,
+        );
+        this.saveExecutionCache(this.executions);
         this.toastService.success('Produit final créé avec succès.');
-        this.loadExecutions();
       },
       error: (error) => {
         this.executionError = this.readHttpError(error, 'Impossible de terminer l’exécution.');
@@ -244,12 +278,12 @@ export class GuidesExecuterComponent implements OnInit {
     this.machineService.getAll().subscribe((items) => (this.machines = items));
     this.lotOlivesService.getAll().subscribe((items) => (this.lots = items));
     this.rawMaterialService.getAll().subscribe((items) => (this.matieresPremieres = items));
-    this.loadExecutions();
   }
 
   private loadExecutions(): void {
     this.executionProductionService.getAll().subscribe((items) => {
       this.executions = items ?? [];
+      this.saveExecutionCache(this.executions);
       if (this.selectedExecution) {
         const refreshed = this.executions.find((item) => item.idExecutionProduction === this.selectedExecution?.idExecutionProduction);
         this.selectedExecution = refreshed
@@ -259,7 +293,42 @@ export class GuidesExecuterComponent implements OnInit {
           }
           : this.selectedExecution;
       }
+    }, (error) => {
+      const cachedExecutions = this.readExecutionCache();
+      if (cachedExecutions.length > 0) {
+        this.executions = cachedExecutions;
+        this.executionError = '';
+        return;
+      }
+
+      this.executionError = this.readHttpError(error, 'Impossible de charger les exécutions enregistrées.');
     });
+  }
+
+  private saveExecutionCache(executions: ExecutionProduction[]): void {
+    try {
+      localStorage.setItem(this.executionCacheKey, JSON.stringify(executions ?? []));
+    } catch {
+      // Ignore localStorage write errors.
+    }
+  }
+
+  private readExecutionCache(): ExecutionProduction[] {
+    try {
+      const raw = localStorage.getItem(this.executionCacheKey);
+      if (!raw) {
+        return [];
+      }
+
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed as ExecutionProduction[] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private restoreCachedExecutions(): void {
+    this.executions = this.readExecutionCache();
   }
 
   private populateExecutionValuesFromGuide(guide: GuideProduction): void {
@@ -325,10 +394,21 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private readHttpError(error: unknown, fallbackMessage: string): string {
-    const possibleMessage = (error as { error?: { message?: string }; message?: string })?.error?.message
+    const possibleMessage = (error as { error?: { message?: string; errors?: string[] }; message?: string })?.error?.message
       ?? (error as { message?: string })?.message;
 
-    return possibleMessage ? String(possibleMessage) : fallbackMessage;
+    const firstApiError = (error as { error?: { errors?: string[] } })?.error?.errors?.[0];
+    const backendMessage = String(firstApiError ?? possibleMessage ?? '').trim();
+
+    if (backendMessage.includes('No row with the given identifier exists for entity [Models.GuideProduction')) {
+      return 'Le guide sélectionné est introuvable côté serveur. Veuillez choisir un autre guide.';
+    }
+
+    if (backendMessage.includes('Une contrainte d\'unicite a ete violee')) {
+      return 'Conflit de données détecté. Vérifiez le code lot puis réessayez.';
+    }
+
+    return backendMessage || fallbackMessage;
   }
 
   isExecutionFieldInvalid(controlName: string): boolean {

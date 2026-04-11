@@ -25,6 +25,11 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./features/auth/pages/verify-email/verify-email.component').then(c => c.VerifyEmailComponent),
   },
   {
+    path: 'access-pending',
+    canActivate: [AuthGuard],
+    loadComponent: () => import('./features/auth/pages/access-pending/access-pending.component').then(c => c.AccessPendingComponent),
+  },
+  {
     path: 'pages',
     component: SidebarComponent,
     canActivate: [AuthGuard, RoleGuard],

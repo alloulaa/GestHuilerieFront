@@ -86,6 +86,11 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       return true;
     }
 
+    if (!this.getFirstAccessibleUrl()) {
+      this.router.navigate(['/access-pending']);
+      return false;
+    }
+
     const segments = state.url.split('/').filter(segment => segment);
     const moduleName = this.resolveModuleName(segments);
     const actionMethod = this.resolveActionMethod(segments);
@@ -124,7 +129,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       return false;
     }
 
-    this.router.navigate(['/login']);
+    this.router.navigate(['/access-pending']);
     return false;
   }
 

@@ -32,8 +32,8 @@ export class TraceabilityService {
     const upper = String(value).toUpperCase();
     if (upper.includes('LOT')) return 'LOT_OLIVES';
     if (upper.includes('PESEE')) return 'PESEE';
-    if (upper.includes('PRODUCTION')) return 'PRODUCTION';
     if (upper.includes('PRODUIT')) return 'PRODUIT_FINAL';
+    if (upper.includes('PRODUCTION')) return 'PRODUCTION';
     return 'STOCK';
   }
 }

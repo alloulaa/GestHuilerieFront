@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { StockMovement } from '../../models/stock.models';
-import { StockManagementService } from '../../services/stock-management.service';
+import { Stock } from '../../models/stock.models';
+import { StockService } from '../../services/stock.service';
 import { MatCardModule } from '@angular/material/card';
 
 @Component({
@@ -12,36 +12,26 @@ import { MatCardModule } from '@angular/material/card';
     imports: [CommonModule, MatCardModule],
 })
 export class StockOverviewComponent implements OnInit {
-    movements: StockMovement[] = [];
+    stocks: Stock[] = [];
 
-    constructor(private stockManagementService: StockManagementService) { }
+    constructor(private stockService: StockService) { }
 
     ngOnInit(): void {
-        this.stockManagementService.loadInitialData().subscribe(() => {
-            this.stockManagementService.movements$.subscribe(data => {
-                this.movements = data;
-            });
+        this.stockService.getAll().subscribe({
+            next: data => {
+                this.stocks = data;
+            },
+            error: () => {
+                this.stocks = [];
+            },
         });
     }
 
-    movementReference(movement: StockMovement): string {
-        return movement.reference || (`MS-${movement.id}`);
+    lotReference(stock: Stock): string {
+        return stock.lotReference || (`LO-${stock.referenceId}`);
     }
 
-    lotReference(movement: StockMovement): string {
-        return movement.lotReference || (`LO-${movement.referenceId}`);
-    }
-
-    movementLabel(type: StockMovement['typeMouvement']): string {
-        if (type === 'ARRIVAL') {
-            return 'Entree';
-        }
-        if (type === 'DEPARTURE') {
-            return 'Sortie';
-        }
-        if (type === 'TRANSFER') {
-            return 'Transfert';
-        }
-        return 'Ajustement';
+    stockReference(stock: Stock): string {
+        return stock.reference || (`ST-${stock.idStock}`);
     }
 }
