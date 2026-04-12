@@ -4,6 +4,7 @@ import { Stock, StockMovement } from '../models/stock.models';
 import { StockMovementService } from './stock-movement.service';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../../core/auth/auth.service';
 
 interface StockQueryParams {
   huilerieId: number;
@@ -22,14 +23,24 @@ export class StockManagementService {
 
   readonly movements$ = this.movementsSubject.asObservable();
 
-  constructor(private stockMovementService: StockMovementService) { }
+  constructor(
+    private stockMovementService: StockMovementService,
+    private authService: AuthService,
+  ) { }
 
   loadInitialData(): Observable<void> {
     if (this.initialized) {
       return of(void 0);
     }
 
-    return this.stockMovementService.getAll().pipe(
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      this.movementsSubject.next([]);
+      this.initialized = true;
+      return of(void 0);
+    }
+
+    return this.stockMovementService.getByHuilerie(currentHuilerieId).pipe(
       tap(data => {
         this.movementsSubject.next(data);
         this.initialized = true;
@@ -79,9 +90,14 @@ export class StockManagementService {
       typeMouvement: StockMovement['typeMouvement'];
     },
   ): Observable<StockMovement> {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      return this.stockMovementService.updateMovement(id, payload);
+    }
+
     return this.stockMovementService.updateMovement(id, payload).pipe(
       switchMap(updated =>
-        this.stockMovementService.getAll().pipe(
+        this.stockMovementService.getByHuilerie(currentHuilerieId).pipe(
           tap(items => {
             this.movementsSubject.next(items);
           }),

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { MatierePremiere } from '../models/raw-material.models';
 import { environment } from 'src/environments/environment';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Injectable({
   providedIn: 'root',
@@ -10,7 +11,10 @@ import { environment } from 'src/environments/environment';
 export class RawMaterialService {
   private readonly apiUrl = `${environment.apiUrl}/matieresPremieres`;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) { }
 
   private normalizeMatierePremiere(item: MatierePremiere & { id?: number }): MatierePremiere {
     const resolvedId = Number(item?.idMatierePremiere ?? item?.id ?? 0);
@@ -24,7 +28,7 @@ export class RawMaterialService {
   findAll(): Observable<MatierePremiere[]> {
     return this.http
       .get<Array<MatierePremiere & { id?: number }>>(this.apiUrl)
-      .pipe(map((items) => (items ?? []).map((item) => this.normalizeMatierePremiere(item))));
+      .pipe(map((items) => this.filterByCurrentUserHuilerie((items ?? []).map((item) => this.normalizeMatierePremiere(item)))));
   }
 
   getAll(): Observable<MatierePremiere[]> {
@@ -51,5 +55,14 @@ export class RawMaterialService {
     return this.http
       .get<MatierePremiere & { id?: number }>(`${this.apiUrl}/${reference}`)
       .pipe(map((item) => this.normalizeMatierePremiere(item)));
+  }
+
+  private filterByCurrentUserHuilerie(items: MatierePremiere[]): MatierePremiere[] {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      return items;
+    }
+
+    return items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId || item?.huilerieId == null);
   }
 }

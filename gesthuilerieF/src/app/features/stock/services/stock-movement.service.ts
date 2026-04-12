@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { StockMovement } from '../models/stock.models';
 import { environment } from 'src/environments/environment';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Injectable({
   providedIn: 'root',
@@ -10,11 +11,14 @@ import { environment } from 'src/environments/environment';
 export class StockMovementService {
   private readonly apiUrl = `${environment.apiUrl}/stockMovements`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) {}
 
   getAll(): Observable<StockMovement[]> {
     return this.http.get<unknown>(this.apiUrl).pipe(
-      map(response => this.toMovementList(response)),
+      map(response => this.filterByCurrentUserHuilerie(this.toMovementList(response))),
     );
   }
 
@@ -88,6 +92,15 @@ export class StockMovementService {
       dateMouvement: String(raw?.dateMouvement ?? raw?.date ?? ''),
       typeMouvement: (raw?.typeMouvement ?? raw?.type ?? 'ARRIVAL') as StockMovement['typeMouvement'],
     };
+  }
+
+  private filterByCurrentUserHuilerie(items: StockMovement[]): StockMovement[] {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      return [];
+    }
+
+    return items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
   }
 
   private unwrap(response: unknown): any {

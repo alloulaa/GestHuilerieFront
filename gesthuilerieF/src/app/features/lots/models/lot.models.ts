@@ -12,6 +12,7 @@ export interface LotOlives {
   matierePremiereId: number;
   matierePremiereReference?: string;
   campagneId: number;
+  huilerieId?: number;
 }
 
 export interface AnalyseLaboratoire {

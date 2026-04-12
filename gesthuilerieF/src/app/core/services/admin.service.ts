@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, switchMap, throwError } from 'rxjs';
+import { AuthService } from '../auth/auth.service';
 
 const API_URL = '';
 
@@ -41,7 +42,10 @@ export interface User {
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) { }
 
   private normalizeUtilisateurPayload(payload: any): any {
     const profilId = payload?.profilId ?? payload?.idProfil ?? payload?.profil?.idProfil ?? null;
@@ -267,7 +271,7 @@ export class AdminService {
     return this.http
       .get<ApiResponseDTO<any[]>>(url)
       .pipe(
-        map((response) => ({ data: response?.data ?? [] })),
+        map((response) => ({ data: this.filterUsersByCurrentUserHuilerie(response?.data ?? []) })),
         catchError(this.logAndThrow('getUtilisateurs', url))
       );
   }
@@ -319,5 +323,25 @@ export class AdminService {
       catchError(this.logAndThrow('toggleActif_getUserById', getUserUrl, { id }))
     );
   };
+
+  private filterUsersByCurrentUserHuilerie(users: any[]): any[] {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      return users;
+    }
+
+    return users.filter((user) => {
+      const huilerieId = Number(
+        user?.huilerie?.idHuilerie
+        ?? user?.huilerie?.id
+        ?? user?.huilerieId
+        ?? user?.idHuilerie
+        ?? user?.huilierieId
+        ?? 0,
+      );
+
+      return huilerieId === currentHuilerieId;
+    });
+  }
 }
 

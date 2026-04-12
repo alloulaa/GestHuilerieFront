@@ -52,6 +52,16 @@
   line-height: 1.1;
 }
 
+.traceability-error {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger-500) 42%, transparent);
+  background: color-mix(in srgb, var(--color-danger-100) 55%, #ffffff);
+  color: var(--color-danger-700);
+  font-weight: 600;
+}
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--separator);

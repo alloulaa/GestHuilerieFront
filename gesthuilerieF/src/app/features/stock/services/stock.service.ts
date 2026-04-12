@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { Stock } from '../models/stock.models';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Injectable({
     providedIn: 'root',
@@ -11,14 +12,17 @@ export class StockService {
     private readonly apiUrl = `${environment.apiUrl}/stocks`;
     private readonly fallbackApiUrl = `${environment.apiUrl}/stock`;
 
-    constructor(private http: HttpClient) { }
+    constructor(
+        private http: HttpClient,
+        private authService: AuthService,
+    ) { }
 
     getAll(): Observable<Stock[]> {
         return this.http.get<unknown>(this.apiUrl).pipe(
-            map(response => this.toStocks(response)),
+            map(response => this.filterByCurrentUserHuilerie(this.toStocks(response))),
             catchError(() =>
                 this.http.get<unknown>(this.fallbackApiUrl).pipe(
-                    map(response => this.toStocks(response)),
+                    map(response => this.filterByCurrentUserHuilerie(this.toStocks(response))),
                 ),
             ),
         );
@@ -45,5 +49,14 @@ export class StockService {
             lotReference: String(item.lotReference ?? item.referenceLot ?? item.reference_lot ?? item.lotOlivesReference ?? item.lotOlives?.reference ?? item.lot?.reference ?? '').trim() || undefined,
             quantiteDisponible: Number(item.quantiteDisponible ?? item.quantite_disponible ?? 0),
         }));
+    }
+
+    private filterByCurrentUserHuilerie(items: Stock[]): Stock[] {
+        const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+        if (!currentHuilerieId) {
+            return [];
+        }
+
+        return items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
     }
 }

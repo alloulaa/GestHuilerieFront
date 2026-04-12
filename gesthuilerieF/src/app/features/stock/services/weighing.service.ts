@@ -3,18 +3,23 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Pesee, ReceptionPeseeCreatePayload, Stock } from '../models/stock.models';
 import { environment } from 'src/environments/environment';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class WeighingService {
   private readonly apiUrl = `${environment.apiUrl}/pesees`;
+  private missingHuilerieFallbackLogged = false;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) { }
 
   getAll(): Observable<Pesee[]> {
     return this.http.get<any[]>(this.apiUrl).pipe(
-      map((items) => (items ?? []).map((item) => this.normalizePesee(item))),
+      map((items) => this.filterByCurrentUserHuilerie((items ?? []).map((item) => this.normalizePesee(item)))),
     );
   }
 
@@ -62,5 +67,49 @@ export class WeighingService {
       huilerieId: raw?.huilerieId != null ? Number(raw.huilerieId) : undefined,
       bonPeseePdfPath: raw?.bonPeseePdfPath ?? undefined,
     };
+  }
+
+  private filterByCurrentUserHuilerie(items: Pesee[]): Pesee[] {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      // TODO: Remove this temporary fallback when current user huilerieId is always available in session.
+      if (!this.missingHuilerieFallbackLogged) {
+        this.missingHuilerieFallbackLogged = true;
+        console.warn('[weighing-service] Temporary fallback: missing current user huilerieId, returning API payload as-is.');
+      }
+      return items;
+    }
+
+    const scopedItems = items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
+    if (scopedItems.length > 0) {
+      return scopedItems;
+    }
+
+    const hasAnyHuilerieId = items.some((item) => item?.huilerieId != null);
+    if (!hasAnyHuilerieId) {
+      // TODO: Remove this temporary fallback when backend always returns huilerieId for each pesee.
+      if (!this.missingHuilerieFallbackLogged) {
+        this.missingHuilerieFallbackLogged = true;
+        console.warn('[weighing-service] Temporary fallback: backend response has no huilerieId on pesees.');
+      }
+      return items;
+    }
+
+    const distinctHuilerieIds = new Set(
+      items
+        .map((item) => Number(item?.huilerieId ?? 0))
+        .filter((id) => Number.isFinite(id) && id > 0),
+    );
+
+    // TODO: Remove this temporary fallback when backend + auth contexte huilerie is fully stable.
+    if (distinctHuilerieIds.size === 1) {
+      if (!this.missingHuilerieFallbackLogged) {
+        this.missingHuilerieFallbackLogged = true;
+        console.warn('[weighing-service] Temporary fallback: single-huilerie payload detected, returning all pesees.');
+      }
+      return items;
+    }
+
+    return scopedItems;
   }
 }

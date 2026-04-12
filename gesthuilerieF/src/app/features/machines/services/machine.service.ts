@@ -5,6 +5,7 @@ import { map, switchMap } from 'rxjs/operators';
 import { Machine, Huilerie } from '../models/enterprise.models';
 import { environment } from 'src/environments/environment';
 import { HuilerieService } from './huilerie.service';
+import { AuthService } from '../../../core/auth/auth.service';
 
 type MachineApiDto = {
   idMachine: number;
@@ -34,6 +35,7 @@ export class MachineService {
   constructor(
     private http: HttpClient,
     private huilerieService: HuilerieService,
+    private authService: AuthService,
   ) { }
 
   findAll(): Observable<Machine[]> {
@@ -42,7 +44,9 @@ export class MachineService {
       huileries: this.huilerieService.getAll(),
     }).pipe(
       map(({ machines, huileries }) =>
-        machines.map((machine) => this.fromApi(machine, huileries)),
+        this.filterByCurrentUserHuilerie(
+          machines.map((machine) => this.fromApi(machine, huileries)),
+        ),
       ),
     );
   }
@@ -68,7 +72,9 @@ export class MachineService {
       huileries: this.huilerieService.getAll(),
     }).pipe(
       map(({ machines, huileries }) =>
-        machines.map((machine) => this.fromApi(machine, huileries)),
+        this.filterByCurrentUserHuilerie(
+          machines.map((machine) => this.fromApi(machine, huileries)),
+        ),
       ),
     );
   }
@@ -145,6 +151,15 @@ export class MachineService {
       capacite: machine.capacite,
       huilerieId: huilerie?.idHuilerie ?? 0,
     };
+  }
+
+  private filterByCurrentUserHuilerie(items: Machine[]): Machine[] {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      return items;
+    }
+
+    return items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
   }
 
   private toApi(payload: Omit<Machine, 'idMachine'>, huileries: Huilerie[]): MachineApiPayload {

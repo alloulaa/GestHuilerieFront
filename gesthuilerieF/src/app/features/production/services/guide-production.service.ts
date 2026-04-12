@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, map, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { GuideProduction, GuideProductionCreateDTO } from '../models/production.models';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Injectable({
     providedIn: 'root',
@@ -11,10 +12,15 @@ export class GuideProductionService {
     private readonly apiUrl = `${environment.apiUrl}/guide-productions`;
     private readonly fallbackUpdateUrl = `${environment.apiUrl}/guide-production`;
 
-    constructor(private http: HttpClient) { }
+    constructor(
+        private http: HttpClient,
+        private authService: AuthService,
+    ) { }
 
     findAll(): Observable<GuideProduction[]> {
-        return this.http.get<GuideProduction[]>(this.apiUrl);
+        return this.http.get<GuideProduction[]>(this.apiUrl).pipe(
+            map((items) => this.filterByCurrentUserHuilerie(items ?? [])),
+        );
     }
 
     getAll(): Observable<GuideProduction[]> {
@@ -48,5 +54,14 @@ export class GuideProductionService {
 
     delete(idGuideProduction: number): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${idGuideProduction}`);
+    }
+
+    private filterByCurrentUserHuilerie(items: GuideProduction[]): GuideProduction[] {
+        const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+        if (!currentHuilerieId) {
+            return items;
+        }
+
+        return items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
     }
 }

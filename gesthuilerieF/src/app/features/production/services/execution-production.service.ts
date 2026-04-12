@@ -1,8 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { ExecutionProduction, ExecutionProductionCreate, ExecutionProductionDTO } from '../models/production.models';
+import { AuthService } from '../../../core/auth/auth.service';
+import { GuideProductionService } from './guide-production.service';
+import { MachineService } from '../../machines/services/machine.service';
 
 @Injectable({
     providedIn: 'root',
@@ -11,14 +15,25 @@ export class ExecutionProductionService {
     private readonly apiUrl = `${environment.apiUrl}/execution-productions`;
     private readonly produitFinalApiUrl = `${environment.apiUrl}/produitsFinaux`;
 
-    constructor(private http: HttpClient) { }
+    constructor(
+        private http: HttpClient,
+        private authService: AuthService,
+        private guideProductionService: GuideProductionService,
+        private machineService: MachineService,
+    ) { }
 
     findAll(): Observable<ExecutionProduction[]> {
         return this.http.get<ExecutionProduction[]>(this.apiUrl);
     }
 
     getAll(): Observable<ExecutionProduction[]> {
-        return this.findAll();
+        return forkJoin({
+            executions: this.findAll(),
+            guides: this.guideProductionService.getAll(),
+            machines: this.machineService.getAll(),
+        }).pipe(
+            map(({ executions, guides, machines }) => this.filterByCurrentUserHuilerie(executions, guides, machines)),
+        );
     }
 
     findById(idExecutionProduction: number): Observable<ExecutionProduction> {
@@ -35,6 +50,22 @@ export class ExecutionProductionService {
 
     update(idExecutionProduction: number, payload: Partial<ExecutionProductionCreate>): Observable<ExecutionProduction> {
         return this.http.put<ExecutionProduction>(`${this.apiUrl}/${idExecutionProduction}`, payload);
+    }
+
+    private filterByCurrentUserHuilerie(executions: ExecutionProduction[], guides: any[], machines: any[]): ExecutionProduction[] {
+        const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+        if (!currentHuilerieId) {
+            return executions;
+        }
+
+        const allowedGuideIds = new Set(guides.map((guide) => Number(guide?.idGuideProduction ?? 0)).filter((id) => id > 0));
+        const allowedMachineIds = new Set(machines.map((machine) => Number(machine?.idMachine ?? 0)).filter((id) => id > 0));
+
+        return executions.filter((execution) =>
+            allowedGuideIds.has(Number(execution?.guideProductionId ?? 0))
+            || allowedMachineIds.has(Number(execution?.machineId ?? 0))
+            || Number(execution?.huilerieId ?? 0) === currentHuilerieId,
+        );
     }
 
     createProduitFinal(execution: ExecutionProduction): Observable<ExecutionProductionDTO> {

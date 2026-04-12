@@ -18,6 +18,8 @@
       <div><strong>Quantite restante:</strong> {{ currentLot.quantiteRestante }} kg</div>
     </div>
 
+    <p class="traceability-error" *ngIf="traceabilityErrorMessage">{{ traceabilityErrorMessage }}</p>
+
     <h3 class="section-title">Liste des pesées</h3>
     <div class="table-wrap">
       <table class="pesee-table">

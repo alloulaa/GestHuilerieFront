@@ -7,6 +7,7 @@ import { Pesee } from '../../../stock/models/stock.models';
 import { LotManagementService } from '../../services/lot-management.service';
 import { TraceabilityService } from '../../services/traceability.service';
 import { AnalyseLaboratoireService } from '../../services/analyse-laboratoire.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-lot-details',
@@ -20,6 +21,7 @@ export class LotDetailsComponent implements OnInit {
   pesees: Pesee[] = [];
   events: TraceabilityEvent[] = [];
   analyses: AnalyseLaboratoire[] = [];
+  traceabilityErrorMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -36,12 +38,34 @@ export class LotDetailsComponent implements OnInit {
       this.lot = lot ?? null;
     });
 
-    this.lotManagementService.getPeseesForLot(lotId).subscribe(data => {
-      this.pesees = data;
-    });
+    this.traceabilityService.getLotTraceability(lotId).subscribe({
+      next: (dto) => {
+        this.traceabilityErrorMessage = '';
+        this.pesees = (dto.pesees ?? []).map((pesee) => ({
+          ...pesee,
+          datePesee: pesee.date,
+          lotId: dto.lotId,
+        } as Pesee));
+        this.events = [...(dto.cycleVie ?? [])]
+          .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      },
+      error: (error: HttpErrorResponse) => {
+        this.pesees = [];
+        this.events = [];
 
-    this.traceabilityService.getLotLifecycle(lotId).subscribe(data => {
-      this.events = [...data].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        if (error.status === 403) {
+          this.traceabilityErrorMessage = 'Lot hors périmètre de votre huilerie';
+          return;
+        }
+
+        if (error.status === 404) {
+          this.traceabilityErrorMessage = 'Lot introuvable';
+          return;
+        }
+
+        this.traceabilityErrorMessage = 'Une erreur est survenue lors du chargement de la traçabilité du lot.';
+        console.error('[lot-details] traceability request failed', error);
+      },
     });
 
     this.analyseLaboratoireService.getByLot(lotId).subscribe(data => {

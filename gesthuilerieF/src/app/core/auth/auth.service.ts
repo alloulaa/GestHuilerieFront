@@ -94,12 +94,15 @@ export class AuthService {
     const user = this.extractUser(response) ?? {};
     const token = this.extractToken(response) ?? this.getToken();
     const refreshToken = response?.refreshToken ?? response?.data?.refreshToken ?? this.getRefreshToken();
+    const huilerieId = this.extractCurrentUserHuilerieId(response) ?? this.extractCurrentUserHuilerieId(user) ?? this.extractCurrentUserHuilerieId(existingUser) ?? null;
 
     const storedUser = {
       ...existingUser,
       ...user,
       token: token ?? undefined,
       refreshToken: refreshToken ?? undefined,
+      huilerieId: huilerieId ?? existingUser?.huilerieId ?? user?.huilerieId ?? undefined,
+      idHuilerie: huilerieId ?? existingUser?.idHuilerie ?? user?.idHuilerie ?? undefined,
       permissions:
         response?.permissions ??
         response?.data?.permissions ??
@@ -126,11 +129,14 @@ export class AuthService {
     const user = this.extractUser(response);
     const token = this.extractToken(response);
     const refreshToken = response?.refreshToken ?? response?.data?.refreshToken ?? null;
+    const huilerieId = this.extractCurrentUserHuilerieId(response) ?? this.extractCurrentUserHuilerieId(user) ?? null;
 
     const storedUser = {
       ...user,
       token: token ?? undefined,
       refreshToken: refreshToken ?? undefined,
+      huilerieId: huilerieId ?? user?.huilerieId ?? undefined,
+      idHuilerie: huilerieId ?? user?.idHuilerie ?? undefined,
       permissions: response?.permissions ?? response?.data?.permissions ?? user?.permissions ?? [],
     };
 
@@ -253,6 +259,80 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  getCurrentUserHuilerieId(): number | null {
+    const user = this.getCurrentUser();
+    const fromUser = this.extractCurrentUserHuilerieId(user);
+    if (fromUser) {
+      return fromUser;
+    }
+
+    const token = this.getToken();
+    if (token) {
+      const fromToken = this.extractCurrentUserHuilerieId(this.decodeJwtPayload(token));
+      if (fromToken) {
+        return fromToken;
+      }
+    }
+
+    return null;
+  }
+
+  private extractCurrentUserHuilerieId(source: any): number | null {
+    return this.findHuilerieId(source, false);
+  }
+
+  private findHuilerieId(value: any, withinHuilerieContext: boolean, visited = new Set<any>()): number | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    if (visited.has(value)) {
+      return null;
+    }
+
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = this.findHuilerieId(item, withinHuilerieContext, visited);
+        if (found) {
+          return found;
+        }
+      }
+
+      return null;
+    }
+
+    for (const [key, entryValue] of Object.entries(value)) {
+      const normalizedKey = String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const looksLikeHuilerieKey = normalizedKey.includes('huilerie') || normalizedKey.includes('huilierie');
+      const looksLikeIdKey = normalizedKey === 'id' || normalizedKey.endsWith('id') || normalizedKey.includes('id');
+
+      if (withinHuilerieContext && looksLikeIdKey) {
+        const numericValue = Number(entryValue);
+        if (Number.isFinite(numericValue) && numericValue > 0) {
+          return numericValue;
+        }
+      }
+
+      if ((looksLikeHuilerieKey && looksLikeIdKey) || normalizedKey === 'idhuilerie' || normalizedKey === 'huilerieid' || normalizedKey === 'huilierieid') {
+        const numericValue = Number(entryValue);
+        if (Number.isFinite(numericValue) && numericValue > 0) {
+          return numericValue;
+        }
+      }
+
+      if (entryValue && typeof entryValue === 'object') {
+        const nested = this.findHuilerieId(entryValue, withinHuilerieContext || looksLikeHuilerieKey, visited);
+        if (nested) {
+          return nested;
+        }
+      }
+    }
+
+    return null;
   }
 
   setAccessToken(token: string): void {

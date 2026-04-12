@@ -66,6 +66,7 @@ export interface ExecutionProduction {
     produitFinalCode?: string;
     produitFinalNomProduit?: string;
     valeursReelles: ValeurReelleParametre[];
+    huilerieId?: number;
 }
 
 export interface ExecutionProductionDTO extends ExecutionProduction {

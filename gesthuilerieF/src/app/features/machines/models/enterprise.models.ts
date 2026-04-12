@@ -14,6 +14,7 @@ export interface Huilerie {
   certification: string;
   capaciteProduction: number;
   entrepriseId: number;
+  huilerieId?: number;
   active: boolean;
 }
 
