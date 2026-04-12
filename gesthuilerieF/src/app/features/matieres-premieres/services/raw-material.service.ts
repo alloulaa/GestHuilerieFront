@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, throwError } from 'rxjs';
 import { MatierePremiere } from '../models/raw-material.models';
 import { environment } from 'src/environments/environment';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -36,8 +36,23 @@ export class RawMaterialService {
   }
 
   create(payload: Omit<MatierePremiere, 'idMatierePremiere' | 'reference'>): Observable<MatierePremiere> {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    const resolvedHuilerieId = Number(payload?.huilerieId ?? currentHuilerieId ?? 0);
+
+    if (resolvedHuilerieId <= 0) {
+      return throwError(() => new Error('Impossible de creer la matiere premiere: huilerieId introuvable dans la session.'));
+    }
+
+    const createPayload = {
+      nom: payload?.nom ?? '',
+      type: payload?.type ?? '',
+      uniteMesure: payload?.uniteMesure ?? '',
+      description: payload?.description ?? '',
+      huilerieId: resolvedHuilerieId,
+    };
+
     return this.http
-      .post<MatierePremiere & { id?: number }>(this.apiUrl, payload)
+      .post<MatierePremiere & { id?: number }>(this.apiUrl, createPayload)
       .pipe(map((item) => this.normalizeMatierePremiere(item)));
   }
 

@@ -11,6 +11,7 @@ import { ExecutionProductionService } from '../../services/execution-production.
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-guides-gerer',
@@ -50,6 +51,7 @@ export class GuidesGererComponent implements OnInit {
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
     private permissionService: PermissionService,
+    private authService: AuthService,
   ) {
     this.guideForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -105,8 +107,47 @@ export class GuidesGererComponent implements OnInit {
 
   loadExecutions(): void {
     this.executionProductionService.getAll().subscribe(data => {
-      this.executions = data;
+      this.executions = this.filterExecutionsByCurrentHuilerie(data ?? []);
+    }, (error: HttpErrorResponse) => {
+      const cachedExecutions = this.filterExecutionsByCurrentHuilerie(this.readExecutionCache());
+      if (cachedExecutions.length > 0) {
+        this.executions = cachedExecutions;
+        return;
+      }
+
+      this.toastService.error(this.readHttpError(error, 'Impossible de charger les exécutions enregistrées.'));
     });
+  }
+
+  private filterExecutionsByCurrentHuilerie(executions: ExecutionProduction[]): ExecutionProduction[] {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      return executions;
+    }
+
+    return executions.filter((execution) => Number(execution?.huilerieId ?? 0) === currentHuilerieId);
+  }
+
+  private readExecutionCache(): ExecutionProduction[] {
+    try {
+      const raw = localStorage.getItem('execution-productions-cache');
+      if (!raw) {
+        return [];
+      }
+
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed as ExecutionProduction[] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private readHttpError(error: unknown, fallbackMessage: string): string {
+    const possibleMessage = (error as { error?: { message?: string; errors?: string[] }; message?: string })?.error?.message
+      ?? (error as { message?: string })?.message;
+
+    const firstApiError = (error as { error?: { errors?: string[] } })?.error?.errors?.[0];
+    return String(firstApiError ?? possibleMessage ?? '').trim() || fallbackMessage;
   }
 
   createEtapeGroup(ordre: number) {

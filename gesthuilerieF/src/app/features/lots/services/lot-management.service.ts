@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, forkJoin, map, of, switchMap, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, forkJoin, map, of, switchMap, tap, throwError } from 'rxjs';
 import { LotOlives } from '../models/lot.models';
 import { LotOlivesService } from './lot-olives.service';
 import { Pesee, ReceptionPeseeCreatePayload, StockMovement } from '../../stock/models/stock.models';
@@ -48,11 +48,59 @@ export class LotManagementService {
       lots: this.lotOlivesService.getAll(),
       weighings: this.weighingService.getAll(),
     }).pipe(
+      switchMap(({ lots, weighings }) =>
+        this.backfillLotsFromWeighings(lots, weighings).pipe(
+          map((resolvedLots) => ({ lots: resolvedLots, weighings })),
+        ),
+      ),
       tap(({ lots, weighings }) => {
         this.lotsSubject.next(lots);
         this.weighingsSubject.next(weighings);
+        console.log('[lot-management-service] refreshData', {
+          lotsCount: lots.length,
+          weighingsCount: weighings.length,
+          lotIds: lots.map((lot) => lot.idLot),
+          weighingLotIds: weighings.map((pesee) => pesee.lotId),
+        });
       }),
       map(() => void 0),
+    );
+  }
+
+  private backfillLotsFromWeighings(lots: LotOlives[], weighings: Pesee[]): Observable<LotOlives[]> {
+    const existingLotIds = new Set((lots ?? []).map((lot) => Number(lot?.idLot ?? 0)).filter((id) => id > 0));
+    const missingLotIds = Array.from(
+      new Set(
+        (weighings ?? [])
+          .map((pesee) => Number(pesee?.lotId ?? 0))
+          .filter((id) => id > 0 && !existingLotIds.has(id)),
+      ),
+    );
+
+    if (missingLotIds.length === 0) {
+      return of(lots ?? []);
+    }
+
+    console.warn('[lot-management-service] backfill lots from weighings', {
+      missingLotIds,
+    });
+
+    return forkJoin(
+      missingLotIds.map((idLot) =>
+        this.lotOlivesService.findById(idLot).pipe(
+          catchError(() => of(null)),
+        ),
+      ),
+    ).pipe(
+      map((fetchedLots) => {
+        const validFetchedLots = fetchedLots.filter((item): item is LotOlives => !!item && Number(item?.idLot ?? 0) > 0);
+        if (validFetchedLots.length === 0) {
+          return lots ?? [];
+        }
+
+        return [...(lots ?? []), ...validFetchedLots]
+          .filter((item, index, array) => array.findIndex((candidate) => candidate.idLot === item.idLot) === index);
+      }),
     );
   }
 

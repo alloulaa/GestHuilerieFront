@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, forwardRef } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbInputModule, NbSelectModule } from '@nebular/theme';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Machine } from '../../../machines/models/enterprise.models';
 import { MachineService } from '../../../machines/services/machine.service';
 import { LotOlives } from '../../../lots/models/lot.models';
@@ -13,6 +14,7 @@ import { ExecutionProductionService } from '../../services/execution-production.
 import { GuideProductionService } from '../../services/guide-production.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-guides-executer',
@@ -55,6 +57,7 @@ export class GuidesExecuterComponent implements OnInit {
     private lotOlivesService: LotOlivesService,
     @Inject(forwardRef(() => RawMaterialService))
     private rawMaterialService: RawMaterialService,
+    private authService: AuthService,
     private confirmDialogService: ConfirmDialogService,
     private toastService: ToastService,
   ) {
@@ -75,6 +78,7 @@ export class GuidesExecuterComponent implements OnInit {
   ngOnInit(): void {
     this.restoreCachedExecutions();
     this.loadReferenceData();
+    this.loadExecutions();
   }
 
   get valeursReelles(): FormArray {
@@ -282,7 +286,7 @@ export class GuidesExecuterComponent implements OnInit {
 
   private loadExecutions(): void {
     this.executionProductionService.getAll().subscribe((items) => {
-      this.executions = items ?? [];
+      this.executions = this.filterExecutionsByCurrentHuilerie(items ?? []);
       this.saveExecutionCache(this.executions);
       if (this.selectedExecution) {
         const refreshed = this.executions.find((item) => item.idExecutionProduction === this.selectedExecution?.idExecutionProduction);
@@ -293,10 +297,10 @@ export class GuidesExecuterComponent implements OnInit {
           }
           : this.selectedExecution;
       }
-    }, (error) => {
+    }, (error: HttpErrorResponse) => {
       const cachedExecutions = this.readExecutionCache();
       if (cachedExecutions.length > 0) {
-        this.executions = cachedExecutions;
+        this.executions = this.filterExecutionsByCurrentHuilerie(cachedExecutions);
         this.executionError = '';
         return;
       }
@@ -328,7 +332,16 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private restoreCachedExecutions(): void {
-    this.executions = this.readExecutionCache();
+    this.executions = this.filterExecutionsByCurrentHuilerie(this.readExecutionCache());
+  }
+
+  private filterExecutionsByCurrentHuilerie(executions: ExecutionProduction[]): ExecutionProduction[] {
+    const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (!currentHuilerieId) {
+      return executions;
+    }
+
+    return executions.filter((execution) => Number(execution?.huilerieId ?? 0) === currentHuilerieId);
   }
 
   private populateExecutionValuesFromGuide(guide: GuideProduction): void {
