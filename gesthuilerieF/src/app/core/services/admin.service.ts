@@ -35,6 +35,8 @@ export interface User {
   companyName?: string;
   profilId?: number;
   profil?: Profil;
+  entrepriseId?: number | null;
+  huilerieId?: number | null;
   actif?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -49,6 +51,8 @@ export class AdminService {
 
   private normalizeUtilisateurPayload(payload: any): any {
     const profilId = payload?.profilId ?? payload?.idProfil ?? payload?.profil?.idProfil ?? null;
+    const entrepriseId =
+      payload?.entrepriseId ?? payload?.idEntreprise ?? payload?.entreprise?.idEntreprise ?? this.authService.getCurrentUserEntrepriseId() ?? null;
     const huilerieId =
       payload?.huilerieId ?? payload?.huilierieId ?? payload?.idHuilerie ?? payload?.huilerie?.idHuilerie ?? null;
 
@@ -56,6 +60,8 @@ export class AdminService {
       ...payload,
       profilId,
       idProfil: profilId,
+      entrepriseId,
+      idEntreprise: entrepriseId,
       huilerieId,
       idHuilerie: huilerieId,
     };
@@ -126,13 +132,14 @@ export class AdminService {
   }
 
   // Profils endpoints
-  getProfils(): Observable<{ data: Profil[] }> {
-    const url = `${API_URL}/api/admin/profils`;
+  getProfils(huilerieNom?: string): Observable<{ data: Profil[] }> {
+    const normalized = String(huilerieNom ?? '').trim();
+    const url = normalized ? `${API_URL}/api/admin/profils?huilerieNom=${encodeURIComponent(normalized)}` : `${API_URL}/api/admin/profils`;
     return this.http
       .get<ApiResponseDTO<Profil[]>>(url)
       .pipe(
         map((response) => ({ data: response?.data ?? [] })),
-        catchError(this.logAndThrow('getProfils', url))
+        catchError(this.logAndThrow('getProfils', url, { huilerieNom: normalized }))
       );
   }
 
@@ -325,6 +332,10 @@ export class AdminService {
   };
 
   private filterUsersByCurrentUserHuilerie(users: any[]): any[] {
+    if (this.authService.isCurrentUserAdmin()) {
+      return users;
+    }
+
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       return users;

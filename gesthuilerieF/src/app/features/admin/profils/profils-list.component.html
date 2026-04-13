@@ -16,6 +16,12 @@
           <input type="text" [(ngModel)]="searchText" (input)="onSearchChange()" placeholder="Rechercher un profil" />
           <span class="search-icon">⌕</span>
         </div>
+
+        <div class="search-wrap">
+          <input type="text" [(ngModel)]="huilerieNomFilter" (input)="onHuilerieFilterChange()"
+            placeholder="Filtrer par nom d'huilerie" />
+          <span class="search-icon">⌕</span>
+        </div>
       </div>
     </header>
 

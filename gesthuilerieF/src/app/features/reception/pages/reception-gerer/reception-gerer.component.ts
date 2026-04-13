@@ -21,6 +21,7 @@ import { RawMaterialService } from '../../../matieres-premieres/services/raw-mat
 import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { AnalyseLaboratoireService } from '../../../lots/services/analyse-laboratoire.service';
 
 @Component({
@@ -73,6 +74,7 @@ export class ReceptionGererComponent implements OnInit {
     private rawMaterialService: RawMaterialService,
     private confirmDialogService: ConfirmDialogService,
     private permissionService: PermissionService,
+    private authService: AuthService,
     private analyseLaboratoireService: AnalyseLaboratoireService,
   ) {
     this.form = this.fb.group({
@@ -124,7 +126,19 @@ export class ReceptionGererComponent implements OnInit {
       huileries: this.huilerieService.getAll(),
       matieresPremieres: this.rawMaterialService.getAll(),
     }).subscribe(({ huileries, matieresPremieres }) => {
-      this.huileries = huileries;
+      // Restrict huileries for non-admin users
+      const isAdmin = this.permissionService.isAdmin();
+      const currentUser = this.authService.getCurrentUser();
+      const userHuilerieId = currentUser?.huilerieId || currentUser?.idHuilerie;
+
+      if (!isAdmin && userHuilerieId) {
+        this.huileries = huileries.filter((h) => h.idHuilerie === userHuilerieId);
+        // Lock the huilerie dropdown for non-admin users
+        this.form.get('huilerieId')?.disable();
+      } else {
+        this.huileries = huileries;
+      }
+
       this.matieresPremieres = matieresPremieres.map((item, index) => ({
         ...item,
         idMatierePremiere: this.resolveMatierePremiereId(item, index),
@@ -169,7 +183,7 @@ export class ReceptionGererComponent implements OnInit {
         if (this.campagnes.length === 0) {
           console.warn('[reception-gerer] campagnes list is empty, campagneId will stay invalid in new lot mode.');
         }
-        
+
         // Set default campagne
         if (this.campagnes.length > 0) {
           const currentCampagne = this.form.get('campagneId')?.value;
@@ -177,7 +191,7 @@ export class ReceptionGererComponent implements OnInit {
             this.form.patchValue({ campagneId: this.campagnes[0] });
           }
         }
-        
+
         this.computeAvailableLots();
         this.selectDefaultLot();
       });
@@ -252,23 +266,23 @@ export class ReceptionGererComponent implements OnInit {
       newLotDetails:
         raw.lotMode === 'new'
           ? {
-              maturite: String(raw.maturite ?? ''),
-              dateRecolte: String(raw.dateRecolte ?? ''),
-              dateReception: String(raw.dateReception ?? ''),
-              dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
-              matierePremiereId: Number(
-                raw.matierePremiereId
-                  ?? this.matieresPremieres
-                    .map((item) => this.resolveMatierePremiereId(item))
-                    .find((id) => id != null)
-                  ?? 1,
-              ),
-              campagneId: this.resolveCampaignSeason(
-                String(raw.campagneId ?? ''),
-                String(raw.dateRecolte ?? ''),
-                String(raw.dateReception ?? ''),
-              ),
-            }
+            maturite: String(raw.maturite ?? ''),
+            dateRecolte: String(raw.dateRecolte ?? ''),
+            dateReception: String(raw.dateReception ?? ''),
+            dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
+            matierePremiereId: Number(
+              raw.matierePremiereId
+              ?? this.matieresPremieres
+                .map((item) => this.resolveMatierePremiereId(item))
+                .find((id) => id != null)
+              ?? 1,
+            ),
+            campagneId: this.resolveCampaignSeason(
+              String(raw.campagneId ?? ''),
+              String(raw.dateRecolte ?? ''),
+              String(raw.dateReception ?? ''),
+            ),
+          }
           : undefined,
     };
 
@@ -577,13 +591,16 @@ export class ReceptionGererComponent implements OnInit {
       return;
     }
 
-    this.form.patchValue(
-      {
-        origine: lot.origine,
-        varieteOlive: lot.varieteOlive,
-      },
-      { emitEvent: false },
-    );
+    const patch: Record<string, unknown> = {
+      origine: lot.origine,
+      varieteOlive: lot.varieteOlive,
+    };
+
+    if (lot.huilerieId != null) {
+      patch['huilerieId'] = lot.huilerieId;
+    }
+
+    this.form.patchValue(patch, { emitEvent: false });
   }
 
   private selectDefaultLot(): void {
@@ -593,12 +610,18 @@ export class ReceptionGererComponent implements OnInit {
 
     const availableLot = this.availableLotsForReception[0];
     if (availableLot) {
+      const patch: Record<string, unknown> = {
+        existingLotId: availableLot.idLot,
+        origine: availableLot.origine,
+        varieteOlive: availableLot.varieteOlive,
+      };
+
+      if (availableLot.huilerieId != null) {
+        patch['huilerieId'] = availableLot.huilerieId;
+      }
+
       this.form.patchValue(
-        {
-          existingLotId: availableLot.idLot,
-          origine: availableLot.origine,
-          varieteOlive: availableLot.varieteOlive,
-        },
+        patch,
         { emitEvent: false },
       );
       return;
@@ -609,13 +632,39 @@ export class ReceptionGererComponent implements OnInit {
   }
 
   private computeAvailableLots(): void {
-    const sortedLots = [...this.lots].sort((a, b) => Number(a.idLot) - Number(b.idLot));
+    const isAdmin = this.permissionService.isAdmin();
+    const currentUser = this.authService.getCurrentUser();
+    const userHuilerieId = currentUser?.huilerieId || currentUser?.idHuilerie;
+
+    // For non-admin users, filter lots by their huilerie only
+    let filteredLots = this.lots;
+    if (!isAdmin && userHuilerieId) {
+      filteredLots = this.lots.filter((lot) => {
+        const lotHuilerieId = lot.huilerieId || (lot as any).huilerie?.idHuilerie;
+        return lotHuilerieId === userHuilerieId;
+      });
+    }
+
+    const sortedLots = [...filteredLots].sort((a, b) => Number(a.idLot) - Number(b.idLot));
     const activeTraceabilityLots = sortedLots.filter((lot) => Number(lot.quantiteRestante ?? 0) > 0);
     this.availableLotsForReception = activeTraceabilityLots.length > 0 ? activeTraceabilityLots : sortedLots;
   }
 
   private buildCampaignSeasonsFromLots(): string[] {
-    const seasonsFromDates = this.lots
+    const isAdmin = this.permissionService.isAdmin();
+    const currentUser = this.authService.getCurrentUser();
+    const userHuilerieId = currentUser?.huilerieId || currentUser?.idHuilerie;
+
+    // For non-admin users, filter lots by their huilerie for campaign extraction
+    let lotsForCampaign = this.lots;
+    if (!isAdmin && userHuilerieId) {
+      lotsForCampaign = this.lots.filter((lot) => {
+        const lotHuilerieId = lot.huilerieId || (lot as any).huilerie?.idHuilerie;
+        return lotHuilerieId === userHuilerieId;
+      });
+    }
+
+    const seasonsFromDates = lotsForCampaign
       .flatMap((lot) => [lot.dateRecolte, lot.dateReception])
       .map((value) => this.toCampaignSeason(value))
       .filter((season): season is string => !!season);

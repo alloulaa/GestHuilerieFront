@@ -19,6 +19,11 @@
           <input nbInput fullWidth type="date" formControlName="dateDebut" />
         </label>
 
+        <label class="field">
+          <span>Huilerie du guide</span>
+          <input nbInput fullWidth [value]="selectedGuideHuilerieLabel" readonly />
+        </label>
+
         <label class="field" [class.field-invalid]="isExecutionFieldInvalid('dateFinPrevue')">
           <span>Date fin prévue *</span>
           <input nbInput fullWidth type="date" formControlName="dateFinPrevue" />
@@ -88,7 +93,8 @@
             <strong>{{ row.stepName }}</strong>
             <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
           </div>
-          <div [formGroupName]="valueIndex" class="value-item__input" [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
+          <div [formGroupName]="valueIndex" class="value-item__input"
+            [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
             <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
           </div>
         </div>
@@ -166,7 +172,8 @@
               execution.machineId) }}</strong></div>
           <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotOlivesReference || ('#' +
               execution.lotOlivesId) }}</strong></div>
-            <div class="execution-detail-item"><span>Date fin réelle</span><strong>{{ formatExecutionDate(execution.dateFinReelle) }}</strong></div>
+          <div class="execution-detail-item"><span>Date fin réelle</span><strong>{{
+              formatExecutionDate(execution.dateFinReelle) }}</strong></div>
           <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
               }}</strong></div>
           <div class="execution-detail-item"><span>Rendement</span><strong>{{ execution.rendement }}</strong></div>

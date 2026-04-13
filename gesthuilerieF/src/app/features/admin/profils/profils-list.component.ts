@@ -18,6 +18,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
 export class ProfilsListComponent implements OnInit {
   profils: any[] = [];
   searchText = '';
+  huilerieNomFilter = '';
   currentPage = 1;
   pageSize = 5;
   readonly pageSizeOptions = [5, 10, 20];
@@ -76,6 +77,11 @@ export class ProfilsListComponent implements OnInit {
     this.currentPage = 1;
   }
 
+  onHuilerieFilterChange(): void {
+    this.currentPage = 1;
+    this.loadProfils();
+  }
+
   onPageChange(page: number): void {
     if (page < 1 || page > this.totalPages) {
       return;
@@ -94,7 +100,7 @@ export class ProfilsListComponent implements OnInit {
 
   loadProfils(): void {
     this.isLoading = true;
-    this.adminService.getProfils().subscribe({
+    this.adminService.getProfils(this.huilerieNomFilter).subscribe({
       next: (res: any) => {
         this.profils = res?.data ?? [];
         this.currentPage = 1;

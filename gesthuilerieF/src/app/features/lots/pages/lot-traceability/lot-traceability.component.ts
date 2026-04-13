@@ -6,6 +6,8 @@ import { LotManagementService } from '../../services/lot-management.service';
 import { RouterModule } from '@angular/router';
 import { ExecutionProductionService } from '../../../production/services/execution-production.service';
 import { ExecutionProduction } from '../../../production/models/production.models';
+import { FormsModule } from '@angular/forms';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-lot-traceability',
@@ -16,6 +18,7 @@ import { ExecutionProduction } from '../../../production/models/production.model
     NbCardModule,
     NbInputModule,
     NbButtonModule,
+    FormsModule,
     NgFor,
     NgIf,
     RouterModule,
@@ -26,21 +29,44 @@ export class LotTraceabilityComponent implements OnInit {
 
   lots: LotOlives[] = [];
   lotSearch = '';
+  selectedHuilerieNom = '';
   lifecycleByLot: Record<number, TraceabilityEvent[]> = {};
   finalProductsByLot: Record<number, TraceabilityEvent[]> = {};
 
   constructor(
     private lotManagementService: LotManagementService,
     private executionProductionService: ExecutionProductionService,
+    private permissionService: PermissionService,
   ) { }
 
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
+  }
+
   ngOnInit(): void {
-    this.lotManagementService.loadInitialData().subscribe(() => {
-      this.lotManagementService.lots$.subscribe(data => {
-        this.lots = data;
-        this.loadFinalProducts(data);
-      });
+    this.lotManagementService.lots$.subscribe(data => {
+      this.lots = data;
+      this.loadFinalProducts(data);
     });
+
+    this.reloadLots();
+  }
+
+  applyFilters(): void {
+    if (this.isAdmin) {
+      this.reloadLots();
+    }
+  }
+
+  resetFilters(): void {
+    this.selectedHuilerieNom = '';
+    this.lotSearch = '';
+    this.reloadLots();
+  }
+
+  private reloadLots(): void {
+    const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+    this.lotManagementService.loadInitialData(huilerieNom).subscribe();
   }
 
   getFinalProducts(lotId: number): TraceabilityEvent[] {
@@ -95,37 +121,37 @@ export class LotTraceabilityComponent implements OnInit {
     const executions = cachedExecutions.length > 0 ? cachedExecutions : [];
 
     const lifecycleMap: Record<number, TraceabilityEvent[]> = {};
-      const byLot: Record<number, TraceabilityEvent[]> = {};
+    const byLot: Record<number, TraceabilityEvent[]> = {};
 
-      const finalProductsFromExecutions = (executions ?? [])
-        .filter((execution) => Number(execution.lotOlivesId ?? 0) > 0)
-        .filter((execution) => !!String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim())
-        .map((execution) => ({
-          lotId: Number(execution.lotOlivesId),
-          event: {
-            date: String(execution.dateFinReelle ?? execution.dateFinPrevue ?? execution.dateDebut ?? ''),
-            etape: 'PRODUIT_FINAL' as const,
-            description: String(execution.produitFinalNomProduit ?? execution.observations ?? 'Produit final créé').trim(),
-            reference: String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim(),
-          },
-        }));
+    const finalProductsFromExecutions = (executions ?? [])
+      .filter((execution) => Number(execution.lotOlivesId ?? 0) > 0)
+      .filter((execution) => !!String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim())
+      .map((execution) => ({
+        lotId: Number(execution.lotOlivesId),
+        event: {
+          date: String(execution.dateFinReelle ?? execution.dateFinPrevue ?? execution.dateDebut ?? ''),
+          etape: 'PRODUIT_FINAL' as const,
+          description: String(execution.produitFinalNomProduit ?? execution.observations ?? 'Produit final créé').trim(),
+          reference: String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim(),
+        },
+      }));
 
-      lots.forEach((lot) => {
-        const executionFinalProducts = finalProductsFromExecutions
-          .filter((entry) => entry.lotId === lot.idLot)
-          .map((entry) => entry.event);
+    lots.forEach((lot) => {
+      const executionFinalProducts = finalProductsFromExecutions
+        .filter((entry) => entry.lotId === lot.idLot)
+        .map((entry) => entry.event);
 
-        const mergedFinalProducts = [...executionFinalProducts]
-          .filter((event, position, all) => {
-            const key = `${event.reference}|${event.date}`;
-            return all.findIndex((candidate) => `${candidate.reference}|${candidate.date}` === key) === position;
-          });
+      const mergedFinalProducts = [...executionFinalProducts]
+        .filter((event, position, all) => {
+          const key = `${event.reference}|${event.date}`;
+          return all.findIndex((candidate) => `${candidate.reference}|${candidate.date}` === key) === position;
+        });
 
-        lifecycleMap[lot.idLot] = [];
-        byLot[lot.idLot] = mergedFinalProducts;
-      });
-      this.lifecycleByLot = lifecycleMap;
-      this.finalProductsByLot = byLot;
+      lifecycleMap[lot.idLot] = [];
+      byLot[lot.idLot] = mergedFinalProducts;
+    });
+    this.lifecycleByLot = lifecycleMap;
+    this.finalProductsByLot = byLot;
   }
 
   private readCachedExecutions(): ExecutionProduction[] {

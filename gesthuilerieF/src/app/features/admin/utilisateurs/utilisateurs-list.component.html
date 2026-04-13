@@ -31,6 +31,10 @@
         <option [ngValue]="null">Tous les profils</option>
         <option *ngFor="let p of profils" [ngValue]="getProfilId(p)">{{ getProfilLabel(p) }}</option>
       </select>
+      <label>
+        <span>Huilerie</span>
+        <input type="text" [(ngModel)]="filterHuilerieNom" placeholder="Nom de l'huilerie" />
+      </label>
     </section>
 
     <form class="form-card" *ngIf="showForm" [formGroup]="userForm" (ngSubmit)="onSubmit()">
@@ -59,10 +63,11 @@
         </select>
       </label>
       <label>
-        Huilierie ID
-        <select formControlName="huilierieId">
+        Huilerie
+        <select formControlName="huilerieId">
           <option [ngValue]="null">Selectionner</option>
-          <option *ngFor="let h of huileries" [ngValue]="h.idHuilerie">#{{ h.idHuilerie }} - {{ h.nom }}</option>
+          <option *ngFor="let h of availableHuileries" [ngValue]="h.idHuilerie">#{{ h.idHuilerie }} - {{ h.nom }}
+          </option>
         </select>
       </label>
       <div class="actions">

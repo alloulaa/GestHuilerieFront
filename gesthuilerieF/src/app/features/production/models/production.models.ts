@@ -5,6 +5,7 @@ export interface GuideProduction {
     description: string;
     dateCreation: string;
     huilerieId: number;
+    huilerieNom?: string;
     etapes: EtapeProduction[];
 }
 
@@ -67,6 +68,7 @@ export interface ExecutionProduction {
     produitFinalNomProduit?: string;
     valeursReelles: ValeurReelleParametre[];
     huilerieId?: number;
+    huilerieNom?: string;
 }
 
 export interface ExecutionProductionDTO extends ExecutionProduction {

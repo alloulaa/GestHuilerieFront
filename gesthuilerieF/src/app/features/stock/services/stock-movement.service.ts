@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { StockMovement } from '../models/stock.models';
 import { environment } from 'src/environments/environment';
@@ -14,10 +14,11 @@ export class StockMovementService {
   constructor(
     private http: HttpClient,
     private authService: AuthService,
-  ) {}
+  ) { }
 
-  getAll(): Observable<StockMovement[]> {
-    return this.http.get<unknown>(this.apiUrl).pipe(
+  getAll(huilerieNom?: string): Observable<StockMovement[]> {
+    const params = this.buildHuilerieNomParams(huilerieNom);
+    return this.http.get<unknown>(this.apiUrl, { params }).pipe(
       map(response => this.filterByCurrentUserHuilerie(this.toMovementList(response))),
     );
   }
@@ -42,20 +43,20 @@ export class StockMovementService {
   }
 
   updateMovement(
-  id: number,
-  payload: {
-    huilerieId: number;
-    referenceId: number;
-    quantite: number;
-    commentaire: string;
-    dateMouvement: string;
-    typeMouvement: StockMovement['typeMouvement'];
-  },
-): Observable<StockMovement> {
-  return this.http.put<unknown>(`${this.apiUrl}/${id}`, payload).pipe(
-    map(response => this.toMovement(this.unwrap(response))),
-  );
-}
+    id: number,
+    payload: {
+      huilerieId: number;
+      referenceId: number;
+      quantite: number;
+      commentaire: string;
+      dateMouvement: string;
+      typeMouvement: StockMovement['typeMouvement'];
+    },
+  ): Observable<StockMovement> {
+    return this.http.put<unknown>(`${this.apiUrl}/${id}`, payload).pipe(
+      map(response => this.toMovement(this.unwrap(response))),
+    );
+  }
 
   delete(id: number): Observable<void> {
     return this.http.delete<unknown>(`${this.apiUrl}/${id}`).pipe(
@@ -85,6 +86,7 @@ export class StockMovementService {
       id: Number(raw?.id ?? raw?.idStockMovement ?? raw?.id_stock_movement ?? 0),
       reference: String(raw?.reference ?? raw?.movementReference ?? '').trim() || undefined,
       huilerieId: Number(raw?.huilerieId ?? stock?.huilerie?.idHuilerie ?? stock?.huilerieId ?? raw?.huilerie_id ?? 0),
+      huilerieNom: String(raw?.huilerieNom ?? stock?.huilerie?.nom ?? '').trim() || undefined,
       referenceId: Number(raw?.referenceId ?? raw?.lotId ?? stock?.referenceId ?? stock?.lotOlives?.idLot ?? raw?.reference_id ?? 0),
       lotReference: String(raw?.lotReference ?? raw?.referenceLot ?? lot?.reference ?? '').trim() || undefined,
       quantite: Number(raw?.quantite ?? raw?.quantity ?? 0),
@@ -95,6 +97,10 @@ export class StockMovementService {
   }
 
   private filterByCurrentUserHuilerie(items: StockMovement[]): StockMovement[] {
+    if (this.authService.isCurrentUserAdmin()) {
+      return items;
+    }
+
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       return [];
@@ -109,5 +115,18 @@ export class StockMovementService {
       return raw.data;
     }
     return raw;
+  }
+
+  private buildHuilerieNomParams(huilerieNom?: string): HttpParams | undefined {
+    if (!this.authService.isCurrentUserAdmin()) {
+      return undefined;
+    }
+
+    const normalized = String(huilerieNom ?? '').trim();
+    if (!normalized) {
+      return undefined;
+    }
+
+    return new HttpParams().set('huilerieNom', normalized);
   }
 }

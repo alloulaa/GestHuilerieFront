@@ -55,6 +55,10 @@ export class HuilerieService {
   }
 
   private filterByCurrentUserHuilerie(items: Huilerie[]): Huilerie[] {
+    if (this.authService.isCurrentUserAdmin()) {
+      return items;
+    }
+
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       return items;

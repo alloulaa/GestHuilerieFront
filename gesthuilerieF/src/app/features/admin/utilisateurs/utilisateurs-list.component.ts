@@ -6,6 +6,7 @@ import { RouterModule } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { AdminService } from '../../../core/services/admin.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { HuilerieService } from '../../machines/services/huilerie.service';
@@ -21,7 +22,9 @@ export class UtilisateursListComponent implements OnInit {
   utilisateurs: any[] = [];
   profils: any[] = [];
   huileries: any[] = [];
+  currentEntrepriseId: number | null = null;
   filterText = '';
+  filterHuilerieNom = '';
   filterProfilId: number | null = null;
   pageSize = 10;
   currentPage = 1;
@@ -35,19 +38,30 @@ export class UtilisateursListComponent implements OnInit {
     private adminService: AdminService,
     private fb: FormBuilder,
     private huilerieService: HuilerieService,
+    private authService: AuthService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
   ) { }
 
   get filteredUtilisateurs(): any[] {
+    const huilerieQuery = this.filterHuilerieNom.trim().toLowerCase();
     return this.utilisateurs
       .filter((u) => this.filterProfilId === null || this.getUserProfilId(u) === this.filterProfilId)
+      .filter((u) => !huilerieQuery || this.getUserHuilerieName(u).includes(huilerieQuery))
       .filter(
         (u) =>
           !this.filterText ||
           this.getUserFullName(u).includes(this.filterText.toLowerCase()) ||
           String(u?.email ?? '').toLowerCase().includes(this.filterText.toLowerCase())
       );
+  }
+
+  get availableHuileries(): any[] {
+    if (this.currentEntrepriseId == null) {
+      return this.huileries;
+    }
+
+    return this.huileries.filter((h) => Number(h?.entrepriseId ?? h?.entreprise?.idEntreprise ?? 0) === this.currentEntrepriseId);
   }
 
   get paginatedUtilisateurs(): any[] {
@@ -64,7 +78,7 @@ export class UtilisateursListComponent implements OnInit {
     this.loadData();
   }
 
-  
+
   initForm(): void {
     this.userForm = this.fb.group({
       nom: ['', Validators.required],
@@ -72,7 +86,8 @@ export class UtilisateursListComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       telephone: [''],
       profilId: [null, Validators.required],
-      huilierieId: [null, Validators.required]
+      entrepriseId: [null, Validators.required],
+      huilerieId: [null],
     });
   }
 
@@ -88,6 +103,13 @@ export class UtilisateursListComponent implements OnInit {
         this.utilisateurs = rawUsers;
         this.profils = this.normalizeProfils(profilsRes?.data ?? []);
         this.huileries = huileriesRes ?? [];
+        this.currentEntrepriseId = this.authService.getCurrentUserEntrepriseId() ?? this.resolveEntrepriseIdFromData();
+
+        if (this.currentEntrepriseId != null && !this.userForm.get('entrepriseId')?.value) {
+          this.userForm.patchValue({ entrepriseId: this.currentEntrepriseId });
+        }
+
+        this.syncHuilerieRules();
         this.isLoading = false;
       },
       error: () => {
@@ -99,7 +121,8 @@ export class UtilisateursListComponent implements OnInit {
 
   onNewUser(): void {
     this.editingUser = null;
-    this.userForm.reset();
+    this.userForm.reset({ entrepriseId: this.currentEntrepriseId, huilerieId: null });
+    this.syncHuilerieRules();
     this.showForm = true;
   }
 
@@ -111,14 +134,17 @@ export class UtilisateursListComponent implements OnInit {
     }
 
     this.editingUser = user;
+    const entrepriseId = this.getUserEntrepriseId(user) ?? this.currentEntrepriseId;
     this.userForm.patchValue({
       nom: user.nom,
       prenom: user.prenom,
       email: user.email,
       telephone: user.telephone,
       profilId: user.profil?.idProfil ?? user.profilId ?? user.idProfil ?? null,
-      huilierieId: user.huilerie?.idHuilerie ?? user.huilerie?.id ?? user.huilerieId ?? user.idHuilerie ?? user.huilierieId ?? null,
+      entrepriseId,
+      huilerieId: user.huilerie?.idHuilerie ?? user.huilerie?.id ?? user.huilerieId ?? user.idHuilerie ?? null,
     });
+    this.syncHuilerieRules();
     this.showForm = true;
   }
 
@@ -133,6 +159,8 @@ export class UtilisateursListComponent implements OnInit {
       this.toastService.error('Mise à jour impossible: identifiant utilisateur introuvable.');
       return;
     }
+
+    this.syncHuilerieRules();
 
     const confirmed = await this.confirmDialogService.confirm({
       title: this.editingUser ? 'Confirmer la modification' : 'Confirmer la création',
@@ -262,6 +290,16 @@ export class UtilisateursListComponent implements OnInit {
     return this.getProfilLabel(profil);
   }
 
+  getUserEntrepriseId(user: any): number | null {
+    const id = Number(user?.entreprise?.idEntreprise ?? user?.entreprise?.id ?? user?.entrepriseId ?? user?.idEntreprise ?? 0);
+    return id > 0 ? id : null;
+  }
+
+  getUserHuilerieName(user: any): string {
+    const directName = String(user?.huilerie?.nom ?? user?.huilerie?.name ?? user?.huilerieNom ?? user?.nomHuilerie ?? '').trim();
+    return directName.toLowerCase();
+  }
+
   isUserActive(user: any): boolean {
     const raw = user?.actif ?? user?.active ?? user?.isActive ?? user?.statut ?? user?.status;
 
@@ -290,6 +328,48 @@ export class UtilisateursListComponent implements OnInit {
         nom: this.getProfilLabel(profil),
       };
     });
+  }
+
+  private resolveEntrepriseIdFromData(): number | null {
+    const userEntrepriseId = this.utilisateurs.map((user) => this.getUserEntrepriseId(user)).find((id) => id != null) ?? null;
+    if (userEntrepriseId) {
+      return userEntrepriseId;
+    }
+
+    const huilerieEntrepriseId = this.huileries
+      .map((h) => Number(h?.entrepriseId ?? h?.entreprise?.idEntreprise ?? 0))
+      .find((id) => id > 0) ?? null;
+
+    return huilerieEntrepriseId;
+  }
+
+  private isAdminProfileSelected(): boolean {
+    const profilId = Number(this.userForm.get('profilId')?.value ?? 0);
+    if (!profilId) {
+      return false;
+    }
+
+    const profil = this.profils.find((item) => this.getProfilId(item) === profilId);
+    const profilName = String(profil?.nom ?? profil?.name ?? '').trim().toUpperCase();
+    return profilName.includes('ADMIN');
+  }
+
+  private syncHuilerieRules(): void {
+    const huilerieControl = this.userForm.get('huilerieId');
+    if (!huilerieControl) {
+      return;
+    }
+
+    if (this.isAdminProfileSelected()) {
+      huilerieControl.clearValidators();
+      if (huilerieControl.value != null) {
+        huilerieControl.setValue(null, { emitEvent: false });
+      }
+    } else {
+      huilerieControl.setValidators([Validators.required]);
+    }
+
+    huilerieControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private getUserProfilId(user: any): number | null {

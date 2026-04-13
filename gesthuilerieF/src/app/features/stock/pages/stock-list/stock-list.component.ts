@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { StockMovement } from '../../models/stock.models';
 import { StockManagementService } from '../../services/stock-management.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-stock-list',
@@ -23,30 +24,52 @@ import { StockManagementService } from '../../services/stock-management.service'
 export class StockListComponent implements OnInit {
   allMovements: StockMovement[] = [];
   movements: StockMovement[] = [];
+  selectedHuilerieNom = '';
   lotIdFilter = '';
   filterMessage = '';
 
   constructor(
     private stockManagementService: StockManagementService,
+    private permissionService: PermissionService,
   ) { }
 
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
+  }
+
   ngOnInit(): void {
-    this.stockManagementService.loadInitialData().subscribe(() => {
-      this.stockManagementService.movements$.subscribe(data => {
-        this.allMovements = data;
-        this.applyLotFilter();
-      });
+    this.reloadMovements();
+    this.stockManagementService.movements$.subscribe(data => {
+      this.allMovements = data;
+      this.applyLotFilter();
     });
   }
 
-  filterByLotId(): void {
+  applyFilters(): void {
+    if (this.isAdmin) {
+      this.reloadMovements();
+      return;
+    }
+
     this.applyLotFilter();
   }
 
-  resetLotFilter(): void {
+  resetFilters(): void {
+    this.selectedHuilerieNom = '';
     this.lotIdFilter = '';
     this.filterMessage = '';
+
+    if (this.isAdmin) {
+      this.reloadMovements();
+      return;
+    }
+
     this.movements = this.allMovements;
+  }
+
+  private reloadMovements(): void {
+    const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+    this.stockManagementService.loadInitialData(huilerieNom, true).subscribe();
   }
 
   movementLabel(type: StockMovement['typeMouvement']): string {

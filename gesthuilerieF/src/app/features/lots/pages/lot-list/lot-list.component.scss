@@ -2,6 +2,13 @@
   overflow-x: auto;
 }
 
+.filters-panel {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  align-items: center;
+}
+
 .lot-table {
   width: 100%;
   border-collapse: collapse;

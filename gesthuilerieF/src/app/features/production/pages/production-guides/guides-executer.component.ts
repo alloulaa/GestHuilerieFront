@@ -89,6 +89,25 @@ export class GuidesExecuterComponent implements OnInit {
     return this.executionValueRows.length;
   }
 
+  get selectedGuideHuilerieLabel(): string {
+    const guideId = Number(this.executionForm.get('guideProductionId')?.value ?? 0);
+    if (!guideId) {
+      return '-';
+    }
+
+    const guide = this.guides.find((item) => item.idGuideProduction === guideId);
+    if (!guide) {
+      return '-';
+    }
+
+    const huilerieNom = String(guide.huilerieNom ?? '').trim();
+    if (huilerieNom) {
+      return huilerieNom;
+    }
+
+    return guide.huilerieId ? `#${guide.huilerieId}` : '-';
+  }
+
   get selectedLotMatierePremiereNom(): string {
     const lotId = Number(this.executionForm.get('lotOlivesId')?.value ?? 0);
     if (!lotId) {
@@ -336,6 +355,10 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private filterExecutionsByCurrentHuilerie(executions: ExecutionProduction[]): ExecutionProduction[] {
+    if (this.authService.isCurrentUserAdmin()) {
+      return executions;
+    }
+
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       return executions;

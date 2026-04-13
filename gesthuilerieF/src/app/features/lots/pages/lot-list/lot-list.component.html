@@ -1,11 +1,19 @@
 <nb-card>
   <nb-card-header>Liste des lots d'olives</nb-card-header>
   <nb-card-body>
+    <div class="filters-panel" *ngIf="isAdmin">
+      <input nbInput placeholder="Filtrer par nom d'huilerie" [(ngModel)]="selectedHuilerieNom"
+        name="selectedHuilerieNom" />
+      <button nbButton status="primary" size="small" type="button" (click)="applyAdminHuilerieFilter()">Filtrer</button>
+      <button nbButton status="basic" size="small" type="button" (click)="resetAdminHuilerieFilter()">Reset</button>
+    </div>
+
     <div class="table-wrap">
       <table class="lot-table">
         <thead>
           <tr>
             <th>Référence</th>
+            <th *ngIf="isAdmin">Huilerie</th>
             <th>Varieté</th>
             <th>Origine</th>
             <th>Quantite initiale</th>
@@ -16,12 +24,14 @@
         <tbody>
           <tr *ngFor="let lot of lots">
             <td>{{ lot.idLot }}</td>
+            <td *ngIf="isAdmin">{{ lot.huilerieNom || ('#' + (lot.huilerieId ?? '-')) }}</td>
             <td>{{ lot.varieteOlive }}</td>
             <td>{{ lot.origine }}</td>
             <td>{{ lot.quantiteInitiale }} kg</td>
             <td>{{ lot.quantiteRestante }} kg</td>
             <td>
-              <a nbButton status="primary" size="small" class="lot-details-btn" [routerLink]="['/pages/lots', lot.idLot]">Voir details</a>
+              <a nbButton status="primary" size="small" class="lot-details-btn"
+                [routerLink]="['/pages/lots', lot.idLot]">Voir details</a>
             </td>
           </tr>
         </tbody>

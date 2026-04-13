@@ -287,18 +287,28 @@ export class WeighingStockComponent implements OnInit {
       return;
     }
 
-    const lot = this.lots.find(item => item.idLot === lotId);
-    if (!lot) {
+    if (!Number.isFinite(lotId) || lotId <= 0) {
       return;
     }
 
-    this.weighingForm.patchValue(
-      {
-        origine: lot.origine,
-        varieteOlive: lot.varieteOlive,
-      },
-      { emitEvent: false },
-    );
+    const lot = this.lots.find(item => item.idLot === lotId);
+    if (!lot) {
+      this.patchHuilerieFromLotId(lotId);
+      return;
+    }
+
+    const patch: Record<string, unknown> = {
+      origine: lot.origine,
+      varieteOlive: lot.varieteOlive,
+    };
+
+    if (lot.huilerieId != null) {
+      patch['huilerieId'] = lot.huilerieId;
+    } else {
+      this.patchHuilerieFromLotId(lotId);
+    }
+
+    this.weighingForm.patchValue(patch, { emitEvent: false });
   }
 
   private selectDefaultLot(): void {
@@ -309,14 +319,22 @@ export class WeighingStockComponent implements OnInit {
     const availableLot = this.availableLotsForReception[0];
 
     if (availableLot) {
+      const patch: Record<string, unknown> = {
+        existingLotId: availableLot.idLot,
+        origine: availableLot.origine,
+        varieteOlive: availableLot.varieteOlive,
+      };
+
+      if (availableLot.huilerieId != null) {
+        patch['huilerieId'] = availableLot.huilerieId;
+      }
+
       this.weighingForm.patchValue(
-        {
-          existingLotId: availableLot.idLot,
-          origine: availableLot.origine,
-          varieteOlive: availableLot.varieteOlive,
-        },
+        patch,
         { emitEvent: false },
       );
+
+      this.patchLotIdentityFromSelection(availableLot.idLot);
       return;
     }
 
@@ -328,6 +346,19 @@ export class WeighingStockComponent implements OnInit {
     const sortedLots = [...this.lots].sort((a, b) => Number(a.idLot) - Number(b.idLot));
     const activeTraceabilityLots = sortedLots.filter((lot) => Number(lot.quantiteRestante ?? 0) > 0);
     this.availableLotsForReception = activeTraceabilityLots.length > 0 ? activeTraceabilityLots : sortedLots;
+  }
+
+  private patchHuilerieFromLotId(lotId: number): void {
+    this.lotManagementService.getLotById(lotId).subscribe({
+      next: (resolvedLot) => {
+        if (resolvedLot?.huilerieId != null) {
+          this.weighingForm.patchValue({ huilerieId: resolvedLot.huilerieId }, { emitEvent: false });
+        }
+      },
+      error: () => {
+        // Keep current value if lot details cannot be loaded.
+      },
+    });
   }
 
 }

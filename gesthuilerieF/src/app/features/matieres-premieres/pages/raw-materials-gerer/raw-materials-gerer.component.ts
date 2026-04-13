@@ -2,12 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NbCardModule, NbInputModule, NbButtonModule, NbIconModule } from '@nebular/theme';
+import { NbCardModule, NbInputModule, NbButtonModule, NbIconModule, NbSelectModule } from '@nebular/theme';
 import { MatierePremiere } from '../../models/raw-material.models';
 import { RawMaterialService } from '../../services/raw-material.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { HuilerieService } from '../../../machines/services/huilerie.service';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { Huilerie } from '../../../machines/models/enterprise.models';
 
 @Component({
   selector: 'app-raw-materials-gerer',
@@ -19,12 +22,15 @@ import { PermissionService } from '../../../../core/services/permission.service'
     NbInputModule,
     NbButtonModule,
     NbIconModule,
+    NbSelectModule,
     CommonModule,
     ReactiveFormsModule,
   ],
 })
 export class RawMaterialsGererComponent implements OnInit {
   rawMaterials: MatierePremiere[] = [];
+  availableHuileries: Huilerie[] = [];
+  currentEntrepriseId: number | null = null;
   editingId: string | number | null = null;
   formErrorMessage = '';
 
@@ -33,6 +39,8 @@ export class RawMaterialsGererComponent implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private rawMaterialService: RawMaterialService,
+    private huilerieService: HuilerieService,
+    private authService: AuthService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
     private permissionService: PermissionService,
@@ -42,10 +50,12 @@ export class RawMaterialsGererComponent implements OnInit {
       type: ['', [Validators.required]],
       uniteMesure: ['', [Validators.required]],
       description: ['', [Validators.required]],
+      huilerieId: this.formBuilder.control<number | null>(null, [Validators.required, Validators.min(1)]),
     });
   }
 
   ngOnInit(): void {
+    this.loadAvailableHuileries();
     this.loadRawMaterials();
   }
 
@@ -65,6 +75,24 @@ export class RawMaterialsGererComponent implements OnInit {
     });
   }
 
+  loadAvailableHuileries(): void {
+    this.currentEntrepriseId = this.authService.getCurrentUserEntrepriseId();
+    this.huilerieService.getAll().subscribe((items) => {
+      const allHuileries = items ?? [];
+      this.availableHuileries = allHuileries.filter((h) => {
+        if (this.currentEntrepriseId == null) {
+          return true;
+        }
+        return Number(h?.entrepriseId ?? 0) === this.currentEntrepriseId;
+      });
+
+      const selectedHuilerieId = Number(this.form.get('huilerieId')?.value ?? 0);
+      if (selectedHuilerieId <= 0 && this.availableHuileries.length > 0) {
+        this.form.patchValue({ huilerieId: this.availableHuileries[0].idHuilerie });
+      }
+    });
+  }
+
   async submit(): Promise<void> {
     this.formErrorMessage = '';
 
@@ -79,6 +107,7 @@ export class RawMaterialsGererComponent implements OnInit {
       type: payload.type ?? '',
       uniteMesure: payload.uniteMesure ?? '',
       description: payload.description ?? '',
+      huilerieId: Number(payload.huilerieId),
     };
 
     const request = this.editingId
@@ -119,6 +148,7 @@ export class RawMaterialsGererComponent implements OnInit {
       type: item.type,
       uniteMesure: item.uniteMesure,
       description: item.description,
+      huilerieId: item.huilerieId ?? this.form.get('huilerieId')?.value ?? null,
     });
   }
 
@@ -159,6 +189,7 @@ export class RawMaterialsGererComponent implements OnInit {
       type: '',
       uniteMesure: '',
       description: '',
+      huilerieId: this.availableHuileries[0]?.idHuilerie ?? null,
     });
   }
 

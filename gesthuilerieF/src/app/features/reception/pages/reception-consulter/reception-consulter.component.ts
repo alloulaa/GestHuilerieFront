@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NbCardModule, NbButtonModule, NbIconModule, NbInputModule } from '@nebular/theme';
 import { Pesee } from '../../../stock/models/stock.models';
 import { LotManagementService } from '../../../lots/services/lot-management.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-reception-consulter',
@@ -15,21 +16,55 @@ import { LotManagementService } from '../../../lots/services/lot-management.serv
 export class ReceptionConsulterComponent implements OnInit {
   pesees: Pesee[] = [];
   filteredPesees: Pesee[] = [];
+  selectedHuilerieNom = '';
   lotSearchValue = '';
   filterMessage = '';
 
-  constructor(private lotManagementService: LotManagementService) { }
+  constructor(
+    private lotManagementService: LotManagementService,
+    private permissionService: PermissionService,
+  ) { }
+
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
+  }
 
   ngOnInit(): void {
-    this.lotManagementService.loadInitialData().subscribe(() => {
-      this.lotManagementService.weighings$.subscribe(data => {
-        this.pesees = data;
-        this.filteredPesees = data;
-      });
+    this.reloadPesees();
+    this.lotManagementService.weighings$.subscribe(data => {
+      this.pesees = data;
+      this.applyLotFilter();
     });
   }
 
-  filterByLot(): void {
+  applyFilters(): void {
+    if (this.isAdmin) {
+      this.reloadPesees();
+      return;
+    }
+
+    this.applyLotFilter();
+  }
+
+  resetFilters(): void {
+    this.selectedHuilerieNom = '';
+    this.lotSearchValue = '';
+    this.filterMessage = '';
+
+    if (this.isAdmin) {
+      this.reloadPesees();
+      return;
+    }
+
+    this.filteredPesees = this.pesees;
+  }
+
+  private reloadPesees(): void {
+    const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+    this.lotManagementService.loadInitialData(huilerieNom).subscribe();
+  }
+
+  private applyLotFilter(): void {
     const searchValue = String(this.lotSearchValue ?? '').trim();
     this.filterMessage = '';
 
@@ -50,12 +85,6 @@ export class ReceptionConsulterComponent implements OnInit {
     if (this.filteredPesees.length === 0) {
       this.filterMessage = 'Aucune réception trouvée pour ce lot.';
     }
-  }
-
-  resetFilter(): void {
-    this.lotSearchValue = '';
-    this.filterMessage = '';
-    this.filteredPesees = this.pesees;
   }
 
   trackByPesee(index: number, pesee: Pesee): number {

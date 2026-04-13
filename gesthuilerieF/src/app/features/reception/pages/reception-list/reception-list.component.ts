@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { Pesee } from '../../../stock/models/stock.models';
 import { LotManagementService } from '../../../lots/services/lot-management.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-reception-list',
@@ -21,18 +22,34 @@ export class ReceptionListComponent implements OnInit {
   pesees: Pesee[] = [];
   lastReception: Pesee | null = null;
   lotSearchValue = '';
+  selectedHuilerieNom = '';
   filterMessage = '';
 
-  constructor(private lotManagementService: LotManagementService) {}
+  constructor(
+    private lotManagementService: LotManagementService,
+    private permissionService: PermissionService,
+  ) { }
+
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
+  }
 
   ngOnInit(): void {
-    this.lotManagementService.loadInitialData().subscribe(() => {
-      this.lotManagementService.weighings$.subscribe(data => {
-        this.allPesees = data;
-        this.pesees = data;
-        this.lastReception = data.length > 0 ? data[0] : null;
-      });
+    this.reloadPesees();
+    this.lotManagementService.weighings$.subscribe(data => {
+      this.allPesees = data;
+      this.pesees = data;
+      this.lastReception = data.length > 0 ? data[0] : null;
     });
+  }
+
+  applyAdminHuilerieFilter(): void {
+    this.reloadPesees();
+  }
+
+  resetAdminHuilerieFilter(): void {
+    this.selectedHuilerieNom = '';
+    this.reloadPesees();
   }
 
   filterByLot(): void {
@@ -60,5 +77,10 @@ export class ReceptionListComponent implements OnInit {
     this.lotSearchValue = '';
     this.filterMessage = '';
     this.pesees = this.allPesees;
+  }
+
+  private reloadPesees(): void {
+    const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+    this.lotManagementService.loadInitialData(huilerieNom).subscribe();
   }
 }

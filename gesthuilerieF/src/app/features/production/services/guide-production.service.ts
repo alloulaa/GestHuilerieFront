@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { GuideProduction, GuideProductionCreateDTO } from '../models/production.models';
@@ -17,14 +17,16 @@ export class GuideProductionService {
         private authService: AuthService,
     ) { }
 
-    findAll(): Observable<GuideProduction[]> {
-        return this.http.get<GuideProduction[]>(this.apiUrl).pipe(
+    findAll(huilerieNom?: string): Observable<GuideProduction[]> {
+        const params = this.buildHuilerieNomParams(huilerieNom);
+
+        return this.http.get<GuideProduction[]>(this.apiUrl, { params }).pipe(
             map((items) => this.filterByCurrentUserHuilerie(items ?? [])),
         );
     }
 
-    getAll(): Observable<GuideProduction[]> {
-        return this.findAll();
+    getAll(huilerieNom?: string): Observable<GuideProduction[]> {
+        return this.findAll(huilerieNom);
     }
 
     findById(idGuideProduction: number): Observable<GuideProduction> {
@@ -57,11 +59,28 @@ export class GuideProductionService {
     }
 
     private filterByCurrentUserHuilerie(items: GuideProduction[]): GuideProduction[] {
+        if (this.authService.isCurrentUserAdmin()) {
+            return items;
+        }
+
         const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
         if (!currentHuilerieId) {
             return items;
         }
 
         return items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
+    }
+
+    private buildHuilerieNomParams(huilerieNom?: string): HttpParams | undefined {
+        if (!this.authService.isCurrentUserAdmin()) {
+            return undefined;
+        }
+
+        const normalized = String(huilerieNom ?? '').trim();
+        if (!normalized) {
+            return undefined;
+        }
+
+        return new HttpParams().set('huilerieNom', normalized);
     }
 }

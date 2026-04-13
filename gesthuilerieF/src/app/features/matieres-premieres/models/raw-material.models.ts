@@ -7,4 +7,5 @@ export interface MatierePremiere {
   uniteMesure: string;
   description: string;
   huilerieId?: number;
+  huilerieNom?: string;
 }

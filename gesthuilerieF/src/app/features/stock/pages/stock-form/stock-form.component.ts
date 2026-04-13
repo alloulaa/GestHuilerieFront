@@ -59,6 +59,10 @@ export class StockFormComponent {
       commentaire: ['', [Validators.required]],
       huilerieId: [1, [Validators.required, Validators.min(1)]],
     });
+
+    this.form.get('referenceId')?.valueChanges.subscribe((lotId) => {
+      this.applyHuilerieFromSelectedLot(Number(lotId));
+    });
   }
 
   ngOnInit(): void {
@@ -159,23 +163,23 @@ export class StockFormComponent {
     const request$ = this.isEditMode
       ? this.stockManagementService.updateMovementType(this.editingMovementId!, payload)
       : this.stockManagementService.loadInitialData().pipe(
-          switchMap(() => {
-            if (payload.typeMouvement === 'DEPARTURE') {
-              const quantiteDisponible = this.stockManagementService.getAvailableQuantity(
-                payload.huilerieId,
-                payload.referenceId,
-              );
+        switchMap(() => {
+          if (payload.typeMouvement === 'DEPARTURE') {
+            const quantiteDisponible = this.stockManagementService.getAvailableQuantity(
+              payload.huilerieId,
+              payload.referenceId,
+            );
 
-              if (payload.quantite > quantiteDisponible) {
-                this.errorMessage = 'La quantite en stock est insuffisante.';
-                this.toastService.error(this.errorMessage);
-                return EMPTY;
-              }
+            if (payload.quantite > quantiteDisponible) {
+              this.errorMessage = 'La quantite en stock est insuffisante.';
+              this.toastService.error(this.errorMessage);
+              return EMPTY;
             }
+          }
 
-            return this.stockManagementService.createMovement(payload);
-          }),
-        );
+          return this.stockManagementService.createMovement(payload);
+        }),
+      );
 
     request$.subscribe({
       next: () => {
@@ -205,6 +209,29 @@ export class StockFormComponent {
       dateMouvement: new Date().toISOString().slice(0, 16),
       commentaire: '',
       huilerieId: firstHuilerieId,
+    });
+  }
+
+  private applyHuilerieFromSelectedLot(lotId: number): void {
+    if (!Number.isFinite(lotId) || lotId <= 0) {
+      return;
+    }
+
+    const selectedLot = this.lots.find((lot) => Number(lot.idLot) === lotId);
+    if (selectedLot?.huilerieId != null) {
+      this.form.patchValue({ huilerieId: selectedLot.huilerieId }, { emitEvent: false });
+      return;
+    }
+
+    this.lotOlivesService.findById(lotId).subscribe({
+      next: (resolvedLot) => {
+        if (resolvedLot?.huilerieId != null) {
+          this.form.patchValue({ huilerieId: resolvedLot.huilerieId }, { emitEvent: false });
+        }
+      },
+      error: () => {
+        // Keep current huilerie when lot details cannot be resolved.
+      },
     });
   }
 

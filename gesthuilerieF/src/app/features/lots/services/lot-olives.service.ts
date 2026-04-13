@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { LotOlives } from '../models/lot.models';
 import { environment } from 'src/environments/environment';
@@ -20,9 +20,17 @@ export class LotOlivesService {
     private stockService: StockService,
   ) { }
 
-  getAll(): Observable<LotOlives[]> {
+  getAll(huilerieNom?: string): Observable<LotOlives[]> {
+    const params = this.buildHuilerieNomParams(huilerieNom);
+
+    if (this.authService.isCurrentUserAdmin()) {
+      return this.http.get<Array<LotOlives & { huilerieId?: number; huilerieNom?: string }>>(this.apiUrl, { params }).pipe(
+        map((items) => (items ?? []).map((item) => this.normalizeLot(item))),
+      );
+    }
+
     return forkJoin({
-      lots: this.http.get<Array<LotOlives & { huilerieId?: number }>>(this.apiUrl),
+      lots: this.http.get<Array<LotOlives & { huilerieId?: number; huilerieNom?: string }>>(this.apiUrl, { params }),
       stocks: this.stockService.getAll().pipe(catchError(() => of([]))),
     }).pipe(
       map(({ lots, stocks }) => {
@@ -49,10 +57,11 @@ export class LotOlivesService {
     );
   }
 
-  private normalizeLot(item: LotOlives & { huilerieId?: number }): LotOlives {
+  private normalizeLot(item: LotOlives & { huilerieId?: number; huilerieNom?: string }): LotOlives {
     return {
       ...item,
       huilerieId: item?.huilerieId,
+      huilerieNom: item?.huilerieNom,
     };
   }
 
@@ -152,5 +161,18 @@ export class LotOlivesService {
       .trim()
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '');
+  }
+
+  private buildHuilerieNomParams(huilerieNom?: string): HttpParams | undefined {
+    if (!this.authService.isCurrentUserAdmin()) {
+      return undefined;
+    }
+
+    const normalized = String(huilerieNom ?? '').trim();
+    if (!normalized) {
+      return undefined;
+    }
+
+    return new HttpParams().set('huilerieNom', normalized);
   }
 }

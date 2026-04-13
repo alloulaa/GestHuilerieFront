@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbIconModule } from '@nebular/theme';
 import { GuideProduction } from '../../models/production.models';
 import { GuideProductionService } from '../../services/guide-production.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-guides-consulter',
@@ -17,12 +18,18 @@ export class GuidesConsulterComponent implements OnInit {
   filteredGuides: GuideProduction[] = [];
 
   guideSearchValue = '';
+  selectedHuilerieNom = '';
   selectedGuideId: number | null = null;
 
   constructor(
     @Inject(forwardRef(() => GuideProductionService))
     private guideProductionService: GuideProductionService,
+    private permissionService: PermissionService,
   ) { }
+
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
+  }
 
   ngOnInit(): void {
     // Ensure clean filter state on first mount.
@@ -44,8 +51,24 @@ export class GuidesConsulterComponent implements OnInit {
     );
   }
 
-  resetGuideFilter(): void {
+  applyFilters(): void {
+    if (this.isAdmin) {
+      this.reloadGuides();
+      return;
+    }
+
+    this.filterGuides();
+  }
+
+  resetFilters(): void {
+    this.selectedHuilerieNom = '';
     this.guideSearchValue = '';
+
+    if (this.isAdmin) {
+      this.reloadGuides();
+      return;
+    }
+
     this.filteredGuides = [...this.guides];
   }
 
@@ -68,7 +91,8 @@ export class GuidesConsulterComponent implements OnInit {
   }
 
   private reloadGuides(selectGuideId?: number): void {
-    this.guideProductionService.getAll().subscribe((items) => {
+    const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+    this.guideProductionService.getAll(huilerieNom).subscribe((items) => {
       this.guides = items;
       this.filteredGuides = [...items];
 

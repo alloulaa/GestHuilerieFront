@@ -28,12 +28,22 @@ export class StockManagementService {
     private authService: AuthService,
   ) { }
 
-  loadInitialData(): Observable<void> {
-    if (this.initialized) {
+  loadInitialData(huilerieNom?: string, forceReload = false): Observable<void> {
+    if (this.initialized && !forceReload) {
       return of(void 0);
     }
 
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+    if (this.authService.isCurrentUserAdmin()) {
+      return this.stockMovementService.getAll(huilerieNom).pipe(
+        tap(data => {
+          this.movementsSubject.next(data);
+          this.initialized = true;
+        }),
+        map(() => void 0),
+      );
+    }
+
     if (!currentHuilerieId) {
       this.movementsSubject.next([]);
       this.initialized = true;
@@ -90,6 +100,19 @@ export class StockManagementService {
       typeMouvement: StockMovement['typeMouvement'];
     },
   ): Observable<StockMovement> {
+    if (this.authService.isCurrentUserAdmin()) {
+      return this.stockMovementService.updateMovement(id, payload).pipe(
+        switchMap(updated =>
+          this.stockMovementService.getAll().pipe(
+            tap(items => {
+              this.movementsSubject.next(items);
+            }),
+            map(() => updated),
+          ),
+        ),
+      );
+    }
+
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       return this.stockMovementService.updateMovement(id, payload);

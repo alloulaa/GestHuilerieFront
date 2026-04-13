@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { Stock } from '../models/stock.models';
@@ -17,11 +17,13 @@ export class StockService {
         private authService: AuthService,
     ) { }
 
-    getAll(): Observable<Stock[]> {
-        return this.http.get<unknown>(this.apiUrl).pipe(
+    getAll(huilerieNom?: string): Observable<Stock[]> {
+        const params = this.buildHuilerieNomParams(huilerieNom);
+
+        return this.http.get<unknown>(this.apiUrl, { params }).pipe(
             map(response => this.filterByCurrentUserHuilerie(this.toStocks(response))),
             catchError(() =>
-                this.http.get<unknown>(this.fallbackApiUrl).pipe(
+                this.http.get<unknown>(this.fallbackApiUrl, { params }).pipe(
                     map(response => this.filterByCurrentUserHuilerie(this.toStocks(response))),
                 ),
             ),
@@ -44,6 +46,7 @@ export class StockService {
             idStock: Number(item.idStock ?? item.id_stock ?? 0),
             reference: String(item.reference ?? item.stockReference ?? item.referenceStock ?? item.stock?.reference ?? '').trim() || undefined,
             huilerieId: Number(item.huilerieId ?? item.huilerie_id ?? 0),
+            huilerieNom: String(item.huilerieNom ?? item.huilerie?.nom ?? '').trim() || undefined,
             typeStock: String(item.typeStock ?? item.type_stock ?? ''),
             referenceId: Number(item.referenceId ?? item.reference_id ?? item.lot_id ?? 0),
             lotReference: String(item.lotReference ?? item.referenceLot ?? item.reference_lot ?? item.lotOlivesReference ?? item.lotOlives?.reference ?? item.lot?.reference ?? '').trim() || undefined,
@@ -52,11 +55,28 @@ export class StockService {
     }
 
     private filterByCurrentUserHuilerie(items: Stock[]): Stock[] {
+        if (this.authService.isCurrentUserAdmin()) {
+            return items;
+        }
+
         const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
         if (!currentHuilerieId) {
             return [];
         }
 
         return items.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
+    }
+
+    private buildHuilerieNomParams(huilerieNom?: string): HttpParams | undefined {
+        if (!this.authService.isCurrentUserAdmin()) {
+            return undefined;
+        }
+
+        const normalized = String(huilerieNom ?? '').trim();
+        if (!normalized) {
+            return undefined;
+        }
+
+        return new HttpParams().set('huilerieNom', normalized);
     }
 }

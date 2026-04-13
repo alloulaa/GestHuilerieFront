@@ -9,6 +9,20 @@
       <span class="chip">Total: {{ rawMaterials.length }}</span>
     </div>
 
+    <div class="filter-panel">
+      <div class="filter-input-wrap">
+        <label class="filter-label">Filtrer par nom d'huilerie</label>
+        <input nbInput fullWidth [(ngModel)]="huilerieSearchNom" placeholder="Ex: Huilerie Nord"
+          (keyup.enter)="applyHuilerieFilter()" />
+      </div>
+      <div class="filter-actions">
+        <button nbButton status="primary" type="button" (click)="applyHuilerieFilter()">Filtrer</button>
+        <button nbButton status="basic" outline type="button" (click)="resetHuilerieFilter()">Reinitialiser</button>
+      </div>
+    </div>
+
+    <p class="filter-message" *ngIf="filterMessage">{{ filterMessage }}</p>
+
     <div class="table-wrap">
       <table class="crud-table">
         <thead>

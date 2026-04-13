@@ -215,3 +215,28 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.filter-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.filter-bar input {
+  flex: 1;
+  min-width: 220px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(131, 166, 54, 0.24);
+  border-radius: 8px;
+  background: #fff;
+}
+
+:host ::ng-deep .filter-bar .filter-btn.mat-mdc-raised-button.mat-primary {
+  background: #6b7c3a !important;
+  color: #ffffff !important;
+}
+
+:host ::ng-deep .filter-bar .filter-btn.mat-mdc-raised-button.mat-primary:hover {
+  background: #5f6f33 !important;
+}

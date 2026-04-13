@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Pesee, ReceptionPeseeCreatePayload, Stock } from '../models/stock.models';
 import { environment } from 'src/environments/environment';
@@ -17,9 +17,17 @@ export class WeighingService {
     private authService: AuthService,
   ) { }
 
-  getAll(): Observable<Pesee[]> {
-    return this.http.get<any[]>(this.apiUrl).pipe(
-      map((items) => this.filterByCurrentUserHuilerie((items ?? []).map((item) => this.normalizePesee(item)))),
+  getAll(huilerieNom?: string): Observable<Pesee[]> {
+    const params = this.buildHuilerieNomParams(huilerieNom);
+    return this.http.get<any[]>(this.apiUrl, { params }).pipe(
+      map((items) => {
+        const normalizedItems = (items ?? []).map((item) => this.normalizePesee(item));
+        if (this.authService.isCurrentUserAdmin()) {
+          return normalizedItems;
+        }
+
+        return this.filterByCurrentUserHuilerie(normalizedItems);
+      }),
     );
   }
 
@@ -65,6 +73,7 @@ export class WeighingService {
       poidsNet: Number(raw?.poidsNet ?? Math.max(0, brut - tare)),
       lotId: Number(raw?.lotId ?? raw?.lotOlivesId ?? 0),
       huilerieId: raw?.huilerieId != null ? Number(raw.huilerieId) : undefined,
+      huilerieNom: raw?.huilerieNom != null ? String(raw.huilerieNom) : undefined,
       bonPeseePdfPath: raw?.bonPeseePdfPath ?? undefined,
     };
   }
@@ -111,5 +120,18 @@ export class WeighingService {
     }
 
     return scopedItems;
+  }
+
+  private buildHuilerieNomParams(huilerieNom?: string): HttpParams | undefined {
+    if (!this.authService.isCurrentUserAdmin()) {
+      return undefined;
+    }
+
+    const normalized = String(huilerieNom ?? '').trim();
+    if (!normalized) {
+      return undefined;
+    }
+
+    return new HttpParams().set('huilerieNom', normalized);
   }
 }

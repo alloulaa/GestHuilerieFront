@@ -25,6 +25,7 @@ export interface Machine {
   etatMachine: string;
   capacite: number;
   huilerieId: number;
+  huilerieNom?: string;
 }
 
 export interface Maintenance {

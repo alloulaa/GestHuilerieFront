@@ -8,10 +8,12 @@
   </nb-card-header>
   <nb-card-body>
     <div class="panel-toolbar">
+      <input *ngIf="isAdmin" nbInput fullWidth [(ngModel)]="selectedHuilerieNom"
+        placeholder="Filtrer par nom d'huilerie" name="selectedHuilerieNom" />
       <input nbInput fullWidth [(ngModel)]="lotSearchValue" placeholder="Filtrer par lot" type="number"
         name="lotSearchValue" />
-      <button nbButton status="primary" type="button" (click)="filterByLot()">Filtrer</button>
-      <button nbButton status="basic" outline type="button" (click)="resetFilter()">Réinitialiser</button>
+      <button nbButton status="primary" type="button" (click)="applyFilters()">Filtrer</button>
+      <button nbButton status="basic" outline type="button" (click)="resetFilters()">Réinitialiser</button>
     </div>
 
     <p class="error" *ngIf="filterMessage">{{ filterMessage }}</p>

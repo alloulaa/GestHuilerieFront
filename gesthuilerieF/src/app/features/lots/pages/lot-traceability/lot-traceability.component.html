@@ -10,13 +10,20 @@
     </div>
   </nb-card-header>
   <nb-card-body>
-    <div class="lots-panel">
-      <div class="search-row">
-        <label class="form-label" for="lotSearch">Recherche lot</label>
-        <input id="lotSearch" nbInput fullWidth [value]="lotSearch" (input)="lotSearch = $any($event.target).value"
-          placeholder="Reference, variete ou origine" />
+    <div class="search-row unified-filter-row">
+      <label class="form-label" for="lotSearch">Filtres</label>
+      <div class="filter-grid">
+        <input *ngIf="isAdmin" id="huilerieSearch" nbInput fullWidth [(ngModel)]="selectedHuilerieNom"
+          placeholder="Nom d'huilerie" />
+        <input id="lotSearch" nbInput fullWidth [(ngModel)]="lotSearch" placeholder="Reference, variete ou origine" />
+        <div class="filter-actions">
+          <button nbButton status="primary" type="button" (click)="applyFilters()">Filtrer</button>
+          <button nbButton status="basic" outline type="button" (click)="resetFilters()">Réinitialiser</button>
+        </div>
       </div>
+    </div>
 
+    <div class="lots-panel">
       <div class="table-wrap">
         <table class="history-table lots-table">
           <thead>

@@ -8,10 +8,12 @@
         <p class="section-subtitle">Consultez tous les guides de production enregistrés</p>
       </div>
       <div class="search-filter-bar">
+        <input *ngIf="isAdmin" type="text" class="search-input" placeholder="Filtrer par nom d'huilerie"
+          [(ngModel)]="selectedHuilerieNom">
         <input type="text" class="search-input" placeholder="Chercher par nom, référence..."
           [(ngModel)]="guideSearchValue" (change)="filterGuides()">
-        <button class="filter-btn" (click)="filterGuides()">Chercher</button>
-        <button class="reset-btn" (click)="resetGuideFilter()">Réinitialiser</button>
+        <button class="filter-btn" (click)="applyFilters()">Filtrer</button>
+        <button class="reset-btn" (click)="resetFilters()">Réinitialiser</button>
       </div>
     </div>
 
@@ -34,7 +36,7 @@
           </div>
           <div class="meta-item">
             <span class="meta-label">Huilerie:</span>
-            <span class="meta-value">#{{ guide.huilerieId }}</span>
+            <span class="meta-value">{{ guide.huilerieNom || ('#' + guide.huilerieId) }}</span>
           </div>
         </div>
       </div>
@@ -67,7 +69,7 @@
           </div>
           <div class="meta-box">
             <span class="meta-label">Huilerie</span>
-            <strong>#{{ guide.huilerieId }}</strong>
+            <strong>{{ guide.huilerieNom || ('#' + guide.huilerieId) }}</strong>
           </div>
           <div class="meta-box">
             <span class="meta-label">Étapes</span>

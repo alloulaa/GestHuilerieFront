@@ -7,15 +7,6 @@
     </div>
   </nb-card-header>
   <nb-card-body>
-    <div class="panel-toolbar">
-      <nb-select fullWidth [(ngModel)]="machineSearchHuilerieNom" name="machineSearchHuilerieNom">
-        <nb-option value="">Toutes les huileries</nb-option>
-        <nb-option *ngFor="let h of allHuileries" [value]="h.nom">{{ h.nom }}</nb-option>
-      </nb-select>
-      <button nbButton status="primary" type="button" (click)="searchMachinesByHuilerie()">Filtrer</button>
-      <button nbButton status="basic" outline type="button" (click)="resetMachineFilter()">Reinitialiser</button>
-    </div>
-
     <p class="error" *ngIf="machineFilterMessage">{{ machineFilterMessage }}</p>
 
     <form class="entity-form" [formGroup]="machineForm" (ngSubmit)="submitMachine()">
@@ -85,13 +76,11 @@
             <td>{{ getHuilerieName(m.huilerieId) }}</td>
             <td class="actions">
               <button nbButton ghost status="primary" size="small" type="button" (click)="editMachine(m)"
-                [disabled]="!canUpdate"
-                aria-label="Editer machine">
+                [disabled]="!canUpdate" aria-label="Editer machine">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
               <button nbButton ghost status="danger" size="small" type="button" (click)="askDeleteMachine(m)"
-                [disabled]="!canDelete"
-                aria-label="Supprimer machine">
+                [disabled]="!canDelete" aria-label="Supprimer machine">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>
             </td>

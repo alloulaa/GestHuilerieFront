@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { Machine, Huilerie } from '../models/enterprise.models';
@@ -38,9 +38,10 @@ export class MachineService {
     private authService: AuthService,
   ) { }
 
-  findAll(): Observable<Machine[]> {
+  findAll(huilerieNom?: string): Observable<Machine[]> {
+    const params = this.buildHuilerieNomParams(huilerieNom);
     return forkJoin({
-      machines: this.http.get<MachineApiDto[]>(this.apiUrl),
+      machines: this.http.get<MachineApiDto[]>(this.apiUrl, { params }),
       huileries: this.huilerieService.getAll(),
     }).pipe(
       map(({ machines, huileries }) =>
@@ -51,8 +52,8 @@ export class MachineService {
     );
   }
 
-  getAll(): Observable<Machine[]> {
-    return this.findAll();
+  getAll(huilerieNom?: string): Observable<Machine[]> {
+    return this.findAll(huilerieNom);
   }
 
   findById(idMachine: number): Observable<Machine> {
@@ -150,10 +151,15 @@ export class MachineService {
       etatMachine: machine.etatMachine,
       capacite: machine.capacite,
       huilerieId: huilerie?.idHuilerie ?? 0,
+      huilerieNom: machine.huilerieNom ?? huilerie?.nom,
     };
   }
 
   private filterByCurrentUserHuilerie(items: Machine[]): Machine[] {
+    if (this.authService.isCurrentUserAdmin()) {
+      return items;
+    }
+
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       return items;
@@ -176,5 +182,18 @@ export class MachineService {
       capacite: payload.capacite,
       huilerieNom: huilerie.nom,
     };
+  }
+
+  private buildHuilerieNomParams(huilerieNom?: string): HttpParams | undefined {
+    if (!this.authService.isCurrentUserAdmin()) {
+      return undefined;
+    }
+
+    const normalized = String(huilerieNom ?? '').trim();
+    if (!normalized) {
+      return undefined;
+    }
+
+    return new HttpParams().set('huilerieNom', normalized);
   }
 }

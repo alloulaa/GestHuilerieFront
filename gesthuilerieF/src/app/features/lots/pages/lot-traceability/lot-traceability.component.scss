@@ -60,6 +60,23 @@
   margin-bottom: 0.8rem;
 }
 
+.unified-filter-row {
+  margin-bottom: 1rem;
+}
+
+.filter-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr) auto;
+  align-items: center;
+}
+
+.filter-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--separator);
@@ -219,6 +236,14 @@
 @media (max-width: 980px) {
   .head-wrap {
     display: grid;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-actions {
+    flex-wrap: wrap;
   }
 
   .count-chip {

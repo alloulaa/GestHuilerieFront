@@ -60,7 +60,7 @@ export class GuidesGererComponent implements OnInit {
       huilerieId: [0, [Validators.required, Validators.min(1)]],
       etapes: this.fb.array([
         this.createEtapeGroup(1),
-   
+
       ]),
     });
 
@@ -120,6 +120,10 @@ export class GuidesGererComponent implements OnInit {
   }
 
   private filterExecutionsByCurrentHuilerie(executions: ExecutionProduction[]): ExecutionProduction[] {
+    if (this.authService.isCurrentUserAdmin()) {
+      return executions;
+    }
+
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       return executions;

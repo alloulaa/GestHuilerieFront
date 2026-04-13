@@ -10,9 +10,11 @@
     </div>
 
     <div class="filter-bar">
+      <input *ngIf="isAdmin" [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom"
+        placeholder="Filtrer par nom d'huilerie" />
       <input [(ngModel)]="lotIdFilter" name="lotIdFilter" placeholder="Filtrer par reference lot" />
-      <button mat-raised-button color="primary" type="button" (click)="filterByLotId()">Filtrer</button>
-      <button mat-stroked-button type="button" (click)="resetLotFilter()">Réinitialiser</button>
+      <button mat-raised-button color="primary" type="button" (click)="applyFilters()">Filtrer</button>
+      <button mat-stroked-button type="button" (click)="resetFilters()">Réinitialiser</button>
     </div>
 
     <p class="filter-message" *ngIf="filterMessage">{{ filterMessage }}</p>
@@ -22,6 +24,7 @@
         <thead>
           <tr>
             <th>Reference mouvement</th>
+            <th *ngIf="isAdmin">Huilerie</th>
             <th>Type</th>
             <th>Reference lot</th>
             <th>Quantite</th>
@@ -31,10 +34,11 @@
         </thead>
         <tbody>
           <tr *ngIf="movements.length === 0">
-            <td colspan="6" class="empty-row">Aucun mouvement a afficher.</td>
+            <td [attr.colspan]="isAdmin ? 7 : 6" class="empty-row">Aucun mouvement a afficher.</td>
           </tr>
           <tr *ngFor="let m of movements" class="row-hover">
             <td>{{ movementReference(m) }}</td>
+            <td *ngIf="isAdmin">{{ m.huilerieNom || ('#' + m.huilerieId) }}</td>
             <td class="type-cell">{{ movementLabel(m.typeMouvement) }}</td>
             <td>{{ lotReference(m) }}</td>
             <td class="quantite-cell">{{ m.quantite }}</td>

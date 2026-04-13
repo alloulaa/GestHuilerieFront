@@ -59,7 +59,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     private router: Router,
     private authService: AuthService,
     private permissionService: PermissionService
-  ) {}
+  ) { }
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
     if (!this.authService.isAuthenticated()) {
@@ -138,7 +138,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       return 'DASHBOARD_ADMIN';
     }
 
-    if (segments.includes('stock') && (segments.includes('history') || segments.includes('weighing'))) {
+    if (segments.includes('stock') && (segments.includes('history') || segments.includes('weighing') || segments.includes('form'))) {
       return 'STOCK_MOUVEMENT';
     }
 

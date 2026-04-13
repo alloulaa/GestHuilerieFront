@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { LotManagementService } from '../../../lots/services/lot-management.service';
 import { ReceptionListComponent } from '../reception-list/reception-list.component';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-reception-new',
@@ -14,7 +15,10 @@ import { ReceptionListComponent } from '../reception-list/reception-list.compone
   imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule],
 })
 export class ReceptionNewComponent extends ReceptionListComponent {
-  constructor(lotManagementService: LotManagementService) {
-    super(lotManagementService);
+  constructor(
+    lotManagementService: LotManagementService,
+    permissionService: PermissionService,
+  ) {
+    super(lotManagementService, permissionService);
   }
 }

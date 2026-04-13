@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NbCardModule, NbButtonModule, NbIconModule } from '@nebular/theme';
+import { FormsModule } from '@angular/forms';
+import { NbButtonModule, NbCardModule, NbInputModule } from '@nebular/theme';
 import { MatierePremiere } from '../../models/raw-material.models';
 import { RawMaterialService } from '../../services/raw-material.service';
 
@@ -12,28 +13,43 @@ import { RawMaterialService } from '../../services/raw-material.service';
   standalone: true,
   imports: [
     NbCardModule,
+    NbInputModule,
     NbButtonModule,
-    NbIconModule,
     CommonModule,
+    FormsModule,
   ],
 })
 export class RawMaterialsConsulterComponent implements OnInit {
   rawMaterials: MatierePremiere[] = [];
+  huilerieSearchNom = '';
+  filterMessage = '';
   pendingRawMaterialDeletion: MatierePremiere | null = null;
   deleteErrorMessage = '';
 
-  constructor(
-    private rawMaterialService: RawMaterialService,
-  ) { }
+  constructor(private rawMaterialService: RawMaterialService) { }
 
   ngOnInit(): void {
     this.loadRawMaterials();
   }
 
-  loadRawMaterials(): void {
-    this.rawMaterialService.getAll().subscribe(data => {
+  loadRawMaterials(huilerieNom?: string): void {
+    this.rawMaterialService.getAll(huilerieNom).subscribe(data => {
       this.rawMaterials = data;
+      this.filterMessage = data.length === 0 && !!String(huilerieNom ?? '').trim()
+        ? 'Aucune matiere premiere trouvee pour cette huilerie.'
+        : '';
     });
+  }
+
+  applyHuilerieFilter(): void {
+    const normalized = String(this.huilerieSearchNom ?? '').trim();
+    this.loadRawMaterials(normalized || undefined);
+  }
+
+  resetHuilerieFilter(): void {
+    this.huilerieSearchNom = '';
+    this.filterMessage = '';
+    this.loadRawMaterials();
   }
 
   edit(item: MatierePremiere): void {

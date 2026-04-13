@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
@@ -22,13 +22,18 @@ export class ExecutionProductionService {
         private machineService: MachineService,
     ) { }
 
-    findAll(): Observable<ExecutionProduction[]> {
-        return this.http.get<ExecutionProduction[]>(this.apiUrl);
+    findAll(huilerieNom?: string): Observable<ExecutionProduction[]> {
+        const params = this.buildHuilerieNomParams(huilerieNom);
+        return this.http.get<ExecutionProduction[]>(this.apiUrl, { params });
     }
 
-    getAll(): Observable<ExecutionProduction[]> {
+    getAll(huilerieNom?: string): Observable<ExecutionProduction[]> {
+        if (this.authService.isCurrentUserAdmin()) {
+            return this.findAll(huilerieNom);
+        }
+
         return forkJoin({
-            executions: this.findAll(),
+            executions: this.findAll(huilerieNom),
             guides: this.guideProductionService.getAll(),
             machines: this.machineService.getAll(),
         }).pipe(
@@ -66,6 +71,19 @@ export class ExecutionProductionService {
             || allowedMachineIds.has(Number(execution?.machineId ?? 0))
             || Number(execution?.huilerieId ?? 0) === currentHuilerieId,
         );
+    }
+
+    private buildHuilerieNomParams(huilerieNom?: string): HttpParams | undefined {
+        if (!this.authService.isCurrentUserAdmin()) {
+            return undefined;
+        }
+
+        const normalized = String(huilerieNom ?? '').trim();
+        if (!normalized) {
+            return undefined;
+        }
+
+        return new HttpParams().set('huilerieNom', normalized);
     }
 
     createProduitFinal(execution: ExecutionProduction): Observable<ExecutionProductionDTO> {

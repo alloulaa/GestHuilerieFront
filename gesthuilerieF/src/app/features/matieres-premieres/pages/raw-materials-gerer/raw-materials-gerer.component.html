@@ -34,11 +34,21 @@
           [status]="isFieldInvalid('description') ? 'danger' : 'basic'" />
       </div>
 
+      <div class="form-group">
+        <label class="form-label">Huilerie *</label>
+        <nb-select fullWidth formControlName="huilerieId" [status]="isFieldInvalid('huilerieId') ? 'danger' : 'basic'">
+          <nb-option *ngFor="let h of availableHuileries" [value]="h.idHuilerie">
+            #{{ h.idHuilerie }} - {{ h.nom }}
+          </nb-option>
+        </nb-select>
+      </div>
+
       <div class="form-actions">
         <button nbButton status="primary" type="submit">
           {{ editingId ? 'Mettre à jour' : 'Créer' }}
         </button>
-        <button *ngIf="editingId" nbButton status="basic" outline class="app-cancel-btn" type="button" (click)="resetForm()">Annuler</button>
+        <button *ngIf="editingId" nbButton status="basic" outline class="app-cancel-btn" type="button"
+          (click)="resetForm()">Annuler</button>
       </div>
     </form>
 
@@ -55,7 +65,9 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngIf="rawMaterials.length === 0"><td colspan="6" class="table-empty">Aucune matière première à afficher.</td></tr>
+          <tr *ngIf="rawMaterials.length === 0">
+            <td colspan="6" class="table-empty">Aucune matière première à afficher.</td>
+          </tr>
           <tr *ngFor="let item of rawMaterials; trackBy: trackByMaterial">
             <td>{{ item.reference || ('#' + item.idMatierePremiere) }}</td>
             <td>{{ item.nom }}</td>
@@ -64,13 +76,11 @@
             <td>{{ item.description }}</td>
             <td class="actions">
               <button nbButton ghost status="primary" size="small" type="button" (click)="edit(item)"
-                [disabled]="!canUpdate"
-                aria-label="Éditer">
+                [disabled]="!canUpdate" aria-label="Éditer">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
               <button nbButton ghost status="danger" size="small" type="button" (click)="askDelete(item)"
-                [disabled]="!canDelete"
-                aria-label="Supprimer">
+                [disabled]="!canDelete" aria-label="Supprimer">
                 <nb-icon icon="trash-2-outline"></nb-icon>
               </button>
             </td>

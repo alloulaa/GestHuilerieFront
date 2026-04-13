@@ -33,7 +33,6 @@ export class OilMillsManagementComponent implements OnInit {
   allMachines: Machine[] = [];
   machines: Machine[] = [];
   machineFilterMessage = '';
-  machineSearchHuilerieNom = '';
 
   editingMachineId: number | null = null;
 
@@ -167,37 +166,6 @@ export class OilMillsManagementComponent implements OnInit {
     });
   }
 
-  searchMachinesByHuilerie(): void {
-    const huilerieNom = this.cleanSearchTerm(this.machineSearchHuilerieNom);
-
-    this.machineFilterMessage = '';
-
-    if (!huilerieNom) {
-      this.loadData();
-      return;
-    }
-
-    const matchingHuilerieIds = this.allHuileries
-      .filter((h) => this.cleanSearchTerm(h.nom).includes(huilerieNom))
-      .map((h) => h.idHuilerie);
-
-    const filtered = this.allMachines.filter((machine) =>
-      matchingHuilerieIds.includes(machine.huilerieId),
-    );
-
-    this.machines = filtered;
-
-    if (filtered.length === 0) {
-      this.machineFilterMessage = 'Aucune machine trouvee pour cette huilerie.';
-    }
-  }
-
-  resetMachineFilter(): void {
-    this.machineSearchHuilerieNom = '';
-    this.machineFilterMessage = '';
-    this.loadData();
-  }
-
   getHuilerieName(huilerieId: number): string {
     return this.allHuileries.find((h) => h.idHuilerie === huilerieId)?.nom ?? '-';
   }
@@ -232,14 +200,6 @@ export class OilMillsManagementComponent implements OnInit {
         this.machineForm.patchValue({ huilerieId: firstHuilerieId });
       }
     });
-  }
-
-  private cleanSearchTerm(value: string): string {
-    return (value ?? '')
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
   }
 
   private buildMachinePayload(): Omit<Machine, 'idMachine'> {

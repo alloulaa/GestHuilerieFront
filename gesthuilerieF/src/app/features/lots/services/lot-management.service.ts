@@ -43,10 +43,10 @@ export class LotManagementService {
     private traceabilityService: TraceabilityService,
   ) { }
 
-  private refreshData(): Observable<void> {
+  private refreshData(huilerieNom?: string): Observable<void> {
     return forkJoin({
-      lots: this.lotOlivesService.getAll(),
-      weighings: this.weighingService.getAll(),
+      lots: this.lotOlivesService.getAll(huilerieNom),
+      weighings: this.weighingService.getAll(huilerieNom),
     }).pipe(
       switchMap(({ lots, weighings }) =>
         this.backfillLotsFromWeighings(lots, weighings).pipe(
@@ -104,8 +104,8 @@ export class LotManagementService {
     );
   }
 
-  loadInitialData(): Observable<void> {
-    return this.refreshData();
+  loadInitialData(huilerieNom?: string): Observable<void> {
+    return this.refreshData(huilerieNom);
   }
 
   getLotById(lotId: number): Observable<LotOlives | undefined> {

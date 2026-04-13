@@ -12,6 +12,12 @@
   </mat-card-header>
 
   <mat-card-content>
+    <div class="filter-bar" *ngIf="isAdmin">
+      <input [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom" placeholder="Filtrer par nom d'huilerie" />
+      <button mat-raised-button color="primary" class="filter-btn" type="button" (click)="applyAdminHuilerieFilter()">Filtrer</button>
+      <button mat-stroked-button type="button" (click)="resetAdminHuilerieFilter()">Réinitialiser</button>
+    </div>
+
     <div class="kpi-grid">
       <article class="kpi-item">
         <span class="kpi-label">Total machines</span>
