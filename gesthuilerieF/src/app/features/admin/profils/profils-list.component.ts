@@ -103,6 +103,39 @@ export class ProfilsListComponent implements OnInit {
     this.adminService.getProfils(this.huilerieNomFilter).subscribe({
       next: (res: any) => {
         this.profils = res?.data ?? [];
+        console.log('[ProfilsListComponent] Profils loaded:', {
+          count: this.profils.length,
+          filter: this.huilerieNomFilter,
+          data: this.profils
+        });
+        this.currentPage = 1;
+        this.isLoading = false;
+      },
+      error: () => {
+        this.toastService.error('Erreur lors du chargement des profils.');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  loadAllProfils(): void {
+    console.log('[ProfilsListComponent] Loading all profils (no filter)...');
+    this.isLoading = true;
+    this.adminService.getProfils('').subscribe({
+      next: (res: any) => {
+        this.profils = res?.data ?? [];
+        console.log('[ProfilsListComponent] All profils loaded:', {
+          count: this.profils.length,
+          data: this.profils.map((p: any) => ({
+            id: p.idProfil || p.id,
+            nom: p.nom,
+            description: p.description,
+            actif: p.actif,
+            createdAt: p.createdAt || p.dateCreation,
+            allKeys: Object.keys(p)
+          }))
+        });
+        this.huilerieNomFilter = '';
         this.currentPage = 1;
         this.isLoading = false;
       },
@@ -138,7 +171,10 @@ export class ProfilsListComponent implements OnInit {
         this.createForm.reset({ nom: '', description: '' });
         this.toastService.success('Profil créé avec succès.');
       },
-      error: () => this.toastService.error('Erreur lors de la création du profil.')
+      error: (error: any) => {
+        const errorMsg = error?.error?.message || error?.message || 'Erreur lors de la création du profil.';
+        this.toastService.error(errorMsg);
+      }
     });
   }
 
@@ -167,7 +203,10 @@ export class ProfilsListComponent implements OnInit {
         this.editingProfil = null;
         this.toastService.success('Profil modifié avec succès.');
       },
-      error: () => this.toastService.error('Erreur lors de la modification du profil.')
+      error: (error: any) => {
+        const errorMsg = error?.error?.message || error?.message || 'Erreur lors de la modification du profil.';
+        this.toastService.error(errorMsg);
+      }
     });
   }
 
