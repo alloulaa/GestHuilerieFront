@@ -1,0 +1,58 @@
+<mat-card class="olive-card campagnes-card">
+    <mat-card-header>
+        <div class="heading-wrap">
+            <mat-card-title>Campagnes olives - Consultation</mat-card-title>
+            <p class="heading-subtitle">Consultez rapidement les campagnes avec filtres par reference et huilerie.</p>
+        </div>
+    </mat-card-header>
+
+    <mat-card-content>
+        <div class="filter-bar">
+            <div class="filter-field">
+                <input [(ngModel)]="referenceFilter" name="referenceFilter" placeholder="Filtrer par reference" />
+            </div>
+            <div class="filter-field" *ngIf="isAdmin">
+                <input [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom"
+                    placeholder="Filtrer par nom d'huilerie" />
+            </div>
+            <div class="filter-actions">
+                <button class="app-btn app-btn-primary" type="button" (click)="applyFilters()">Filtrer</button>
+                <button class="app-btn app-btn-ghost" type="button" (click)="resetFilters()">Reinitialiser</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <span class="chip">Total: {{ campagnes.length }}</span>
+        </div>
+
+        <div class="table-title-row">
+            <h3 class="table-title">Resultats</h3>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>REFERENCE</th>
+                        <th>ANNEE</th>
+                        <th *ngIf="isAdmin">HUILERIE</th>
+                        <th>DATE DEBUT</th>
+                        <th>DATE FIN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngIf="campagnes.length === 0">
+                        <td [attr.colspan]="isAdmin ? 5 : 4" class="empty-row">Aucune campagne a afficher.</td>
+                    </tr>
+                    <tr *ngFor="let campagne of campagnes" class="row-hover">
+                        <td>{{ campagne.reference }}</td>
+                        <td>{{ campagne.annee || '-' }}</td>
+                        <td *ngIf="isAdmin">{{ campagne.huilerieNom || ('#' + campagne.huilerieId) }}</td>
+                        <td>{{ campagne.dateDebut || '-' }}</td>
+                        <td>{{ campagne.dateFin || '-' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </mat-card-content>
+</mat-card>

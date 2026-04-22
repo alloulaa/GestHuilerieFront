@@ -124,10 +124,10 @@ export class LotTraceabilityComponent implements OnInit {
     const byLot: Record<number, TraceabilityEvent[]> = {};
 
     const finalProductsFromExecutions = (executions ?? [])
-      .filter((execution) => Number(execution.lotOlivesId ?? 0) > 0)
+      .filter((execution) => Number(execution.lotId ?? 0) > 0)
       .filter((execution) => !!String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim())
       .map((execution) => ({
-        lotId: Number(execution.lotOlivesId),
+        lotId: Number(execution.lotId),
         event: {
           date: String(execution.dateFinReelle ?? execution.dateFinPrevue ?? execution.dateDebut ?? ''),
           etape: 'PRODUIT_FINAL' as const,

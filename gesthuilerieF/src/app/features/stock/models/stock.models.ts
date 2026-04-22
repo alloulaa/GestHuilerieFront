@@ -1,29 +1,36 @@
 export interface Pesee {
   idPesee?: number;
+  idLotArrivage?: number;
   reference?: string;
   datePesee: string;
-  poidsBrut: number;
-  poidsTare: number;
-  poidsNet: number;
+  pesee: number;
+  poidsBrut?: number;
+  poidsTare?: number;
+  poidsNet?: number;
   lotId: number;
+  matierePremiereReference?: string;
+  campagneReference?: string;
   huilerieId?: number;
   huilerieNom?: string;
   bonPeseePdfPath?: string;
+  fournisseurNom?: string;
+  fournisseurCIN?: string;
 }
 
 export interface ReceptionPeseeCreatePayload {
-  lotId?: number | null;
   datePesee: string;
-  poidsBrut: number;
-  poidsTare?: number | null;
+  pesee: number;
+  variete?: string;
   varieteOlive?: string;
   maturite?: string;
   origine?: string;
   dateRecolte?: string;
   dateReception?: string;
+  fournisseurNom?: string;
+  fournisseurCIN?: string;
   dureeStockageAvantBroyage?: number;
-  matierePremiereId?: number;
-  campagneAnnee?: string;
+  matierePremiereReference?: string;
+  campagneReference?: string;
   huilerieId: number;
 }
 
@@ -35,6 +42,8 @@ export interface Stock {
   typeStock: string;
   referenceId: number;
   lotReference?: string;
+  lotReferences?: string[];
+  matierePremiereId?: number;
   quantiteDisponible: number;
 }
 
@@ -43,10 +52,10 @@ export interface StockMovement {
   reference?: string;
   huilerieId: number;
   huilerieNom?: string;
-  referenceId: number;
+  lotId: number;
   lotReference?: string;
-  quantite: number;
+  quantite?: number;
   commentaire: string;
   dateMouvement: string;
-  typeMouvement: 'ARRIVAL' | 'DEPARTURE' | 'TRANSFER' | 'ADJUSTMENT';
+  typeMouvement: 'ENTREE' | 'TRANSFERT' | 'AJUSTEMENT';
 }

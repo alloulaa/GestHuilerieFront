@@ -62,6 +62,10 @@ export class PermissionService {
       return ['STOCK_MOUVEMENT', 'STOCK_MOUVEMENTS', 'MOUVEMENTS'];
     }
 
+    if (normalized === 'CAMPAGNE_OLIVES' || normalized === 'CAMPAGNES' || normalized === 'CAMPAGNE') {
+      return ['CAMPAGNE_OLIVES', 'CAMPAGNES', 'CAMPAGNE'];
+    }
+
     return [normalized];
   }
 

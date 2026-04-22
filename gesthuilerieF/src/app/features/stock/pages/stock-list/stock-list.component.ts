@@ -73,26 +73,20 @@ export class StockListComponent implements OnInit {
   }
 
   movementLabel(type: StockMovement['typeMouvement']): string {
-    if (type === 'ARRIVAL') {
+    if (type === 'ENTREE') {
       return 'Entree';
     }
-    if (type === 'DEPARTURE') {
-      return 'Sortie';
-    }
-    if (type === 'TRANSFER') {
+    if (type === 'TRANSFERT') {
       return 'Transfert';
     }
     return 'Ajustement';
   }
 
   movementClass(type: StockMovement['typeMouvement']): string {
-    if (type === 'ARRIVAL') {
+    if (type === 'ENTREE') {
       return 'ok';
     }
-    if (type === 'DEPARTURE') {
-      return 'critical';
-    }
-    if (type === 'TRANSFER') {
+    if (type === 'TRANSFERT') {
       return 'warn';
     }
     return 'muted';
@@ -103,7 +97,7 @@ export class StockListComponent implements OnInit {
   }
 
   lotReference(movement: StockMovement): string {
-    return movement.lotReference || (`LO-${movement.referenceId}`);
+    return movement.lotReference || (`LO-${movement.lotId}`);
   }
 
   private applyLotFilter(): void {
@@ -118,7 +112,7 @@ export class StockListComponent implements OnInit {
     const searchLower = search.toLowerCase();
     const filtered = this.allMovements.filter((movement) => {
       const lotRef = this.lotReference(movement).toLowerCase();
-      return lotRef.includes(searchLower) || String(movement.referenceId).includes(searchLower);
+      return lotRef.includes(searchLower) || String(movement.lotId).includes(searchLower);
     });
     this.movements = filtered;
 

@@ -27,8 +27,8 @@ import { MachineService } from '../../services/machine.service';
   ],
 })
 export class MachinesFormComponent implements OnInit {
-  machines: Array<Machine & { availability: string }> = [];
-  filteredMachines: Array<Machine & { availability: string }> = [];
+  machines: Machine[] = [];
+  filteredMachines: Machine[] = [];
 
   readonly form;
 
@@ -39,16 +39,12 @@ export class MachinesFormComponent implements OnInit {
     this.form = this.formBuilder.group({
       etatMachine: ['ALL'],
       minCapacite: [''],
-      availability: ['ALL'],
     });
   }
 
   ngOnInit(): void {
     this.machineService.getAll().subscribe((data) => {
-      this.machines = data.map((item) => ({
-        ...item,
-        availability: item.etatMachine === 'MAINTENANCE' ? 'INDISPONIBLE' : 'DISPONIBLE',
-      }));
+      this.machines = data;
 
       this.applyFilter();
       this.form.valueChanges.subscribe(() => this.applyFilter());
@@ -65,18 +61,16 @@ export class MachinesFormComponent implements OnInit {
     if (status === 'MAINTENANCE') {
       return 'Maintenance';
     }
+    if (status === 'DESACTIVEE') {
+      return 'Desactivee';
+    }
     return status;
-  }
-
-  availabilityLabel(value: string): string {
-    return value === 'DISPONIBLE' ? 'Disponible' : 'Indisponible';
   }
 
   resetFilters(): void {
     this.form.reset({
       etatMachine: 'ALL',
       minCapacite: '',
-      availability: 'ALL',
     });
     this.applyFilter();
   }
@@ -89,20 +83,15 @@ export class MachinesFormComponent implements OnInit {
     return this.filteredMachines.length;
   }
 
-  get filteredAvailableCount(): number {
-    return this.filteredMachines.filter((machine) => machine.availability === 'DISPONIBLE').length;
-  }
-
   applyFilter(): void {
     const raw = this.form.getRawValue();
     const minCapacite = raw.minCapacite ? Number(raw.minCapacite) : 0;
 
     this.filteredMachines = this.machines.filter((machine) => {
       const statusMatch = raw.etatMachine === 'ALL' || machine.etatMachine === raw.etatMachine;
-      const availabilityMatch = raw.availability === 'ALL' || machine.availability === raw.availability;
       const capaciteMatch = machine.capacite >= minCapacite;
 
-      return statusMatch && availabilityMatch && capaciteMatch;
+      return statusMatch && capaciteMatch;
     });
   }
 }

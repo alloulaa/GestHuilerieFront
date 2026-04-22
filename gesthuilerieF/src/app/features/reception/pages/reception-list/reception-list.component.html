@@ -1,44 +1,52 @@
-<mat-card class="olive-card">
+<mat-card class="olive-card reception-list-card">
   <mat-card-header>
-    <mat-card-title>Reception</mat-card-title>
+    <div class="heading-wrap">
+      <mat-card-title>Reception</mat-card-title>
+      <p class="heading-subtitle">Consultez les receptions et lancez les analyses laboratoire en un clic.</p>
+    </div>
   </mat-card-header>
   <mat-card-content>
-    <div class="filters-panel">
+    <div class="stats-strip">
+      <article class="stat-pill">
+        <span class="stat-label">Total receptions</span>
+        <strong class="stat-value">{{ pesees.length }}</strong>
+      </article>
+      <article class="stat-pill" *ngIf="isAdmin">
+        <span class="stat-label">Mode</span>
+        <strong class="stat-value">Administration</strong>
+      </article>
+    </div>
+
+    <div class="filters-panel" *ngIf="showFilters">
       <mat-form-field *ngIf="isAdmin" appearance="outline" class="filter-field">
         <mat-label>Filtrer par huilerie</mat-label>
-        <input matInput [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom" placeholder="Ex: Huilerie Nord" />
+        <input matInput [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom" placeholder="Ex: Huilerie Nord"
+          (ngModelChange)="onFilterInputChange()" />
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>Filtrer par lot</mat-label>
-        <input matInput type="number" [(ngModel)]="lotSearchValue" name="lotSearchValue" placeholder="Ex: 12" />
+        <input matInput type="number" [(ngModel)]="lotSearchValue" name="lotSearchValue" placeholder="Ex: 12"
+          (ngModelChange)="onFilterInputChange()" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Filtrer par fournisseur</mat-label>
+        <input matInput [(ngModel)]="fournisseurSearchValue" name="fournisseurSearchValue"
+          placeholder="Ex: Fournisseur Test ou CIN" (ngModelChange)="onFilterInputChange()" />
       </mat-form-field>
 
       <div class="filter-actions">
-        <button *ngIf="isAdmin" mat-raised-button color="primary" type="button"
-          (click)="applyAdminHuilerieFilter()">Filtrer huilerie</button>
-        <button *ngIf="isAdmin" mat-stroked-button type="button" (click)="resetAdminHuilerieFilter()">Reset
-          huilerie</button>
-        <button mat-raised-button color="primary" type="button" (click)="filterByLot()">Filtrer</button>
-        <button mat-stroked-button type="button" (click)="resetFilter()">Reset</button>
+        <button mat-raised-button class="green-action" type="button" (click)="applyFilters()">Filtrer</button>
+        <button mat-stroked-button type="button" (click)="resetFilters()">Réinitialiser</button>
       </div>
     </div>
 
-    <p class="empty" *ngIf="filterMessage">{{ filterMessage }}</p>
+    <p class="empty" *ngIf="showFilters && filterMessage">{{ filterMessage }}</p>
 
-    <div class="summary" *ngIf="lastReception as r; else emptyState">
-      <h3>Derniere reception</h3>
-      <div class="grid">
-        <div class="item"><span>Reference</span><strong>{{ r.reference || ('#' + r.idPesee) }}</strong></div>
-        <div class="item"><span>Date</span><strong>{{ r.datePesee | date:'dd/MM/yyyy HH:mm' }}</strong></div>
-        <div class="item"><span>Lot</span><strong>{{ r.lotId }}</strong></div>
-        <div class="item"><span>Poids net</span><strong>{{ r.poidsNet }} kg</strong></div>
-      </div>
+    <div class="table-title-row">
+      <h3 class="table-title">Liste des receptions</h3>
     </div>
-
-    <ng-template #emptyState>
-      <p class="empty">Aucune reception disponible.</p>
-    </ng-template>
 
     <div class="table-wrap">
       <table class="crud-table reception-table">
@@ -48,26 +56,73 @@
             <th *ngIf="isAdmin">Huilerie</th>
             <th>Date</th>
             <th>Lot</th>
-            <th>Brut</th>
-            <th>Tare</th>
-            <th>Net</th>
+            <th>Pesee</th>
+            <th>Fournisseur</th>
+            <th *ngIf="!showFilters">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="pesees.length === 0">
-            <td [attr.colspan]="isAdmin ? 7 : 6" class="table-empty">Aucune reception a afficher.</td>
+            <td [attr.colspan]="(isAdmin ? 6 : 5) + (!showFilters ? 1 : 0)" class="table-empty">Aucune reception a
+              afficher.</td>
           </tr>
           <tr *ngFor="let pesee of pesees">
             <td>{{ pesee.reference || ('#' + pesee.idPesee) }}</td>
             <td *ngIf="isAdmin">{{ pesee.huilerieNom || ('#' + (pesee.huilerieId ?? '-')) }}</td>
             <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
             <td>{{ pesee.lotId }}</td>
-            <td>{{ pesee.poidsBrut }} kg</td>
-            <td>{{ pesee.poidsTare }} kg</td>
-            <td>{{ pesee.poidsNet }} kg</td>
+            <td>{{ pesee.pesee }} kg</td>
+            <td>{{ pesee.fournisseurNom || '-' }} / {{ pesee.fournisseurCIN || '-' }}</td>
+            <td *ngIf="!showFilters" class="actions-cell">
+              <button nbButton ghost status="primary" size="small" type="button" class="icon-action-btn"
+                (click)="triggerEdit(pesee)" aria-label="Modifier">
+                <nb-icon icon="edit-outline"></nb-icon>
+              </button>
+              <button nbButton ghost status="danger" size="small" type="button" class="icon-action-btn"
+                (click)="triggerDelete(pesee)" aria-label="Supprimer">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+              </button>
+              <button mat-stroked-button type="button" class="analysis-add-btn" (click)="openAddAnalysis(pesee)">
+                Ajouter analyse laboratoire
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="analysis-backdrop" *ngIf="selectedPeseeForAnalysis as selected">
+      <div class="analysis-modal">
+        <h3>Ajouter analyse laboratoire</h3>
+        <p class="analysis-kicker">Lot {{ selected.lotId }} · {{ selected.reference || ('#' + selected.idPesee) }}</p>
+
+        <div class="analysis-grid">
+          <label>
+            Acidite
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.acidite" name="acidite" />
+          </label>
+          <label>
+            Indice peroxyde
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.indicePeroxyde"
+              name="indicePeroxyde" />
+          </label>
+          <label>
+            K232
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.k232" name="k232" />
+          </label>
+          <label>
+            K270
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.k270" name="k270" />
+          </label>
+        </div>
+
+        <p class="analysis-error" *ngIf="analysisSaveError">{{ analysisSaveError }}</p>
+
+        <div class="analysis-actions">
+          <button mat-raised-button class="green-action" type="button" (click)="saveAnalysis()">Enregistrer</button>
+          <button mat-stroked-button type="button" (click)="closeAddAnalysis()">Annuler</button>
+        </div>
+      </div>
     </div>
   </mat-card-content>
 </mat-card>

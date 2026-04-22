@@ -44,7 +44,7 @@ export class StockOverviewComponent implements OnInit {
         const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
         this.stockService.getAll(huilerieNom).subscribe({
             next: data => {
-                this.stocks = data;
+                this.stocks = this.groupByMatierePremiere(data);
             },
             error: () => {
                 this.stocks = [];
@@ -52,11 +52,80 @@ export class StockOverviewComponent implements OnInit {
         });
     }
 
+    private groupByMatierePremiere(items: Stock[]): Stock[] {
+        const groups = new Map<string, Stock>();
+
+        for (const item of items) {
+            const matiereKey = item.matierePremiereId != null
+                ? `mp-${item.huilerieId}-${item.matierePremiereId}`
+                : `stock-${item.idStock}`;
+            const existing = groups.get(matiereKey);
+
+            if (!existing) {
+                groups.set(matiereKey, {
+                    ...item,
+                    quantiteDisponible: Number(item.quantiteDisponible ?? 0),
+                    lotReferences: this.collectLotReferences(item),
+                });
+                continue;
+            }
+
+            existing.quantiteDisponible = Number(existing.quantiteDisponible ?? 0) + Number(item.quantiteDisponible ?? 0);
+            existing.lotReferences = this.collectLotReferences(existing, item);
+
+            if (!existing.reference && item.reference) {
+                existing.reference = item.reference;
+            }
+
+            if (!existing.lotReference && item.lotReference) {
+                existing.lotReference = item.lotReference;
+            }
+        }
+
+        return Array.from(groups.values()).sort((left, right) => {
+            const leftKey = `${left.huilerieNom ?? ''}-${left.matierePremiereId ?? left.idStock}`;
+            const rightKey = `${right.huilerieNom ?? ''}-${right.matierePremiereId ?? right.idStock}`;
+            return leftKey.localeCompare(rightKey);
+        });
+    }
+
+    private collectLotReferences(...stocks: Stock[]): string[] {
+        const references = new Set<string>();
+
+        for (const stock of stocks) {
+            if (stock.lotReference) {
+                references.add(stock.lotReference);
+            }
+
+            for (const reference of stock.lotReferences ?? []) {
+                const normalized = String(reference ?? '').trim();
+                if (normalized) {
+                    references.add(normalized);
+                }
+            }
+        }
+
+        return Array.from(references);
+    }
+
     lotReference(stock: Stock): string {
-        return stock.lotReference || (`LO-${stock.referenceId}`);
+        return stock.lotReference || stock.lotReferences?.[0] || (`LO-${stock.referenceId}`);
     }
 
     stockReference(stock: Stock): string {
         return stock.reference || (`ST-${stock.idStock}`);
+    }
+
+    matiereReference(stock: Stock): string {
+        return stock.matierePremiereId != null ? `MP-${stock.matierePremiereId}` : '-';
+    }
+
+    lotReferencesLabel(stock: Stock): string {
+        const references = stock.lotReferences ?? [];
+        if (references.length > 0) {
+            return references.join(', ');
+        }
+
+        return this.lotReference(stock);
     }
 }

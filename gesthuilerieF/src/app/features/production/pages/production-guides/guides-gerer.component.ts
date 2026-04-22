@@ -65,7 +65,7 @@ export class GuidesGererComponent implements OnInit {
     });
 
     this.executionForm = this.fb.group({
-      codeLot: ['', [Validators.required]],
+      reference: ['', [Validators.required]],
       guideProductionId: [0, [Validators.required, Validators.min(1)]],
     });
   }
@@ -371,7 +371,7 @@ export class GuidesGererComponent implements OnInit {
     this.executionError = '';
     const raw = this.executionForm.getRawValue();
     const payload = {
-      codeLot: String(raw.codeLot ?? '').trim(),
+      reference: String(raw.reference ?? '').trim(),
       guideProductionId: Number(raw.guideProductionId),
     };
 
@@ -403,7 +403,7 @@ export class GuidesGererComponent implements OnInit {
   editExecution(execution: ExecutionProduction): void {
     this.executionEditingId = execution.idExecutionProduction;
     this.executionForm.patchValue({
-      codeLot: execution.codeLot,
+      reference: execution.reference,
       guideProductionId: execution.guideProductionId,
     });
   }
@@ -439,7 +439,7 @@ export class GuidesGererComponent implements OnInit {
     this.executionMessage = '';
     this.executionError = '';
     this.executionForm.reset({
-      codeLot: '',
+      reference: '',
       guideProductionId: 0,
     });
   }

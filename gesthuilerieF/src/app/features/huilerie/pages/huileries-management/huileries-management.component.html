@@ -55,11 +55,11 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Entreprise ID *</label>
+        <label class="form-label">Entreprise *</label>
         <nb-select fullWidth formControlName="entrepriseId"
           [status]="isHuilerieFieldInvalid('entrepriseId') ? 'danger' : 'basic'" [disabled]="isEditingInactiveHuilerie">
           <nb-option *ngFor="let entrepriseId of availableEntrepriseIds" [value]="entrepriseId">
-            {{ entrepriseId }}
+            {{ getEntrepriseNom(entrepriseId) || 'Entreprise ' + entrepriseId }}
           </nb-option>
         </nb-select>
       </div>
@@ -68,7 +68,7 @@
         <button nbButton status="primary" type="submit" [disabled]="isEditingInactiveHuilerie">
           {{ editingHuilerieId ? 'Mettre a jour huilerie' : 'Creer huilerie' }}
         </button>
-          <button *ngIf="editingHuilerieId" nbButton status="basic" outline class="app-cancel-btn" type="button"
+        <button *ngIf="editingHuilerieId" nbButton status="basic" outline class="app-cancel-btn" type="button"
           (click)="resetHuilerieForm()">Annuler</button>
       </div>
 
@@ -103,8 +103,11 @@
                 aria-label="Editer huilerie">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
-              <button nbButton ghost size="small" type="button" (click)="toggleHuilerieStatus(h)">
-                {{ h.active ? 'Desactiver' : 'Activer' }}
+              <button nbButton ghost [status]="!h.active ? 'success' : 'danger'" size="small" type="button"
+                (click)="askToggleHuilerieActivation(h)" title="Action huilerie"
+                [attr.aria-label]="!h.active ? 'Activer huilerie' : 'Désactiver huilerie'"
+                [title]="!h.active ? 'Activer huilerie' : 'Désactiver huilerie'">
+                <nb-icon [icon]="!h.active ? 'checkmark-circle-2-outline' : 'close-circle-outline'"></nb-icon>
               </button>
             </td>
           </tr>

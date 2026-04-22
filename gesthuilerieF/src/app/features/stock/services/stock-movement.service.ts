@@ -9,7 +9,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   providedIn: 'root',
 })
 export class StockMovementService {
-  private readonly apiUrl = `${environment.apiUrl}/stockMovements`;
+  private readonly apiUrl = `${environment.apiUrl}/stockMouvements`;
 
   constructor(
     private http: HttpClient,
@@ -31,8 +31,7 @@ export class StockMovementService {
 
   create(payload: {
     huilerieId: number;
-    referenceId: number;
-    quantite: number;
+    lotId: number;
     commentaire: string;
     dateMouvement: string;
     typeMouvement: StockMovement['typeMouvement'];
@@ -46,8 +45,7 @@ export class StockMovementService {
     id: number,
     payload: {
       huilerieId: number;
-      referenceId: number;
-      quantite: number;
+      lotId: number;
       commentaire: string;
       dateMouvement: string;
       typeMouvement: StockMovement['typeMouvement'];
@@ -87,13 +85,24 @@ export class StockMovementService {
       reference: String(raw?.reference ?? raw?.movementReference ?? '').trim() || undefined,
       huilerieId: Number(raw?.huilerieId ?? stock?.huilerie?.idHuilerie ?? stock?.huilerieId ?? raw?.huilerie_id ?? 0),
       huilerieNom: String(raw?.huilerieNom ?? stock?.huilerie?.nom ?? '').trim() || undefined,
-      referenceId: Number(raw?.referenceId ?? raw?.lotId ?? stock?.referenceId ?? stock?.lotOlives?.idLot ?? raw?.reference_id ?? 0),
+      lotId: Number(raw?.lotId ?? raw?.referenceId ?? stock?.lotId ?? stock?.referenceId ?? stock?.lotOlives?.idLot ?? raw?.reference_id ?? 0),
       lotReference: String(raw?.lotReference ?? raw?.referenceLot ?? lot?.reference ?? '').trim() || undefined,
-      quantite: Number(raw?.quantite ?? raw?.quantity ?? 0),
+      quantite: raw?.quantite != null ? Number(raw.quantite) : undefined,
       commentaire: String(raw?.commentaire ?? raw?.comment ?? ''),
       dateMouvement: String(raw?.dateMouvement ?? raw?.date ?? ''),
-      typeMouvement: (raw?.typeMouvement ?? raw?.type ?? 'ARRIVAL') as StockMovement['typeMouvement'],
+      typeMouvement: this.normalizeTypeMouvement(raw?.typeMouvement ?? raw?.type),
     };
+  }
+
+  private normalizeTypeMouvement(value: unknown): StockMovement['typeMouvement'] {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    if (normalized === 'ARRIVAL' || normalized === 'ENTREE') {
+      return 'ENTREE';
+    }
+    if (normalized === 'TRANSFER' || normalized === 'DEPARTURE' || normalized === 'TRANSFERT') {
+      return 'TRANSFERT';
+    }
+    return 'AJUSTEMENT';
   }
 
   private filterByCurrentUserHuilerie(items: StockMovement[]): StockMovement[] {

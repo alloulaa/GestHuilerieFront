@@ -178,9 +178,17 @@ export class UtilisateursListComponent implements OnInit {
 
     this.isSaving = true;
 
+    const submitPayload = {
+      ...this.userForm.value,
+      idEmploye: this.editingUser?.idEmploye ?? this.editingUser?.employe?.idEmploye ?? null,
+      idAdministrateur: this.editingUser?.idAdministrateur ?? this.editingUser?.administrateur?.idAdministrateur ?? null,
+      idUtilisateur: this.editingUser ? editingUserId : null,
+      utilisateurId: this.editingUser ? editingUserId : null,
+    };
+
     const call = this.editingUser
-      ? this.adminService.updateUtilisateur(editingUserId as number, this.userForm.value)
-      : this.adminService.createUtilisateur(this.userForm.value);
+      ? this.adminService.updateUtilisateur(editingUserId as number, submitPayload)
+      : this.adminService.createUtilisateur(submitPayload);
 
     call.subscribe({
       next: () => {
@@ -319,6 +327,11 @@ export class UtilisateursListComponent implements OnInit {
     return false;
   }
 
+  isUserAdmin(user: any): boolean {
+    const profilName = String(this.getUserProfilName(user) ?? '').trim().toUpperCase();
+    return profilName.includes('ADMIN');
+  }
+
   private normalizeProfils(profils: any[]): any[] {
     return profils.map((profil) => {
       const profilId = this.getProfilId(profil);
@@ -383,7 +396,17 @@ export class UtilisateursListComponent implements OnInit {
   }
 
   private getUserId(user: any): number | null {
-    const id = Number(user?.idUtilisateur ?? user?.id ?? user?.utilisateurId ?? 0);
+    const hasTypedEntityId = user?.idEmploye != null || user?.idAdministrateur != null;
+    const candidates = [
+      user?.idUtilisateur,
+      user?.utilisateurId,
+      user?.utilisateur?.idUtilisateur,
+      user?.utilisateur?.utilisateurId,
+      user?.utilisateur?.id,
+      hasTypedEntityId ? null : user?.id,
+    ];
+
+    const id = Number(candidates.find((value) => Number(value) > 0) ?? 0);
     return id > 0 ? id : null;
   }
 }

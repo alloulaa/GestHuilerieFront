@@ -10,6 +10,8 @@ interface SearchResultItem {
   route: string;
   keywords: string[];
   module?: string;
+  action?: 'READ' | 'CREATE' | 'EXECUTE' | 'ANY';
+  requiresAdmin?: boolean;
 }
 
 @Component({
@@ -33,6 +35,7 @@ export class HeaderComponent {
       route: '/pages/dashboard/production',
       keywords: ['dashboard production'],
       module: 'DASHBOARD',
+      action: 'READ',
     },
     {
       label: 'Dashboard Admin',
@@ -40,48 +43,112 @@ export class HeaderComponent {
       route: '/pages/dashboard/admin',
       keywords: ['dashboard admin'],
       module: 'DASHBOARD_ADMIN',
+      action: 'READ',
+      requiresAdmin: true,
     },
     {
-      label: 'Réception',
-      description: 'Saisie et suivi des lots réceptionnés',
-      route: '/pages/reception',
-      keywords: ['reception', 'réception'],
+      label: 'Réception - Consulter',
+      description: 'Consulter l historique des réceptions',
+      route: '/pages/reception/consulter',
+      keywords: ['reception', 'réception', 'consulter'],
       module: 'RECEPTION',
+      action: 'READ',
     },
     {
-      label: 'Guide de Production',
-      description: 'Paramétrage des guides et étapes de production',
-      route: '/pages/production/guides',
-      keywords: ['guide de production'],
+      label: 'Réception - Gérer',
+      description: 'Créer et gérer les arrivages de lots',
+      route: '/pages/reception/gerer',
+      keywords: ['reception', 'réception', 'gérer', 'arrivage'],
+      module: 'RECEPTION',
+      action: 'CREATE',
+    },
+    {
+      label: 'Lots mouvement - Consulter',
+      description: 'Consulter l historique des mouvements de lots',
+      route: '/pages/lots/movements/history',
+      keywords: ['lots', 'mouvement', 'consulter', 'historique'],
+      module: 'STOCK_MOUVEMENT',
+      action: 'READ',
+    },
+    {
+      label: 'Lots mouvement - Gérer',
+      description: 'Créer ou modifier un mouvement de lots',
+      route: '/pages/lots/movements/create',
+      keywords: ['lots', 'mouvement', 'gérer', 'formulaire', 'créer'],
+      module: 'STOCK_MOUVEMENT',
+      action: 'CREATE',
+    },
+    {
+      label: 'Guide de Production - Consulter',
+      description: 'Consulter les guides de production',
+      route: '/pages/production/guides/consulter',
+      keywords: ['guide de production', 'consulter', 'production'],
       module: 'GUIDE_PRODUCTION',
+      action: 'READ',
     },
     {
-      label: 'Machines',
-      description: 'Liste et gestion du parc machines',
+      label: 'Guide de Production - Exécuter',
+      description: 'Exécuter un guide de production',
+      route: '/pages/production/guides/executer',
+      keywords: ['guide de production', 'executer', 'exécuter', 'production'],
+      module: 'GUIDE_PRODUCTION',
+      action: 'EXECUTE',
+    },
+    {
+      label: 'Guide de Production - Gérer',
+      description: 'Créer et gérer les guides de production',
+      route: '/pages/production/guides/gerer',
+      keywords: ['guide de production', 'gérer', 'production'],
+      module: 'GUIDE_PRODUCTION',
+      action: 'CREATE',
+    },
+    {
+      label: 'Machines - Consulter',
+      description: 'Consulter le parc machines',
       route: '/pages/machines',
-      keywords: ['machine', 'machines'],
+      keywords: ['machine', 'machines', 'consulter'],
       module: 'MACHINES',
+      action: 'READ',
+    },
+    {
+      label: 'Machines - Gérer',
+      description: 'Gérer le parc machines',
+      route: '/pages/machines/management',
+      keywords: ['machine', 'machines', 'gérer', 'management'],
+      module: 'MACHINES',
+      action: 'CREATE',
     },
     {
       label: 'Gestion des Huileries',
       description: 'Administration des huileries et de leurs paramètres',
-      route: '/pages/machines/management',
+      route: '/pages/huileries/management',
       keywords: ['huilerie', 'huileries'],
       module: 'HUILERIES',
+      action: 'READ',
     },
     {
-      label: 'Matières Premières',
-      description: 'Référentiel des matières utilisées',
-      route: '/pages/matieres-premieres',
-      keywords: ['matiere premieres', 'matière premières'],
+      label: 'Matières Premières - Consulter',
+      description: 'Consulter les matières premières',
+      route: '/pages/matieres-premieres/consulter',
+      keywords: ['matiere premieres', 'matière premières', 'consulter'],
       module: 'MATIERES_PREMIERES',
+      action: 'READ',
+    },
+    {
+      label: 'Matières Premières - Gérer',
+      description: 'Créer et gérer les matières premières',
+      route: '/pages/matieres-premieres/gerer',
+      keywords: ['matiere premieres', 'matière premières', 'gérer'],
+      module: 'MATIERES_PREMIERES',
+      action: 'CREATE',
     },
     {
       label: 'Stock',
-      description: 'Suivi des stocks et mouvements',
+      description: 'Vue consolidée du stock',
       route: '/pages/stock',
       keywords: ['stock'],
       module: 'STOCK',
+      action: 'READ',
     },
     {
       label: 'Traçabilité des Lots',
@@ -89,20 +156,41 @@ export class HeaderComponent {
       route: '/pages/lots/traceability',
       keywords: ['lots', 'traçabilité'],
       module: 'LOTS_TRAÇABILITE',
+      action: 'READ',
     },
     {
-      label: 'Gestion Acces',
-      description: 'Profils, permissions et droits d’accès',
+      label: 'Campagnes Olives - Consulter',
+      description: 'Consulter les campagnes d olives',
+      route: '/pages/campagnes/consulter',
+      keywords: ['campagnes', 'olives', 'consulter'],
+      module: 'CAMPAGNE_OLIVES',
+      action: 'READ',
+    },
+    {
+      label: 'Campagnes Olives - Gérer',
+      description: 'Créer et gérer les campagnes d olives',
+      route: '/pages/campagnes/gerer',
+      keywords: ['campagnes', 'olives', 'gérer'],
+      module: 'CAMPAGNE_OLIVES',
+      action: 'CREATE',
+    },
+    {
+      label: 'Gestion Profils & Permissions',
+      description: 'Administration des profils et permissions',
       route: '/admin/profils',
-      keywords: ['profil', 'permissions', 'acces'],
+      keywords: ['profil', 'permissions', 'acces', 'admin'],
       module: 'COMPTES_PROFILS',
+      action: 'ANY',
+      requiresAdmin: true,
     },
     {
-      label: 'Affectation Utilisateurs',
-      description: 'Gestion des utilisateurs et de leurs affectations',
+      label: 'Gestion Utilisateurs',
+      description: 'Administration des utilisateurs',
       route: '/admin/utilisateurs',
-      keywords: ['utilisateur', 'affectation'],
+      keywords: ['utilisateur', 'utilisateurs', 'admin'],
       module: 'UTILISATEURS',
+      action: 'ANY',
+      requiresAdmin: true,
     },
     {
       label: 'Profil utilisateur',
@@ -128,7 +216,7 @@ export class HeaderComponent {
     }
 
     return this.searchItems
-      .filter((item) => !item.module || this.permissionService.isAdmin() || this.permissionService.hasAnyPermission(item.module))
+      .filter((item) => this.canAccessSearchItem(item))
       .filter((item) => {
         const haystack = [item.label, item.description, ...item.keywords].join(' ').toLowerCase();
         return haystack.includes(query);
@@ -157,6 +245,35 @@ export class HeaderComponent {
     ];
 
     return !modules.some((moduleName) => this.permissionService.hasAnyPermission(moduleName));
+  }
+
+  private canAccessSearchItem(item: SearchResultItem): boolean {
+    if (item.requiresAdmin && !this.permissionService.isAdmin()) {
+      return false;
+    }
+
+    if (!item.module) {
+      return true;
+    }
+
+    if (this.permissionService.isAdmin()) {
+      return true;
+    }
+
+    const action = item.action ?? 'READ';
+    if (action === 'READ') {
+      return this.permissionService.canRead(item.module);
+    }
+
+    if (action === 'CREATE') {
+      return this.permissionService.canCreate(item.module);
+    }
+
+    if (action === 'EXECUTE') {
+      return this.permissionService.canExecute(item.module);
+    }
+
+    return this.permissionService.hasAnyPermission(item.module);
   }
 
   onSearchFocus(): void {

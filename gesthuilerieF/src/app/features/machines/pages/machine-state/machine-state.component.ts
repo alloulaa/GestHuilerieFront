@@ -37,6 +37,9 @@ export class MachineStateComponent implements OnInit {
     if (status === 'SURVEILLANCE') {
       return 68;
     }
+    if (status === 'DESACTIVEE') {
+      return 0;
+    }
     return 35;
   }
 
@@ -49,6 +52,9 @@ export class MachineStateComponent implements OnInit {
     }
     if (status === 'MAINTENANCE') {
       return 'Maintenance planifiee';
+    }
+    if (status === 'DESACTIVEE') {
+      return 'Desactivee';
     }
     return status;
   }

@@ -38,7 +38,7 @@
         <label class="form-label">Huilerie *</label>
         <nb-select fullWidth formControlName="huilerieId" [status]="isFieldInvalid('huilerieId') ? 'danger' : 'basic'">
           <nb-option *ngFor="let h of availableHuileries" [value]="h.idHuilerie">
-            #{{ h.idHuilerie }} - {{ h.nom }}
+            {{ h.nom }}
           </nb-option>
         </nb-select>
       </div>

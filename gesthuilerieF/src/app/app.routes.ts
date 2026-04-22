@@ -47,23 +47,11 @@ export const APP_ROUTES: Routes = [
       // Reception
       {
         path: 'reception/consulter',
-        loadComponent: () => import('./features/reception/pages/reception-consulter/reception-consulter.component').then(c => c.ReceptionConsulterComponent),
+        loadComponent: () => import('./features/reception/pages/reception-list/reception-list.component').then(c => c.ReceptionListComponent),
       },
       {
         path: 'reception/gerer',
         loadComponent: () => import('./features/reception/pages/reception-gerer/reception-gerer.component').then(c => c.ReceptionGererComponent),
-      },
-      {
-        path: 'reception',
-        loadComponent: () => import('./features/reception/pages/reception-list/reception-list.component').then(c => c.ReceptionListComponent),
-      },
-      {
-        path: 'reception/new',
-        loadComponent: () => import('./features/reception/pages/reception-new/reception-new.component').then(c => c.ReceptionNewComponent),
-      },
-      {
-        path: 'reception/form',
-        loadComponent: () => import('./features/reception/pages/reception-form/reception-form.component').then(c => c.ReceptionFormComponent),
       },
       // Production
       {
@@ -126,16 +114,14 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./features/stock/pages/stock-overview/stock-overview.component').then(c => c.StockOverviewComponent),
       },
       {
-        path: 'stock/form',
+        path: 'lots/movements/gerer',
         loadComponent: () => import('./features/stock/pages/stock-form/stock-form.component').then(c => c.StockFormComponent),
       },
       {
-        path: 'stock/history',
-loadComponent: () => import('./features/stock/pages/stock-list/stock-list.component').then(c => c.StockListComponent),      },
-      {
-        path: 'stock/weighing',
-        loadComponent: () => import('./features/stock/pages/weighing-stock/weighing-stock.component').then(c => c.WeighingStockComponent),
+        path: 'lots/movements/consulter',
+        loadComponent: () => import('./features/stock/pages/stock-list/stock-list.component').then(c => c.StockListComponent),
       },
+
       // Lots (feature separée)
       {
         path: 'lots/traceability',
@@ -148,6 +134,14 @@ loadComponent: () => import('./features/stock/pages/stock-list/stock-list.compon
       {
         path: 'lots/:id',
         loadComponent: () => import('./features/lots/pages/lot-details/lot-details.component').then(c => c.LotDetailsComponent),
+      },
+      {
+        path: 'campagnes/consulter',
+        loadComponent: () => import('./features/campagnes/pages/campagnes-consulter/campagnes-consulter.component').then(c => c.CampagnesConsulterComponent),
+      },
+      {
+        path: 'campagnes/gerer',
+        loadComponent: () => import('./features/campagnes/pages/campagnes-gerer/campagnes-gerer.component').then(c => c.CampagnesGererComponent),
       },
       { path: 'raw-material', redirectTo: 'matieres-premieres', pathMatch: 'full' },
       // Users

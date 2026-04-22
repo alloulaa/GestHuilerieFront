@@ -79,9 +79,11 @@
                 [disabled]="!canUpdate" aria-label="Editer machine">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
-              <button nbButton ghost status="danger" size="small" type="button" (click)="askDeleteMachine(m)"
-                [disabled]="!canDelete" aria-label="Supprimer machine">
-                <nb-icon icon="trash-2-outline"></nb-icon>
+              <button nbButton ghost [status]="m.etatMachine === 'DESACTIVEE' ? 'success' : 'danger'" size="small" type="button" (click)="askToggleMachineActivation(m)"
+                title="Action machine"
+                [disabled]="!canDelete" [attr.aria-label]="m.etatMachine === 'DESACTIVEE' ? 'Activer machine' : 'Désactiver machine'"
+                [title]="m.etatMachine === 'DESACTIVEE' ? 'Activer machine' : 'Désactiver machine'">
+                <nb-icon [icon]="m.etatMachine === 'DESACTIVEE' ? 'checkmark-circle-2-outline' : 'close-circle-outline'"></nb-icon>
               </button>
             </td>
           </tr>

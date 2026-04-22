@@ -1,3 +1,4 @@
+// ...existing code...
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
@@ -89,10 +90,10 @@ export class ExecutionProductionService {
     createProduitFinal(execution: ExecutionProduction): Observable<ExecutionProductionDTO> {
         const dateProduction = String(execution?.dateFinReelle ?? '').trim() || new Date().toISOString().slice(0, 19);
         const quantiteProduite = Number(execution?.rendement ?? 0);
-        const produitNomFallback = String(execution?.lotOlivesVariete ?? '').trim();
+        const produitNomFallback = String(execution?.lotVariete ?? '').trim();
         const payload = {
             executionProductionId: execution.idExecutionProduction,
-            nomProduit: produitNomFallback ? `Huile ${produitNomFallback}` : `Huile lot ${execution.codeLot ?? execution.idExecutionProduction}`,
+            nomProduit: produitNomFallback ? `Huile ${produitNomFallback}` : `Huile lot ${execution.reference ?? execution.idExecutionProduction}`,
             quantiteProduite,
             dateProduction,
         };
@@ -102,5 +103,9 @@ export class ExecutionProductionService {
 
     delete(idExecutionProduction: number): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${idExecutionProduction}`);
+    }
+
+    saveValeursReelles(idExecutionProduction: number, valeurs: { parametreEtapeId: number; valeurReelle: string }[]): Observable<void> {
+        return this.http.post<void>(`${this.apiUrl}/${idExecutionProduction}/valeurs-reelles`, valeurs);
     }
 }

@@ -7,9 +7,10 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { StockMovement } from '../../models/stock.models';
+import { Stock, StockMovement } from '../../models/stock.models';
 import { StockManagementService } from '../../services/stock-management.service';
-import { EMPTY, switchMap } from 'rxjs';
+import { StockService } from '../../services/stock.service';
+import { switchMap } from 'rxjs';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
@@ -39,36 +40,45 @@ export class StockFormComponent {
   errorMessage = '';
   movements: StockMovement[] = [];
   lots: LotOlives[] = [];
+  selectableLots: LotOlives[] = [];
   huileries: Huilerie[] = [];
   editingMovementId: number | null = null;
+  private availableLotIds = new Set<number>();
 
   constructor(
     private formBuilder: FormBuilder,
     private stockManagementService: StockManagementService,
     private lotOlivesService: LotOlivesService,
+    private stockService: StockService,
     private huilerieService: HuilerieService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
     private permissionService: PermissionService,
   ) {
     this.form = this.formBuilder.group({
-      typeMouvement: ['ARRIVAL', [Validators.required]],
-      referenceId: [null as number | null, [Validators.required, Validators.min(1)]],
-      quantite: [0, [Validators.required, Validators.min(1)]],
+      typeMouvement: ['ENTREE', [Validators.required]],
+      lotId: [null as number | null, [Validators.required, Validators.min(1)]],
       dateMouvement: [new Date().toISOString().slice(0, 16), [Validators.required]],
       commentaire: ['', [Validators.required]],
       huilerieId: [1, [Validators.required, Validators.min(1)]],
     });
 
-    this.form.get('referenceId')?.valueChanges.subscribe((lotId) => {
+    this.form.get('lotId')?.valueChanges.subscribe((lotId) => {
       this.applyHuilerieFromSelectedLot(Number(lotId));
+    });
+
+    this.form.get('huilerieId')?.valueChanges.subscribe(() => {
+      this.enforceLotHuilerieConsistency(true, true);
     });
   }
 
   ngOnInit(): void {
     this.lotOlivesService.getAll().subscribe(data => {
       this.lots = data;
+      this.refreshSelectableLots();
     });
+
+    this.loadAvailableLotsFromStock();
 
     this.huilerieService.getAll().subscribe(data => {
       this.huileries = data;
@@ -90,7 +100,7 @@ export class StockFormComponent {
   }
 
   lotReference(movement: StockMovement): string {
-    return movement.lotReference || (`LO-${movement.referenceId}`);
+    return movement.lotReference || (`LO-${movement.lotId}`);
   }
 
   get isEditMode(): boolean {
@@ -101,27 +111,25 @@ export class StockFormComponent {
     this.editingMovementId = movement.id;
     this.form.patchValue({
       typeMouvement: movement.typeMouvement,
-      referenceId: movement.referenceId,
-      quantite: movement.quantite,
+      lotId: movement.lotId,
       dateMouvement: this.toDatetimeLocal(movement.dateMouvement),
       commentaire: movement.commentaire,
       huilerieId: movement.huilerieId,
     });
+    this.refreshSelectableLots();
   }
 
   cancelEdit(): void {
     this.editingMovementId = null;
     this.resetForm();
+    this.refreshSelectableLots();
   }
 
   movementLabel(type: StockMovement['typeMouvement']): string {
-    if (type === 'ARRIVAL') {
+    if (type === 'ENTREE') {
       return 'Entree';
     }
-    if (type === 'DEPARTURE') {
-      return 'Sortie';
-    }
-    if (type === 'TRANSFER') {
+    if (type === 'TRANSFERT') {
       return 'Transfert';
     }
     return 'Ajustement';
@@ -136,14 +144,17 @@ export class StockFormComponent {
       return;
     }
 
+    if (!this.enforceLotHuilerieConsistency(true, true)) {
+      return;
+    }
+
     const raw = this.form.getRawValue();
     const payload = {
       huilerieId: Number(raw.huilerieId),
-      referenceId: Number(raw.referenceId),
-      quantite: Number(raw.quantite),
+      lotId: Number(raw.lotId),
       dateMouvement: raw.dateMouvement ?? new Date().toISOString(),
       commentaire: raw.commentaire ?? '',
-      typeMouvement: (raw.typeMouvement as StockMovement['typeMouvement']) ?? 'ARRIVAL',
+      typeMouvement: (raw.typeMouvement as StockMovement['typeMouvement']) ?? 'ENTREE',
     };
 
     const confirmed = await this.confirmDialogService.confirm({
@@ -163,22 +174,7 @@ export class StockFormComponent {
     const request$ = this.isEditMode
       ? this.stockManagementService.updateMovementType(this.editingMovementId!, payload)
       : this.stockManagementService.loadInitialData().pipe(
-        switchMap(() => {
-          if (payload.typeMouvement === 'DEPARTURE') {
-            const quantiteDisponible = this.stockManagementService.getAvailableQuantity(
-              payload.huilerieId,
-              payload.referenceId,
-            );
-
-            if (payload.quantite > quantiteDisponible) {
-              this.errorMessage = 'La quantite en stock est insuffisante.';
-              this.toastService.error(this.errorMessage);
-              return EMPTY;
-            }
-          }
-
-          return this.stockManagementService.createMovement(payload);
-        }),
+        switchMap(() => this.stockManagementService.createMovement(payload)),
       );
 
     request$.subscribe({
@@ -189,6 +185,7 @@ export class StockFormComponent {
             : 'Mouvement de stock enregistre avec succes.',
         );
         this.cancelEdit();
+        this.loadAvailableLotsFromStock();
       },
       error: errorResponse => {
         this.errorMessage =
@@ -203,9 +200,8 @@ export class StockFormComponent {
   private resetForm(): void {
     const firstHuilerieId = this.huileries[0]?.idHuilerie ?? 1;
     this.form.patchValue({
-      typeMouvement: 'ARRIVAL',
-      referenceId: null,
-      quantite: 0,
+      typeMouvement: 'ENTREE',
+      lotId: null,
       dateMouvement: new Date().toISOString().slice(0, 16),
       commentaire: '',
       huilerieId: firstHuilerieId,
@@ -242,7 +238,81 @@ export class StockFormComponent {
     return value.length >= 16 ? value.slice(0, 16) : value;
   }
 
+  private enforceLotHuilerieConsistency(autoFix: boolean, showToast: boolean): boolean {
+    const selectedLotId = Number(this.form.get('lotId')?.value ?? 0);
+    if (!Number.isFinite(selectedLotId) || selectedLotId <= 0) {
+      return true;
+    }
+
+    const selectedLot = this.lots.find((lot) => Number(lot?.idLot ?? 0) === selectedLotId);
+    const expectedHuilerieId = Number(selectedLot?.huilerieId ?? 0);
+    if (!Number.isFinite(expectedHuilerieId) || expectedHuilerieId <= 0) {
+      return true;
+    }
+
+    const currentHuilerieId = Number(this.form.get('huilerieId')?.value ?? 0);
+    if (currentHuilerieId === expectedHuilerieId) {
+      return true;
+    }
+
+    if (autoFix) {
+      this.form.patchValue({ huilerieId: expectedHuilerieId }, { emitEvent: false });
+    }
+
+    if (showToast) {
+      const lotReference = String(selectedLot?.reference ?? '').trim() || `LO-${selectedLotId}`;
+      const expectedHuilerieName = this.huileries.find((h) => Number(h?.idHuilerie ?? 0) === expectedHuilerieId)?.nom;
+      const huilerieLabel = String(expectedHuilerieName ?? '').trim() || `#${expectedHuilerieId}`;
+      this.toastService.error(`Le lot ${lotReference} appartient a l'huilerie ${huilerieLabel}.`);
+    }
+
+    return false;
+  }
+
   canUpdateStockMovement(): boolean {
     return this.permissionService.canUpdate('STOCK_MOUVEMENT');
+  }
+
+  private loadAvailableLotsFromStock(): void {
+    this.stockService.getAll().subscribe({
+      next: (stocks) => {
+        this.updateAvailableLotIds(stocks);
+        this.refreshSelectableLots();
+      },
+      error: () => {
+        this.availableLotIds.clear();
+        this.refreshSelectableLots();
+      },
+    });
+  }
+
+  private updateAvailableLotIds(stocks: Stock[]): void {
+    const nextIds = new Set<number>();
+    (stocks ?? []).forEach((stock) => {
+      const quantiteDisponible = Number(stock?.quantiteDisponible ?? 0);
+      const lotId = Number(stock?.referenceId ?? 0);
+      if (lotId > 0 && quantiteDisponible > 0) {
+        nextIds.add(lotId);
+      }
+    });
+
+    this.availableLotIds = nextIds;
+  }
+
+  private refreshSelectableLots(): void {
+    const selectedLotId = Number(this.form.get('lotId')?.value ?? 0);
+    const baseLots = this.lots.filter((lot) => this.availableLotIds.has(Number(lot?.idLot ?? 0)));
+
+    if (this.isEditMode && selectedLotId > 0 && !baseLots.some((lot) => Number(lot?.idLot ?? 0) === selectedLotId)) {
+      const selectedLot = this.lots.find((lot) => Number(lot?.idLot ?? 0) === selectedLotId);
+      this.selectableLots = selectedLot ? [selectedLot, ...baseLots] : baseLots;
+      return;
+    }
+
+    this.selectableLots = baseLots;
+
+    if (!this.isEditMode && selectedLotId > 0 && !this.selectableLots.some((lot) => Number(lot?.idLot ?? 0) === selectedLotId)) {
+      this.form.patchValue({ lotId: null }, { emitEvent: false });
+    }
   }
 }

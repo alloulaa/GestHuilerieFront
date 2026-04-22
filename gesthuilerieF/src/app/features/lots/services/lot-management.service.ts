@@ -1,29 +1,27 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, forkJoin, map, of, switchMap, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { LotOlives } from '../models/lot.models';
 import { LotOlivesService } from './lot-olives.service';
-import { Pesee, ReceptionPeseeCreatePayload, StockMovement } from '../../stock/models/stock.models';
+import { Pesee, ReceptionPeseeCreatePayload } from '../../stock/models/stock.models';
 import { WeighingService } from '../../stock/services/weighing.service';
-import { StockMovementService } from '../../stock/services/stock-movement.service';
 import { TraceabilityService } from './traceability.service';
 
 export interface CreatePeseeInput {
   datePesee: string;
-  poidsBrut: number;
-  poidsTare: number;
+  pesee: number;
+  poidsBrut?: number;
+  poidsTare?: number;
   huilerieId: number;
-  lotMode: 'existing' | 'new';
-  existingLotId?: number;
   origine: string;
   varieteOlive: string;
-  newLotDetails?: {
-    maturite: string;
-    dateRecolte: string;
-    dateReception: string;
-    dureeStockageAvantBroyage: number;
-    matierePremiereId: number;
-    campagneId: number | string;
-  };
+  fournisseurNom: string;
+  fournisseurCIN: string;
+  maturite: string;
+  dateRecolte: string;
+  dateReception: string;
+  dureeStockageAvantBroyage: number;
+  matierePremiereReference: string;
+  campagneReference: string;
 }
 
 
@@ -115,9 +113,11 @@ export class LotManagementService {
   getPeseesForLot(lotId: number): Observable<Pesee[]> {
     return this.traceabilityService.getLotTraceability(lotId).pipe(
       map(dto =>
-        (dto.pesees ?? []).map(pesee => ({
-          ...pesee,
+        ((dto.pesees ?? dto.arrivages ?? []) as Array<{ date: string; pesee: number; idPesee?: number; idLotArrivage?: number }>).map(pesee => ({
+          idPesee: pesee.idPesee ?? pesee.idLotArrivage,
+          idLotArrivage: pesee.idLotArrivage,
           datePesee: pesee.date,
+          pesee: Number(pesee.pesee ?? 0),
           lotId: dto.lotId,
         } as Pesee)),
       ),
@@ -130,21 +130,20 @@ export class LotManagementService {
 
   createPesee(input: CreatePeseeInput): Observable<Pesee> {
     const payload: ReceptionPeseeCreatePayload = {
-      lotId: input.lotMode === 'existing' ? Number(input.existingLotId) : null,
       datePesee: input.datePesee,
-      poidsBrut: Number(input.poidsBrut),
-      poidsTare: Number(input.poidsTare),
+      pesee: Number(input.pesee ?? input.poidsBrut ?? 0),
       huilerieId: Number(input.huilerieId),
       origine: input.origine,
+      variete: input.varieteOlive,
       varieteOlive: input.varieteOlive,
-      maturite: input.lotMode === 'new' ? input.newLotDetails?.maturite : undefined,
-      dateRecolte: input.lotMode === 'new' ? input.newLotDetails?.dateRecolte : undefined,
-      dateReception: input.lotMode === 'new' ? input.newLotDetails?.dateReception : undefined,
-      dureeStockageAvantBroyage: input.lotMode === 'new' ? Number(input.newLotDetails?.dureeStockageAvantBroyage) : undefined,
-      matierePremiereId: input.lotMode === 'new' ? Number(input.newLotDetails?.matierePremiereId) : undefined,
-      campagneAnnee: input.lotMode === 'new'
-        ? String(input.newLotDetails?.campagneId)
-        : undefined,
+      fournisseurNom: input.fournisseurNom,
+      fournisseurCIN: input.fournisseurCIN,
+      maturite: input.maturite,
+      dateRecolte: input.dateRecolte,
+      dateReception: input.dateReception,
+      dureeStockageAvantBroyage: Number(input.dureeStockageAvantBroyage),
+      matierePremiereReference: String(input.matierePremiereReference ?? '').trim() || undefined,
+      campagneReference: String(input.campagneReference ?? '').trim() || undefined,
     };
 
     return this.weighingService.createReception(payload).pipe(
@@ -158,21 +157,20 @@ export class LotManagementService {
 
   updatePesee(idPesee: number, input: CreatePeseeInput): Observable<Pesee> {
     const payload: ReceptionPeseeCreatePayload = {
-      lotId: input.lotMode === 'existing' ? Number(input.existingLotId) : null,
       datePesee: input.datePesee,
-      poidsBrut: Number(input.poidsBrut),
-      poidsTare: Number(input.poidsTare),
+      pesee: Number(input.pesee ?? input.poidsBrut ?? 0),
       huilerieId: Number(input.huilerieId),
       origine: input.origine,
+      variete: input.varieteOlive,
       varieteOlive: input.varieteOlive,
-      maturite: input.lotMode === 'new' ? input.newLotDetails?.maturite : undefined,
-      dateRecolte: input.lotMode === 'new' ? input.newLotDetails?.dateRecolte : undefined,
-      dateReception: input.lotMode === 'new' ? input.newLotDetails?.dateReception : undefined,
-      dureeStockageAvantBroyage: input.lotMode === 'new' ? Number(input.newLotDetails?.dureeStockageAvantBroyage) : undefined,
-      matierePremiereId: input.lotMode === 'new' ? Number(input.newLotDetails?.matierePremiereId) : undefined,
-      campagneAnnee: input.lotMode === 'new'
-        ? String(input.newLotDetails?.campagneId)
-        : undefined,
+      fournisseurNom: input.fournisseurNom,
+      fournisseurCIN: input.fournisseurCIN,
+      maturite: input.maturite,
+      dateRecolte: input.dateRecolte,
+      dateReception: input.dateReception,
+      dureeStockageAvantBroyage: Number(input.dureeStockageAvantBroyage),
+      matierePremiereReference: String(input.matierePremiereReference ?? '').trim() || undefined,
+      campagneReference: String(input.campagneReference ?? '').trim() || undefined,
     };
 
     return this.weighingService.updateReception(idPesee, payload).pipe(

@@ -27,7 +27,6 @@
             <th *ngIf="isAdmin">Huilerie</th>
             <th>Type</th>
             <th>Reference lot</th>
-            <th>Quantite</th>
             <th>Date</th>
             <th>Commentaire</th>
           </tr>
@@ -41,7 +40,6 @@
             <td *ngIf="isAdmin">{{ m.huilerieNom || ('#' + m.huilerieId) }}</td>
             <td class="type-cell">{{ movementLabel(m.typeMouvement) }}</td>
             <td>{{ lotReference(m) }}</td>
-            <td class="quantite-cell">{{ m.quantite }}</td>
             <td>{{ m.dateMouvement }}</td>
             <td>{{ m.commentaire }}</td>
           </tr>

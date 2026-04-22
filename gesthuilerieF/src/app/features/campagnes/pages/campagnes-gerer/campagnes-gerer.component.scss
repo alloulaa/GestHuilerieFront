@@ -1,0 +1,254 @@
+:host {
+    --camp-primary: #3f6a2a;
+    --camp-primary-soft: #edf5e7;
+    --camp-border: #d8e4d0;
+    --camp-border-strong: #c2d3b5;
+    --camp-surface: #ffffff;
+    --camp-surface-soft: #f5f9f1;
+    --camp-muted: #6b786c;
+    --camp-danger: #b73a34;
+    --camp-title: #243f1c;
+
+    display: block;
+}
+
+.campagnes-card {
+    border: 1px solid var(--camp-border);
+    border-radius: 18px;
+    box-shadow: 0 14px 30px rgba(41, 64, 31, 0.1);
+    overflow: hidden;
+}
+
+.heading-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-top: 0.25rem;
+}
+
+.heading-wrap mat-card-title {
+    color: var(--camp-title);
+    font-size: clamp(1.4rem, 1.7vw, 1.9rem);
+    line-height: 1.2;
+    margin: 0;
+}
+
+.heading-subtitle {
+    margin: 0;
+    color: var(--camp-muted);
+    font-size: 0.96rem;
+}
+
+.stats-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.stat-pill {
+    border: 1px solid var(--camp-border-strong);
+    background: linear-gradient(180deg, #f9fcf6 0%, #eef6e8 100%);
+    border-radius: 12px;
+    padding: 0.55rem 0.85rem;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.stat-label {
+    color: var(--camp-muted);
+    font-size: 0.79rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.stat-value {
+    color: #2d4d21;
+    font-size: 1.05rem;
+}
+
+.campaign-form {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+    padding: 0.2rem;
+}
+
+.form-field {
+    grid-column: span 3;
+}
+
+.form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.table-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0.25rem 0 0.65rem;
+}
+
+.table-title {
+    margin: 0;
+    color: #2e4626;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+}
+
+.form-hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #4f5f50;
+    font-size: 0.93rem;
+}
+
+.app-btn {
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 0.56rem 0.95rem;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 160ms ease;
+}
+
+.app-btn-primary {
+    background: var(--camp-primary);
+    border-color: var(--camp-primary);
+    color: #ffffff;
+}
+
+.app-btn-primary:hover {
+    background: #335a21;
+    border-color: #335a21;
+}
+
+.app-btn-ghost {
+    background: var(--camp-primary-soft);
+    border-color: #b7caaa;
+    color: #2f4c24;
+}
+
+.app-btn-ghost:hover {
+    background: #e4efdb;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--camp-border);
+    border-radius: 12px;
+    background: var(--camp-surface);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 0.8rem 0.72rem;
+    border-bottom: 1px solid #edf2eb;
+}
+
+th {
+    background: #f2f7ee;
+    color: #243f1c;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 0.81rem;
+}
+
+.actions-col {
+    text-align: center;
+}
+
+.empty-row {
+    text-align: center;
+    color: var(--camp-muted);
+}
+
+.row-hover:hover {
+    background: var(--camp-surface-soft);
+}
+
+.row-actions {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.btn-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    border: 1px solid var(--camp-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f8ef;
+    color: #335a21;
+    cursor: pointer;
+    transition: all 140ms ease;
+}
+
+.btn-icon:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(41, 64, 31, 0.12);
+}
+
+.action-delete {
+    color: var(--camp-danger);
+    border-color: #e8c2bf;
+    background: #fff2f1;
+}
+
+.action-icon {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@media (max-width: 768px) {
+    .campagnes-card {
+        border-radius: 12px;
+    }
+
+    .campaign-form {
+        grid-template-columns: 1fr;
+    }
+
+    .form-field {
+        grid-column: auto;
+    }
+
+    .table-title {
+        font-size: 0.95rem;
+    }
+
+    th,
+    td {
+        padding: 0.62rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .form-field {
+        grid-column: span 6;
+    }
+}

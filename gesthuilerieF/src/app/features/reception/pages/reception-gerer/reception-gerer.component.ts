@@ -23,6 +23,8 @@ import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.s
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AnalyseLaboratoireService } from '../../../lots/services/analyse-laboratoire.service';
+import { ReceptionListComponent } from '../reception-list/reception-list.component';
+import { ReceptionFormComponent } from "../reception-form/reception-form.component";
 
 @Component({
   selector: 'app-reception-gerer',
@@ -41,9 +43,12 @@ import { AnalyseLaboratoireService } from '../../../lots/services/analyse-labora
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
+    ReceptionListComponent,
+    ReceptionFormComponent
   ],
 })
 export class ReceptionGererComponent implements OnInit {
+  selectedPeseeForEdit: Pesee | null = null;
   pesees: Pesee[] = [];
   lots: LotOlives[] = [];
   weighings: Pesee[] = [];
@@ -55,6 +60,9 @@ export class ReceptionGererComponent implements OnInit {
   lastCreatedReference = '';
   showSaveSuccessPopup = false;
   savedReception: Pesee | null = null;
+  selectedBonPeseeFile: File | null = null;
+  showBonPeseeUploadSection = false;
+  bonPeseeUploadProgress = '';
   selectedLotForAnalysis: LotOlives | null = null;
   analysisSaveError = '';
 
@@ -86,6 +94,8 @@ export class ReceptionGererComponent implements OnInit {
       existingLotId: [null as number | null, [Validators.required]],
       origine: ['', [Validators.required]],
       varieteOlive: ['', [Validators.required]],
+      fournisseurNom: [''],
+      fournisseurCIN: [''],
       maturite: [''],
       dateRecolte: [new Date().toISOString().slice(0, 10)],
       dateReception: [new Date().toISOString().slice(0, 10)],
@@ -223,6 +233,10 @@ export class ReceptionGererComponent implements OnInit {
     this.lotManagementService.loadInitialData().subscribe();
   }
 
+  onSubmit(): void {
+    void this.submit();
+  }
+
   async submit(): Promise<void> {
     this.errorMessage = '';
 
@@ -254,36 +268,38 @@ export class ReceptionGererComponent implements OnInit {
       return;
     }
 
+    const selectedMatiereId = Number(
+      raw.matierePremiereId
+      ?? this.matieresPremieres
+        .map((item) => this.resolveMatierePremiereId(item))
+        .find((id) => id != null)
+      ?? 1,
+    );
+
+    const selectedMatiere = this.matieresPremieres.find(
+      (item) => this.resolveMatierePremiereId(item) === selectedMatiereId,
+    );
+
     const payload: CreatePeseeInput = {
       datePesee: raw.datePesee ?? new Date().toISOString(),
+      pesee: poidsBrut || 0,
       poidsBrut: poidsBrut || 0,
       poidsTare: poidsTare || 0,
       huilerieId: Number(raw.huilerieId) || 1,
-      lotMode: raw.lotMode === 'new' ? 'new' : 'existing',
-      existingLotId: raw.existingLotId ? Number(raw.existingLotId) : undefined,
       origine: String(raw.origine ?? ''),
       varieteOlive: String(raw.varieteOlive ?? ''),
-      newLotDetails:
-        raw.lotMode === 'new'
-          ? {
-            maturite: String(raw.maturite ?? ''),
-            dateRecolte: String(raw.dateRecolte ?? ''),
-            dateReception: String(raw.dateReception ?? ''),
-            dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
-            matierePremiereId: Number(
-              raw.matierePremiereId
-              ?? this.matieresPremieres
-                .map((item) => this.resolveMatierePremiereId(item))
-                .find((id) => id != null)
-              ?? 1,
-            ),
-            campagneId: this.resolveCampaignSeason(
-              String(raw.campagneId ?? ''),
-              String(raw.dateRecolte ?? ''),
-              String(raw.dateReception ?? ''),
-            ),
-          }
-          : undefined,
+      fournisseurNom: String(raw.fournisseurNom ?? '').trim(),
+      fournisseurCIN: String(raw.fournisseurCIN ?? '').trim(),
+      maturite: String(raw.maturite ?? ''),
+      dateRecolte: String(raw.dateRecolte ?? ''),
+      dateReception: String(raw.dateReception ?? ''),
+      dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage ?? 0),
+      matierePremiereReference: String(selectedMatiere?.reference ?? selectedMatiereId),
+      campagneReference: this.resolveCampaignSeason(
+        String(raw.campagneId ?? ''),
+        String(raw.dateRecolte ?? ''),
+        String(raw.dateReception ?? ''),
+      ),
     };
 
     const confirmed = await this.confirmDialogService.confirm({
@@ -334,8 +350,8 @@ export class ReceptionGererComponent implements OnInit {
   }
 
   onPopupGeneratePdf(): void {
-    if (this.savedReception?.reference) {
-      this.generateReceptionPdf(this.savedReception.reference);
+    if (this.savedReception?.lotId) {
+      this.generateReceptionPdf(this.savedReception.lotId);
     }
     this.closePopup();
   }
@@ -344,14 +360,66 @@ export class ReceptionGererComponent implements OnInit {
     this.closePopup();
   }
 
+  onPopupUploadBonPesee(): void {
+    this.showBonPeseeUploadSection = true;
+    this.bonPeseeUploadProgress = '';
+  }
+
+  onBonPeseeFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== 'application/pdf') {
+      this.selectedBonPeseeFile = null;
+      this.bonPeseeUploadProgress = 'Seuls les fichiers PDF sont autorises.';
+      return;
+    }
+
+    this.selectedBonPeseeFile = file;
+    this.bonPeseeUploadProgress = `Fichier selectionne: ${file.name}`;
+  }
+
+  uploadBonPeseePdf(): void {
+    if (!this.savedReception?.lotId) {
+      this.bonPeseeUploadProgress = 'Lot de reception introuvable.';
+      return;
+    }
+
+    if (!this.selectedBonPeseeFile) {
+      this.bonPeseeUploadProgress = 'Veuillez selectionner un fichier PDF.';
+      return;
+    }
+
+    this.bonPeseeUploadProgress = 'Televersement en cours...';
+    this.weighingService.uploadBonPeseePdf(this.savedReception.lotId, this.selectedBonPeseeFile).subscribe({
+      next: (updatedReception) => {
+        this.savedReception = { ...this.savedReception!, ...updatedReception };
+        this.bonPeseeUploadProgress = 'Bon de pesee enregistre avec succes.';
+        this.toastService.success('Bon de pesee enregistre avec succes.');
+        this.closePopup();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.bonPeseeUploadProgress = error?.error?.message ?? 'Erreur lors du televersement du bon de pesee.';
+        this.toastService.error(this.bonPeseeUploadProgress);
+      },
+    });
+  }
+
   private closePopup(): void {
     this.showSaveSuccessPopup = false;
+    this.showBonPeseeUploadSection = false;
+    this.selectedBonPeseeFile = null;
+    this.bonPeseeUploadProgress = '';
     this.resetForm();
     this.loadPesees();
   }
 
-  private generateReceptionPdf(reference: string): void {
-    this.weighingService.generateBonPeseePdf(reference).subscribe({
+  private generateReceptionPdf(lotId: number): void {
+    this.weighingService.generateBonPeseePdf(lotId).subscribe({
       next: (blob) => {
         const pdfUrl = window.URL.createObjectURL(blob);
         const popup = window.open(pdfUrl, '_blank');
@@ -376,7 +444,8 @@ export class ReceptionGererComponent implements OnInit {
 
 
   edit(pesee: Pesee): void {
-    this.editingId = pesee.idPesee ?? null;
+    this.selectedPeseeForEdit = pesee;
+    this.editingId = pesee.lotId ?? null;
     this.isEditMode = true;
     this.errorMessage = '';
     this.successMessage = '';
@@ -420,24 +489,39 @@ export class ReceptionGererComponent implements OnInit {
     }
 
     const peseeToDelete = pesee;
-    if (peseeToDelete.idPesee == null) {
+    if (peseeToDelete.lotId == null) {
       this.errorMessage = 'Suppression impossible: identifiant de reception manquant.';
       this.toastService.error(this.errorMessage);
       return;
     }
 
-    this.lotManagementService.deletePesee(peseeToDelete.idPesee).subscribe({
+    this.lotManagementService.deletePesee(peseeToDelete.lotId).subscribe({
       next: () => {
-        if (this.editingId === peseeToDelete.idPesee) {
+        if (this.selectedPeseeForEdit?.lotId === peseeToDelete.lotId) {
+          this.selectedPeseeForEdit = null;
+        }
+        if (this.editingId === peseeToDelete.lotId) {
           this.resetForm();
         }
         this.toastService.success('Réception supprimée avec succès.');
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = error?.error?.message ?? 'Erreur lors de la suppression.';
+        // Extract error message with priority: specific error reason > general message
+        const errorResponse = error?.error as any;
+        const errorReason = errorResponse?.errors?.[0] || errorResponse?.message || 'Erreur lors de la suppression.';
+        this.errorMessage = errorReason;
         this.toastService.error(this.errorMessage);
       },
     });
+  }
+
+  onEditPesee(pesee: Pesee): void {
+    this.edit(pesee);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  onEditCleared(): void {
+    this.selectedPeseeForEdit = null;
   }
 
   openAddAnalysis(pesee: Pesee): void {
@@ -514,6 +598,8 @@ export class ReceptionGererComponent implements OnInit {
       existingLotId: null,
       origine: '',
       varieteOlive: '',
+      fournisseurNom: '',
+      fournisseurCIN: '',
       maturite: '',
       dateRecolte: new Date().toISOString().slice(0, 10),
       dateReception: new Date().toISOString().slice(0, 10),
@@ -535,6 +621,17 @@ export class ReceptionGererComponent implements OnInit {
 
   trackByPesee(index: number, pesee: Pesee): number {
     return pesee.idPesee ?? index;
+  }
+
+  onWeightChange(): void {
+    const poidsBrut = Number(this.form.get('poidsBrut')?.value ?? 0);
+    const poidsTare = Number(this.form.get('poidsTare')?.value ?? 0);
+    const poidsNet = this.lotManagementService.calculatePoidsNet(poidsBrut, poidsTare);
+    this.form.get('poidsNet')?.setValue(poidsNet, { emitEvent: false });
+  }
+
+  isAdminUser(): boolean {
+    return this.permissionService.isAdmin();
   }
 
   private applyLotModeValidation(mode: 'existing' | 'new'): void {

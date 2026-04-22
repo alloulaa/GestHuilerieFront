@@ -16,7 +16,7 @@ import { PermissionService } from '../../../../core/services/permission.service'
   imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule],
 })
 export class MachinesListComponent implements OnInit {
-  machines: Array<Machine & { availability: string }> = [];
+  machines: Machine[] = [];
   selectedHuilerieNom = '';
 
   constructor(
@@ -44,10 +44,7 @@ export class MachinesListComponent implements OnInit {
   private loadMachines(): void {
     const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
     this.machineService.getAll(huilerieNom).subscribe((data) => {
-      this.machines = data.map((item) => ({
-        ...item,
-        availability: item.etatMachine === 'MAINTENANCE' ? 'Indisponible' : 'Disponible',
-      }));
+      this.machines = data;
     });
   }
 
@@ -74,10 +71,6 @@ export class MachinesListComponent implements OnInit {
     return 'critical';
   }
 
-  availabilityClass(value: string): string {
-    return value === 'Disponible' ? 'ok' : 'critical';
-  }
-
   get enServiceCount(): number {
     return this.machines.filter((machine) => machine.etatMachine === 'EN_SERVICE').length;
   }
@@ -90,7 +83,7 @@ export class MachinesListComponent implements OnInit {
     return this.machines.filter((machine) => machine.etatMachine === 'MAINTENANCE').length;
   }
 
-  get availableCount(): number {
-    return this.machines.filter((machine) => machine.availability === 'Disponible').length;
+  get desactiveeCount(): number {
+    return this.machines.filter((machine) => machine.etatMachine === 'DESACTIVEE').length;
   }
 }

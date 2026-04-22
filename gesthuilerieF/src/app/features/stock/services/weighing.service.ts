@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { Pesee, ReceptionPeseeCreatePayload, Stock } from '../models/stock.models';
+import { Pesee, ReceptionPeseeCreatePayload } from '../models/stock.models';
 import { environment } from 'src/environments/environment';
 import { AuthService } from '../../../core/auth/auth.service';
 
@@ -9,7 +9,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   providedIn: 'root',
 })
 export class WeighingService {
-  private readonly apiUrl = `${environment.apiUrl}/pesees`;
+  private readonly apiUrl = `${environment.apiUrl}/lots/arrivages`;
   private missingHuilerieFallbackLogged = false;
 
   constructor(
@@ -31,51 +31,83 @@ export class WeighingService {
     );
   }
 
-  findById(idPesee: number): Observable<Pesee> {
-    return this.http.get<any>(`${this.apiUrl}/${idPesee}`).pipe(
+  findById(idLotArrivage: number): Observable<Pesee> {
+    return this.http.get<any>(`${this.apiUrl}/${idLotArrivage}`).pipe(
       map((item) => this.normalizePesee(item)),
     );
   }
 
   createReception(payload: ReceptionPeseeCreatePayload): Observable<Pesee> {
-    return this.http.post<any>(this.apiUrl, payload).pipe(
+    const sanitizedPayload: ReceptionPeseeCreatePayload = {
+      ...payload,
+      matierePremiereReference: this.sanitizeReference(payload?.matierePremiereReference),
+      campagneReference: this.sanitizeReference(payload?.campagneReference),
+    };
+
+    return this.http.post<any>(this.apiUrl, sanitizedPayload).pipe(
       map((item) => this.normalizePesee(item)),
     );
   }
 
-  updateReception(idPesee: number, payload: ReceptionPeseeCreatePayload): Observable<Pesee> {
-    return this.http.put<any>(`${this.apiUrl}/${idPesee}`, payload).pipe(
+  updateReception(idLotArrivage: number, payload: ReceptionPeseeCreatePayload): Observable<Pesee> {
+    const sanitizedPayload: ReceptionPeseeCreatePayload = {
+      ...payload,
+      matierePremiereReference: this.sanitizeReference(payload?.matierePremiereReference),
+      campagneReference: this.sanitizeReference(payload?.campagneReference),
+    };
+
+    return this.http.put<any>(`${environment.apiUrl}/lots/${idLotArrivage}`, sanitizedPayload).pipe(
       map((item) => this.normalizePesee(item)),
     );
   }
 
-  generateBonPeseePdf(reference: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${reference}/pdf`, {
+  generateBonPeseePdf(idLot: number): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/lots/${idLot}/bon-pesee/pdf`, {
       responseType: 'blob',
     });
   }
 
-  delete(idPesee: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${idPesee}`);
+  uploadBonPeseePdf(idLot: number, file: File): Observable<Pesee> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.http.post<any>(`${environment.apiUrl}/lots/${idLot}/bon-pesee/pdf/upload`, formData).pipe(
+      map((item) => this.normalizePesee(item)),
+    );
+  }
+
+  delete(idLotArrivage: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/lots/${idLotArrivage}`);
   }
 
   private normalizePesee(raw: any): Pesee {
-    const id = Number(raw?.idPesee ?? raw?.id ?? raw?.peseeId ?? 0);
-    const brut = Number(raw?.poidsBrut ?? 0);
-    const tare = Number(raw?.poidsTare ?? 0);
+    const id = Number(raw?.idLotArrivage ?? raw?.idPesee ?? raw?.id ?? raw?.peseeId ?? raw?.idLot ?? 0);
+    const pesee = Number(raw?.pesee ?? raw?.poidsBrut ?? raw?.quantiteInitiale ?? 0);
 
     return {
       idPesee: id > 0 ? id : undefined,
+      idLotArrivage: id > 0 ? id : undefined,
       reference: raw?.reference ?? raw?.peseeReference,
-      datePesee: String(raw?.datePesee ?? raw?.date ?? ''),
-      poidsBrut: brut,
-      poidsTare: tare,
-      poidsNet: Number(raw?.poidsNet ?? Math.max(0, brut - tare)),
-      lotId: Number(raw?.lotId ?? raw?.lotOlivesId ?? 0),
+      datePesee: String(raw?.datePesee ?? raw?.date ?? raw?.dateReception ?? ''),
+      pesee,
+      lotId: Number(raw?.lotId ?? raw?.lotOlivesId ?? raw?.idLot ?? 0),
+      matierePremiereReference: raw?.matierePremiereReference != null ? String(raw.matierePremiereReference).trim() : undefined,
+      campagneReference: raw?.campagneReference != null ? String(raw.campagneReference).trim() : undefined,
       huilerieId: raw?.huilerieId != null ? Number(raw.huilerieId) : undefined,
       huilerieNom: raw?.huilerieNom != null ? String(raw.huilerieNom) : undefined,
       bonPeseePdfPath: raw?.bonPeseePdfPath ?? undefined,
+      fournisseurNom: raw?.fournisseurNom != null ? String(raw.fournisseurNom) : undefined,
+      fournisseurCIN: raw?.fournisseurCIN != null ? String(raw.fournisseurCIN) : undefined,
     };
+  }
+
+  private sanitizeReference(value?: string): string | undefined {
+    const normalized = String(value ?? '')
+      .trim()
+      .replace(/[\s,;:]+$/g, '')
+      .toUpperCase();
+
+    return normalized || undefined;
   }
 
   private filterByCurrentUserHuilerie(items: Pesee[]): Pesee[] {

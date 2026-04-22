@@ -52,16 +52,16 @@
         <label class="field" [class.field-invalid]="isExecutionFieldInvalid('machineId')">
           <span>Machine *</span>
           <nb-select fullWidth formControlName="machineId" placeholder="Sélectionner">
-            <nb-option *ngFor="let machine of machines" [value]="machine.idMachine">
+            <nb-option *ngFor="let machine of filteredMachines" [value]="machine.idMachine">
               {{ machine.nomMachine }}
             </nb-option>
           </nb-select>
         </label>
 
-        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('lotOlivesId')">
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('lotId')">
           <span>Lot d'olives *</span>
-          <nb-select fullWidth formControlName="lotOlivesId" placeholder="Sélectionner">
-            <nb-option *ngFor="let lot of lots" [value]="lot.idLot">
+          <nb-select fullWidth formControlName="lotId" placeholder="Sélectionner">
+            <nb-option *ngFor="let lot of filteredLots" [value]="lot.idLot">
               {{ lotDisplayLabel(lot) }}
             </nb-option>
           </nb-select>
@@ -79,10 +79,11 @@
         </label>
       </div>
 
-      <div class="values-box values-box--execution" *ngIf="executionValueRows.length > 0">
+      <div class="values-box values-box--execution"
+        *ngIf="executionValueRows.length > 0 && executionForm.get('statut')?.value === 'TERMINEE'">
         <div class="values-box__header">
           <div>
-            <h3>Valeurs réelles</h3>
+            <h3>Valeurs réelles à saisir</h3>
             <p>{{ selectedGuideParameterCount }} paramètre(s) rattaché(s) au guide sélectionné</p>
           </div>
         </div>
@@ -93,8 +94,9 @@
             <strong>{{ row.stepName }}</strong>
             <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
           </div>
-          <div [formGroupName]="valueIndex" class="value-item__input"
+          <div class="value-item__input value-item__input--dual" [formGroupName]="valueIndex"
             [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
+            <input nbInput fullWidth [value]="row.estimatedValue || '-'" readonly placeholder="Valeur estimée" />
             <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
           </div>
         </div>
@@ -123,7 +125,7 @@
           [class.execution-card--selected]="selectedExecution?.idExecutionProduction === execution.idExecutionProduction">
           <header class="execution-card__header">
             <div>
-              <h4>{{ execution.codeLot }}</h4>
+              <h4>{{ execution.reference }}</h4>
               <p>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</p>
             </div>
             <span class="execution-card__status">{{ getExecutionStatusLabel(execution) }}</span>
@@ -160,18 +162,17 @@
         <div class="execution-detail-card__header">
           <div>
             <h3>Détails de l'exécution</h3>
-            <p>{{ execution.codeLot }}</p>
+            <p>{{ execution.reference }}</p>
           </div>
           <span class="execution-card__status">{{ execution.statut }}</span>
         </div>
         <div class="execution-detail-grid">
           <div class="execution-detail-item"><span>Guide</span><strong>{{ execution.guideProductionReference || ('#' +
-              execution.guideProductionId) }}</strong>
-          </div>
+              execution.guideProductionId) }}</strong></div>
           <div class="execution-detail-item"><span>Machine</span><strong>{{ execution.machineNom || ('#' +
               execution.machineId) }}</strong></div>
-          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotOlivesReference || ('#' +
-              execution.lotOlivesId) }}</strong></div>
+          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotReference || ('#' +
+              execution.lotId) }}</strong></div>
           <div class="execution-detail-item"><span>Date fin réelle</span><strong>{{
               formatExecutionDate(execution.dateFinReelle) }}</strong></div>
           <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
@@ -184,6 +185,42 @@
           <h4>Observations</h4>
           <p>{{ execution.observations || '-' }}</p>
         </div>
+
+        <!-- Bloc d'affichage des valeurs réelles enregistrées -->
+        <div class="execution-detail-observations-card" *ngIf="hasRecordedRealValues(execution)">
+          <h4>Valeurs réelles enregistrées</h4>
+          <div class="real-values-list">
+            <div class="real-value-item" *ngFor="let valeur of execution.valeursReelles">
+              <span class="real-value-label">{{ getParameterLabel(valeur.parametreEtapeNom) }}</span>
+              <strong class="real-value-content">{{ valeur.valeurReelle }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloc d'édition des valeurs réelles -->
+        <form [formGroup]="executionForm" (ngSubmit)="saveValeursReelles()">
+          <div class="values-box values-box--execution" *ngIf="executionValueRows.length > 0">
+            <div class="values-box__header">
+              <div>
+                <h3>Valeurs estimées et réelles</h3>
+                <p>Complétez les valeurs réelles avant ou après la clôture de l'exécution.</p>
+              </div>
+            </div>
+            <div class="value-item value-item--execution" formArrayName="valeursReelles"
+              *ngFor="let row of executionValueRows; let valueIndex = index">
+              <div class="value-item__meta">
+                <strong>{{ row.stepName }}</strong>
+                <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
+              </div>
+              <div class="value-item__input value-item__input--dual" [formGroupName]="valueIndex"
+                [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
+                <input nbInput fullWidth [value]="row.estimatedValue || '-'" readonly placeholder="Valeur estimée" />
+                <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle"
+                  [readonly]="isExecutionTerminated(execution)" />
+              </div>
+            </div>
+          </div>
+        </form>
       </article>
     </div>
   </nb-card-body>

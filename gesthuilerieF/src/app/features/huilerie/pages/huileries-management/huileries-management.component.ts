@@ -5,6 +5,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { NbButtonModule, NbCardModule, NbIconModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { Huilerie } from '../../../machines/models/enterprise.models';
 import { HuilerieService } from '../../../machines/services/huilerie.service';
+import { EntrepriseService } from '../../../machines/services/entreprise.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-huileries-management',
@@ -26,6 +28,7 @@ export class HuileriesManagementComponent implements OnInit {
   allHuileries: Huilerie[] = [];
   huileries: Huilerie[] = [];
   availableEntrepriseIds: number[] = [];
+  entrepriseNomMap: Map<number, string> = new Map();
   huilerieErrorMessage = '';
   huilerieFilterMessage = '';
   huilerieSearchNom = '';
@@ -38,6 +41,8 @@ export class HuileriesManagementComponent implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private huilerieService: HuilerieService,
+    private entrepriseService: EntrepriseService,
+    private confirmDialogService: ConfirmDialogService,
   ) {
     this.huilerieForm = this.formBuilder.group({
       nom: ['', [Validators.required]],
@@ -114,13 +119,32 @@ export class HuileriesManagementComponent implements OnInit {
     });
   }
 
-  toggleHuilerieStatus(item: Huilerie): void {
+  async askToggleHuilerieActivation(item: Huilerie): Promise<void> {
+    const isInactive = !item.active;
+    const actionLabel = isInactive ? 'activer' : 'désactiver';
+    const confirmed = await this.confirmDialogService.confirm({
+      title: isInactive ? 'Activer huilerie' : 'Désactiver huilerie',
+      message: `Voulez-vous vraiment ${actionLabel} l'huilerie ${item.nom} ?`,
+      confirmText: isInactive ? 'Activer' : 'Désactiver',
+      cancelText: 'Annuler',
+      intent: isInactive ? 'primary' : 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     this.huilerieService.toggleStatus(item.idHuilerie, !item.active).subscribe({
       next: () => {
+        if (this.editingHuilerieId === item.idHuilerie) {
+          this.resetHuilerieForm();
+        }
         this.loadData();
       },
       error: (error: HttpErrorResponse) => {
-        alert(this.getHttpErrorMessage(error, 'Echec de changement du statut de l\'huilerie.'));
+        alert(this.getHttpErrorMessage(error, isInactive
+          ? 'Echec d\'activation de l\'huilerie.'
+          : 'Echec de désactivation de l\'huilerie.'));
       },
     });
   }
@@ -179,23 +203,34 @@ export class HuileriesManagementComponent implements OnInit {
     return this.editingHuilerieId !== null && !this.editingHuilerieStatus;
   }
 
-  private loadData(): void {
-    this.huilerieService.getAll().subscribe((huileries) => {
-      this.allHuileries = huileries;
-      this.huileries = huileries;
-      this.availableEntrepriseIds = Array.from(
-        new Set(
-          this.allHuileries
-            .map((h) => Number(h.entrepriseId))
-            .filter((id) => !Number.isNaN(id) && id > 0),
-        ),
-      ).sort((a, b) => a - b);
+  getEntrepriseNom(entrepriseId: number): string | undefined {
+    return this.entrepriseNomMap.get(entrepriseId);
+  }
 
-      const selectedEntrepriseId = Number(this.huilerieForm.get('entrepriseId')?.value);
-      if (!this.availableEntrepriseIds.includes(selectedEntrepriseId) && this.availableEntrepriseIds.length > 0) {
-        this.huilerieForm.patchValue({ entrepriseId: this.availableEntrepriseIds[0] });
-      }
-      this.huilerieFilterMessage = '';
+  private loadData(): void {
+    this.entrepriseService.getAll().subscribe((entreprises) => {
+      this.entrepriseNomMap.clear();
+      entreprises.forEach((e) => {
+        this.entrepriseNomMap.set(e.idEntreprise, e.nom);
+      });
+
+      this.huilerieService.getAll().subscribe((huileries) => {
+        this.allHuileries = huileries;
+        this.huileries = huileries;
+        this.availableEntrepriseIds = Array.from(
+          new Set(
+            this.allHuileries
+              .map((h) => Number(h.entrepriseId))
+              .filter((id) => !Number.isNaN(id) && id > 0),
+          ),
+        ).sort((a, b) => a - b);
+
+        const selectedEntrepriseId = Number(this.huilerieForm.get('entrepriseId')?.value);
+        if (!this.availableEntrepriseIds.includes(selectedEntrepriseId) && this.availableEntrepriseIds.length > 0) {
+          this.huilerieForm.patchValue({ entrepriseId: this.availableEntrepriseIds[0] });
+        }
+        this.huilerieFilterMessage = '';
+      });
     });
   }
 

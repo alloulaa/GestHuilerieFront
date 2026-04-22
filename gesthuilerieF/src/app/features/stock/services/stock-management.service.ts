@@ -8,12 +8,12 @@ import { AuthService } from '../../../core/auth/auth.service';
 
 interface StockQueryParams {
   huilerieId: number;
-  referenceId: number;
+  lotId: number;
 }
 
 export interface StockFilter {
   type?: StockMovement['typeMouvement'] | 'ALL';
-  referenceId?: number | null;
+  lotId?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -61,8 +61,7 @@ export class StockManagementService {
 
   createMovement(payload: {
     huilerieId: number;
-    referenceId: number;
-    quantite: number;
+    lotId: number;
     commentaire: string;
     dateMouvement: string;
     typeMouvement: StockMovement['typeMouvement'];
@@ -74,18 +73,19 @@ export class StockManagementService {
     );
   }
 
-  getAvailableQuantity(huilerieId: number, referenceId: number): number {
+  getAvailableQuantity(huilerieId: number, lotId: number): number {
     return this.movementsSubject.value
       .filter(
         movement =>
           movement.huilerieId === huilerieId &&
-          movement.referenceId === referenceId,
+          movement.lotId === lotId,
       )
       .reduce((total, movement) => {
-        if (movement.typeMouvement === 'DEPARTURE') {
-          return total - movement.quantite;
+        const quantity = Number(movement.quantite ?? 0);
+        if (movement.typeMouvement === 'TRANSFERT') {
+          return total - quantity;
         }
-        return total + movement.quantite;
+        return total + quantity;
       }, 0);
   }
 
@@ -93,8 +93,7 @@ export class StockManagementService {
     id: number,
     payload: {
       huilerieId: number;
-      referenceId: number;
-      quantite: number;
+      lotId: number;
       commentaire: string;
       dateMouvement: string;
       typeMouvement: StockMovement['typeMouvement'];
@@ -144,7 +143,7 @@ export class StockManagementService {
       map(items =>
         items.filter(item => {
           const typeMatch = !filter.type || filter.type === 'ALL' || item.typeMouvement === filter.type;
-          const refMatch = !filter.referenceId || item.referenceId === filter.referenceId;
+          const refMatch = !filter.lotId || item.lotId === filter.lotId;
           return typeMatch && refMatch;
         }),
       ),);

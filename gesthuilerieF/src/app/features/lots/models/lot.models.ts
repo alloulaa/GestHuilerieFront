@@ -6,6 +6,8 @@ export interface LotOlives {
   origine: string;
   dateRecolte: string;
   dateReception: string;
+  fournisseurNom?: string;
+  fournisseurCIN?: string;
   dureeStockageAvantBroyage: number;
   quantiteInitiale: number;
   quantiteRestante: number;
@@ -40,12 +42,15 @@ export interface LotTraceability {
   origine: string;
   quantiteInitiale: number;
   quantiteRestante: number;
-  pesees: {
+  pesees?: {
     idPesee: number;
     date: string;
-    poidsBrut: number;
-    poidsTare: number;
-    poidsNet: number;
+    pesee: number;
+  }[];
+  arrivages?: {
+    idLotArrivage: number;
+    date: string;
+    pesee: number;
   }[];
   analyses: {
     idAnalyse: number;

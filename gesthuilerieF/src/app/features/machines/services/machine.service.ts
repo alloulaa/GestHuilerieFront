@@ -138,7 +138,25 @@ export class MachineService {
   }
 
   delete(idMachine: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${idMachine}`);
+    return this.deactivate(idMachine).pipe(map(() => void 0));
+  }
+
+  activate(idMachine: number): Observable<Machine> {
+    return forkJoin({
+      machine: this.http.put<MachineApiDto>(`${this.apiUrl}/${idMachine}/activer`, {}),
+      huileries: this.huilerieService.getAll(),
+    }).pipe(
+      map(({ machine, huileries }) => this.fromApi(machine, huileries)),
+    );
+  }
+
+  deactivate(idMachine: number): Observable<Machine> {
+    return forkJoin({
+      machine: this.http.put<MachineApiDto>(`${this.apiUrl}/${idMachine}/desactiver`, {}),
+      huileries: this.huilerieService.getAll(),
+    }).pipe(
+      map(({ machine, huileries }) => this.fromApi(machine, huileries)),
+    );
   }
 
   private fromApi(machine: MachineApiDto, huileries: Huilerie[]): Machine {

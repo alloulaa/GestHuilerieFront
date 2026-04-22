@@ -29,7 +29,6 @@
           <thead>
             <tr>
               <th>Réference lot</th>
-              <th>Varieté</th>
               <th>Origine</th>
               <th>Qte Initiale</th>
               <th>Qte Restante</th>
@@ -44,7 +43,6 @@
             </tr>
             <tr *ngFor="let lot of filteredLots()" class="row-hover">
               <td>{{ lotReference(lot) }}</td>
-              <td>{{ lot.varieteOlive }}</td>
               <td>{{ lot.origine }}</td>
               <td>{{ lot.quantiteInitiale }} kg</td>
               <td>{{ lot.quantiteRestante }} kg</td>

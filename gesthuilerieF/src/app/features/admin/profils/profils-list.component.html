@@ -10,7 +10,6 @@
 
       <div class="header-tools">
         <button class="icon-btn" type="button" title="Actualiser" (click)="loadProfils()">⟳</button>
-        <button class="icon-btn" type="button" title="Charger tous" (click)="loadAllProfils()">🔄</button>
         <button class="icon-btn" type="button" title="Ajouter" (click)="showCreateForm = !showCreateForm">＋</button>
 
         <div class="search-wrap">
@@ -83,15 +82,7 @@
               <button class="btn-icon action-edit" type="button" title="Modifier" aria-label="Modifier profil"
                 (click)="onEdit(profil)">&#9998;</button>
               <button class="btn-icon action-delete" type="button" title="Supprimer" aria-label="Supprimer profil"
-                (click)="onDelete(profil.idProfil)">
-                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M3 6h18" />
-                  <path d="M8 6V4h8v2" />
-                  <path d="M6 6l1 14h10l1-14" />
-                  <path d="M10 11v6" />
-                  <path d="M14 11v6" />
-                </svg>
-              </button>
+                (click)="onDelete(profil.idProfil)" *ngIf="profil.nom !== 'ADMIN'">🗑️</button>
             </td>
           </tr>
           <tr *ngIf="!isLoading && paginatedProfils.length === 0">

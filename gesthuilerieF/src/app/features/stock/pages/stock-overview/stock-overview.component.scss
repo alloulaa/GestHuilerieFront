@@ -90,6 +90,11 @@ th {
     background: rgba(118, 132, 87, 0.06);
 }
 
+.lot-references-cell {
+    white-space: normal;
+    min-width: 280px;
+}
+
 .empty-row {
     text-align: center;
     color: var(--color-basic-700);

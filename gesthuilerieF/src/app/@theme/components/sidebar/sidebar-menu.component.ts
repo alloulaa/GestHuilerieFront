@@ -27,14 +27,15 @@ export class SidebarMenuComponent {
     const titleToModule: { [key: string]: string } = {
       'Dashboard': 'DASHBOARD',
       'Réception': 'RECEPTION',
+      'Lots mouvement': 'STOCK_MOUVEMENT',
       'Guide de Production': 'GUIDE_PRODUCTION',
       'Machines': 'MACHINES',
       'Matières Premières': 'MATIERES_PREMIERES',
       'Stock': 'STOCK',
       'Traçabilité des Lots': 'LOTS_TRAÇABILITE',
+      'Campagnes Olives': 'CAMPAGNE_OLIVES',
       'Dashboard Admin': 'DASHBOARD_ADMIN',
       'Huileries': 'HUILERIES',
-      'Stock mouvement': 'STOCK_MOUVEMENT',
       'Gestion Paramétrage': 'COMPTES_PROFILS',
     };
 

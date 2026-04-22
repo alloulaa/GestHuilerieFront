@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -8,6 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { forkJoin } from 'rxjs';
+import { CampagneService } from '../../../campagnes/services/campagne.service';
+import { CampagneOlives } from '../../../campagnes/models/campagne.models';
 import { LotOlives } from '../../../lots/models/lot.models';
 import { CreatePeseeInput, LotManagementService } from '../../../lots/services/lot-management.service';
 import { Pesee } from '../../../stock/models/stock.models';
@@ -19,411 +21,503 @@ import { MatierePremiere } from '../../../matieres-premieres/models/raw-material
 import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
-  selector: 'app-reception-form',
-  standalone: true,
-  templateUrl: './reception-form.component.html',
-  styleUrls: ['./reception-form.component.scss'],
-  imports: [
-    CommonModule,
-    RouterModule,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-  ],
+    selector: 'app-reception-form',
+    standalone: true,
+    templateUrl: './reception-form.component.html',
+    styleUrls: ['./reception-form.component.scss'],
+    imports: [
+        CommonModule,
+        RouterModule,
+        ReactiveFormsModule,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatButtonModule,
+    ],
 })
-export class ReceptionFormComponent implements OnInit {
-  lots: LotOlives[] = [];
-  weighings: Pesee[] = [];
-  availableLotsForReception: LotOlives[] = [];
-  huileries: Huilerie[] = [];
-  matieresPremieres: MatierePremiere[] = [];
-  campagnes: string[] = [];
-  errorMessage = '';
-  showSaveSuccessPopup = false;
-  savedReception: Pesee | null = null;
+export class ReceptionFormComponent implements OnInit, OnChanges {
+    @Input() editingPesee: Pesee | null = null;
+    @Output() editCleared = new EventEmitter<void>();
 
-  readonly form;
+    lots: LotOlives[] = [];
+    weighings: Pesee[] = [];
+    availableLotsForReception: LotOlives[] = [];
+    huileries: Huilerie[] = [];
+    matieresPremieres: MatierePremiere[] = [];
+    campagnes: CampagneOlives[] = [];
+    errorMessage = '';
+    showSaveSuccessPopup = false;
+    savedReception: Pesee | null = null;
+    editingId: number | null = null;
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private lotManagementService: LotManagementService,
-    private weighingService: WeighingService,
-    private router: Router,
-    private huilerieService: HuilerieService,
-    private rawMaterialService: RawMaterialService,
-    private toastService: ToastService,
-  ) {
-    this.form = this.formBuilder.group({
-      datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
-      poidsBrut: [0, [Validators.required, Validators.min(0)]],
-      poidsTare: [0, [Validators.required, Validators.min(0)]],
-      poidsNet: [{ value: 0, disabled: true }, [Validators.required]],
-      lotMode: ['existing', [Validators.required]],
-      existingLotId: [null as number | null, [Validators.required]],
-      origine: ['', [Validators.required]],
-      varieteOlive: ['', [Validators.required]],
-      maturite: [''],
-      dateRecolte: [new Date().toISOString().slice(0, 10)],
-      dateReception: [new Date().toISOString().slice(0, 10)],
-      dureeStockageAvantBroyage: [1],
-      matierePremiereId: [null as number | null],
-      campagneId: [null as string | null],
-      huilerieId: [1, [Validators.required, Validators.min(1)]],
-    });
+    readonly form;
 
-    this.form.valueChanges.subscribe(values => {
-      const net = this.lotManagementService.calculatePoidsNet(
-        Number(values.poidsBrut ?? 0),
-        Number(values.poidsTare ?? 0),
-      );
-      this.form.get('poidsNet')?.setValue(net, { emitEvent: false });
-    });
+    constructor(
+        private formBuilder: FormBuilder,
+        private lotManagementService: LotManagementService,
+        private weighingService: WeighingService,
+        private router: Router,
+        private huilerieService: HuilerieService,
+        private rawMaterialService: RawMaterialService,
+        private toastService: ToastService,
+        private campagneService: CampagneService,
+    ) {
+        this.form = this.formBuilder.group({
+            datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
+            poidsBrut: [null, [Validators.required, Validators.min(1)]],
+            poidsTare: [0, [Validators.required, Validators.min(0)]],
+            poidsNet: [{ value: 0, disabled: true }, [Validators.required]],
+            lotMode: ['existing', [Validators.required]],
+            existingLotId: [null as number | null, [Validators.required]],
+            origine: ['', [Validators.required]],
+            varieteOlive: ['', [Validators.required]],
+            maturite: [''],
+            dateRecolte: [new Date().toISOString().slice(0, 10)],
+            dateReception: [new Date().toISOString().slice(0, 10)],
+            dureeStockageAvantBroyage: [1],
+            matierePremiereId: [null as number | null],
+            campagneId: [null as string | null],
+            huilerieId: [1, [Validators.required, Validators.min(1)]],
+            fournisseurNom: [''],
+            fournisseurCIN: [''],
+        });
 
-    this.form.get('lotMode')?.valueChanges.subscribe(mode => {
-      this.applyLotModeValidation(mode === 'new' ? 'new' : 'existing');
-    });
+        this.form.valueChanges.subscribe(values => {
+            const net = this.lotManagementService.calculatePoidsNet(
+                Number(values.poidsBrut ?? 0),
+                Number(values.poidsTare ?? 0),
+            );
+            this.form.get('poidsNet')?.setValue(net, { emitEvent: false });
+        });
 
-    this.form.get('existingLotId')?.valueChanges.subscribe(id => {
-      this.patchLotIdentityFromSelection(Number(id));
-    });
+        this.form.get('lotMode')?.valueChanges.subscribe(mode => {
+            this.applyLotModeValidation(mode === 'new' ? 'new' : 'existing');
+        });
 
-    this.applyLotModeValidation('existing');
-  }
+        this.form.get('existingLotId')?.valueChanges.subscribe(id => {
+            this.patchLotIdentityFromSelection(Number(id));
+        });
 
-  ngOnInit(): void {
-    forkJoin({
-      huileries: this.huilerieService.getAll(),
-      matieresPremieres: this.rawMaterialService.getAll(),
-    }).subscribe(({ huileries, matieresPremieres }) => {
-      this.huileries = huileries;
-      this.matieresPremieres = matieresPremieres;
-      
-      console.log('✅ Loaded huileries:', this.huileries);
-      console.log('✅ Loaded matieresPremieres:', this.matieresPremieres);
+        this.form.get('matierePremiereId')?.valueChanges.subscribe(id => {
+            this.syncHuilerieAndCampagneFromMatiere(Number(id));
+        });
 
-      const selectedHuilerieId = Number(this.form.get('huilerieId')?.value);
-      if (!this.huileries.some((h) => h.idHuilerie === selectedHuilerieId) && this.huileries.length > 0) {
-        this.form.patchValue({ huilerieId: this.huileries[0].idHuilerie });
-      }
+        // Chargement dynamique des campagnes selon la huilerie sélectionnée
+        this.form.get('huilerieId')?.valueChanges.subscribe(huilerieId => {
+            this.loadCampagnesForHuilerie(Number(huilerieId));
+        });
 
-      // Set default matière première
-      if (this.matieresPremieres.length > 0) {
-        const currentMatiereId = this.form.get('matierePremiereId')?.value;
-        console.log('Current matiereId:', currentMatiereId);
-        if (!currentMatiereId || !this.matieresPremieres.some((m) => m.idMatierePremiere === currentMatiereId)) {
-          const defaultMatiereId = this.matieresPremieres[0].idMatierePremiere;
-          console.log('Setting default matiereId to:', defaultMatiereId);
-          this.form.patchValue({ matierePremiereId: defaultMatiereId });
-        }
-      }
-    });
+        // Initialiser la liste au démarrage
+        this.loadCampagnesForHuilerie(Number(this.form.get('huilerieId')?.value) || 0);
 
-    this.lotManagementService.loadInitialData().subscribe(() => {
-      this.lotManagementService.lots$.subscribe(data => {
-        this.lots = data;
-        this.campagnes = this.buildCampaignSeasonsFromLots();
-        
-        console.log('✅ Loaded lots:', this.lots);
-        console.log('✅ Computed campagnes:', this.campagnes);
-        
-        // Set default campagne
-        if (this.campagnes.length > 0) {
-          const currentCampagne = this.form.get('campagneId')?.value;
-          console.log('Current campagne:', currentCampagne);
-          if (!currentCampagne || !this.campagnes.includes(currentCampagne)) {
-            const defaultCampagne = this.campagnes[0];
-            console.log('Setting default campagne to:', defaultCampagne);
-            this.form.patchValue({ campagneId: defaultCampagne });
-          }
-        }
-        
-        this.computeAvailableLots();
-        this.selectDefaultLot();
-      });
-
-      this.lotManagementService.weighings$.subscribe(data => {
-        this.weighings = data;
-        console.log('✅ Loaded weighings:', this.weighings);
-        this.computeAvailableLots();
-        this.selectDefaultLot();
-      });
-    });
-  }
-
-  isNewLotMode(): boolean {
-    return this.form.get('lotMode')?.value === 'new';
-  }
-
-  submit(): void {
-    this.errorMessage = '';
-    
-    console.log('=== DEBUG SUBMIT ===');
-    console.log('Form valid:', this.form.valid);
-    console.log('Form invalid:', this.form.invalid);
-    console.log('Form errors:', this.form.errors);
-    console.log('Form status:', this.form.status);
-    console.log('Form value:', this.form.value);
-    
-    // Check each control
-    Object.keys(this.form.controls).forEach(key => {
-      const control = this.form.get(key);
-      console.log(`${key}:`, {
-        value: control?.value,
-        valid: control?.valid,
-        invalid: control?.invalid,
-        errors: control?.errors,
-        touched: control?.touched,
-      });
-    });
-
-    if (this.form.invalid) {
-      console.log('❌ FORM INVALID - Marking all as touched');
-      this.form.markAllAsTouched();
-      this.toastService.error('Veuillez corriger les champs invalides avant de continuer.');
-      return;
+        this.applyLotModeValidation('existing');
     }
 
-    console.log('✅ FORM VALID - Proceeding with submit');
-    const raw = this.form.getRawValue();
+    ngOnChanges(changes: SimpleChanges): void {
+        if ('editingPesee' in changes && this.editingPesee) {
+            this.applyEditPesee(this.editingPesee);
+        }
+    }
 
-    const payload: CreatePeseeInput = {
-      datePesee: raw.datePesee ?? new Date().toISOString(),
-      poidsBrut: Number(raw.poidsBrut),
-      poidsTare: Number(raw.poidsTare),
-      huilerieId: Number(raw.huilerieId),
-      lotMode: raw.lotMode === 'new' ? 'new' : 'existing',
-      existingLotId: raw.existingLotId ? Number(raw.existingLotId) : undefined,
-      origine: String(raw.origine ?? ''),
-      varieteOlive: String(raw.varieteOlive ?? ''),
-      newLotDetails:
-        raw.lotMode === 'new'
-          ? {
+    get isEditMode(): boolean {
+        return this.editingId !== null;
+    }
+
+    private loadCampagnesForHuilerie(huilerieId: number, preferredCampagneReference?: string | null): void {
+        if (!huilerieId) {
+            this.campagnes = [];
+            this.form.patchValue({ campagneId: null });
+            return;
+        }
+        const huilerieNom = this.getHuilerieNomById(huilerieId);
+        this.campagneService.getAll(undefined, huilerieNom).subscribe(campagnes => {
+            this.campagnes = campagnes;
+            // Si la campagne sélectionnée n'est plus valide, on la réinitialise
+            const currentCampagne = this.form.get('campagneId')?.value;
+            const campagneRefs = this.campagnes.map(c => c.reference);
+            if (preferredCampagneReference && campagneRefs.includes(preferredCampagneReference)) {
+                this.form.patchValue({ campagneId: preferredCampagneReference }, { emitEvent: false });
+            } else if (!currentCampagne || !campagneRefs.includes(currentCampagne)) {
+                this.form.patchValue({ campagneId: this.campagnes[0]?.reference ?? null });
+            }
+        });
+    }
+
+    private getHuilerieNomById(huilerieId: number): string | undefined {
+        const huilerie = this.huileries.find(h => h.idHuilerie === huilerieId);
+        return huilerie?.nom;
+    }
+
+    ngOnInit(): void {
+        forkJoin({
+            huileries: this.huilerieService.getAll(),
+            matieresPremieres: this.rawMaterialService.getAll(),
+        }).subscribe(({ huileries, matieresPremieres }) => {
+            this.huileries = huileries;
+            this.matieresPremieres = matieresPremieres;
+
+            const selectedHuilerieId = Number(this.form.get('huilerieId')?.value);
+            if (!this.huileries.some((h) => h.idHuilerie === selectedHuilerieId) && this.huileries.length > 0) {
+                this.form.patchValue({ huilerieId: this.huileries[0].idHuilerie });
+            }
+
+            // Set default matière première
+            if (this.matieresPremieres.length > 0) {
+                const currentMatiereId = this.form.get('matierePremiereId')?.value;
+                if (!currentMatiereId || !this.matieresPremieres.some((m) => m.idMatierePremiere === currentMatiereId)) {
+                    const defaultMatiereId = this.matieresPremieres[0].idMatierePremiere;
+                    this.form.patchValue({ matierePremiereId: defaultMatiereId });
+                }
+            }
+
+            const selectedMatiereId = Number(this.form.get('matierePremiereId')?.value ?? 0);
+            if (selectedMatiereId > 0) {
+                this.syncHuilerieAndCampagneFromMatiere(selectedMatiereId);
+            }
+        });
+
+        this.lotManagementService.loadInitialData().subscribe(() => {
+            this.lotManagementService.lots$.subscribe(data => {
+                this.lots = data;
+                this.computeAvailableLots();
+                this.selectDefaultLot();
+            });
+
+            this.lotManagementService.weighings$.subscribe(data => {
+                this.weighings = data;
+                this.computeAvailableLots();
+                this.selectDefaultLot();
+            });
+        });
+    }
+
+    isNewLotMode(): boolean {
+        return this.form.get('lotMode')?.value === 'new';
+    }
+
+    submit(): void {
+        this.errorMessage = '';
+
+        if (this.form.invalid) {
+            this.form.markAllAsTouched();
+            this.toastService.error('Veuillez corriger les champs invalides avant de continuer.');
+            return;
+        }
+
+        const raw = this.form.getRawValue();
+
+        const matiere = this.matieresPremieres.find(m => m.idMatierePremiere === raw.matierePremiereId);
+        const campagne = this.campagnes.find(c => c.reference === raw.campagneId);
+
+        const payload: CreatePeseeInput = {
+            datePesee: raw.datePesee ?? new Date().toISOString(),
+            pesee: Number(raw.poidsBrut),
+            poidsBrut: Number(raw.poidsBrut),
+            poidsTare: Number(raw.poidsTare),
+            huilerieId: Number(raw.huilerieId),
+            origine: String(raw.origine ?? ''),
+            varieteOlive: String(raw.varieteOlive ?? ''),
+            fournisseurNom: String(raw.fournisseurNom ?? ''),
+            fournisseurCIN: String(raw.fournisseurCIN ?? ''),
             maturite: String(raw.maturite ?? ''),
             dateRecolte: String(raw.dateRecolte ?? ''),
             dateReception: String(raw.dateReception ?? ''),
             dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
-            matierePremiereId: Number(raw.matierePremiereId ?? this.matieresPremieres[0]?.idMatierePremiere ?? 1),
-            campagneId: this.resolveCampaignSeason(
-              String(raw.campagneId ?? ''),
-              String(raw.dateRecolte ?? ''),
-              String(raw.dateReception ?? ''),
-            ),
-          }
-          : undefined,
-    };
+            matierePremiereReference: matiere?.reference ?? '',
+            campagneReference: campagne?.reference ?? '',
+        };
 
-    this.lotManagementService.createPesee(payload).subscribe({
-      next: result => {
-        this.savedReception = result;
-        this.showSaveSuccessPopup = false;
-        this.toastService.success('Reception enregistree avec succes.');
-        this.router.navigateByUrl('/pages/reception');
-      },
+        const request$ = this.isEditMode && this.editingId !== null
+            ? this.lotManagementService.updatePesee(this.editingId, payload)
+            : this.lotManagementService.createPesee(payload);
 
-      error: errorResponse => {
-        console.log('BACKEND ERROR =', errorResponse);
-        console.log('BACKEND ERROR BODY =', errorResponse?.error);
+        request$.subscribe({
+            next: result => {
+                if (this.isEditMode) {
+                    this.toastService.success('Réception mise à jour avec succès.');
+                    this.clearEditState();
+                    return;
+                }
 
-        this.errorMessage =
-          errorResponse?.error?.message ??
-          errorResponse?.error?.error ??
-          errorResponse?.message ??
-          'Erreur de validation.';
-        this.toastService.error(this.errorMessage);
-      },
-    });
-  }
-
-  onPopupGeneratePdf(): void {
-    if (this.savedReception?.reference) {
-      this.generateReceptionPdf(this.savedReception.reference);
+                this.savedReception = result;
+                this.showSaveSuccessPopup = true;
+                this.toastService.success('Réception enregistrée avec succès.');
+                // Ne pas rediriger, afficher le popup pour téléchargement PDF
+            },
+            error: errorResponse => {
+                this.errorMessage =
+                    errorResponse?.error?.message ??
+                    errorResponse?.error?.error ??
+                    errorResponse?.message ??
+                    'Erreur de validation.';
+                this.toastService.error(this.errorMessage);
+            },
+        });
     }
-    this.closePopupAndGoToList();
-  }
 
-  onPopupSkipPdf(): void {
-    this.closePopupAndGoToList();
-  }
+    cancelEdit(): void {
+        this.clearEditState();
+    }
 
-  private closePopupAndGoToList(): void {
-    this.showSaveSuccessPopup = false;
-    this.router.navigateByUrl('/pages/reception');
-  }
+    onPopupGeneratePdf(): void {
+        this.generateReceptionPdf();
+        this.closePopupAndGoToList();
+    }
 
-  private generateReceptionPdf(reference: string): void {
-    this.weighingService.generateBonPeseePdf(reference).subscribe({
-      next: blob => {
-        const pdfUrl = window.URL.createObjectURL(blob);
-        const popup = window.open(pdfUrl, '_blank');
+    onPopupSkipPdf(): void {
+        this.closePopupAndGoToList();
+    }
 
-        if (!popup) {
-          window.URL.revokeObjectURL(pdfUrl);
-          return;
+    private closePopupAndGoToList(): void {
+        this.showSaveSuccessPopup = false;
+        this.router.navigateByUrl('/pages/reception');
+    }
+
+    private clearEditState(): void {
+        this.editingId = null;
+        this.errorMessage = '';
+        this.editCleared.emit();
+
+        const defaultHuilerieId = this.huileries[0]?.idHuilerie ?? 1;
+        this.form.reset({
+            datePesee: new Date().toISOString().slice(0, 16),
+            poidsBrut: null,
+            poidsTare: 0,
+            poidsNet: 0,
+            lotMode: 'existing',
+            existingLotId: null,
+            origine: '',
+            varieteOlive: '',
+            maturite: '',
+            dateRecolte: new Date().toISOString().slice(0, 10),
+            dateReception: new Date().toISOString().slice(0, 10),
+            dureeStockageAvantBroyage: 1,
+            matierePremiereId: this.matieresPremieres[0]?.idMatierePremiere ?? null,
+            campagneId: null,
+            huilerieId: defaultHuilerieId,
+            fournisseurNom: '',
+            fournisseurCIN: '',
+        });
+    }
+
+    private generateReceptionPdf(): void {
+        const lotId = this.savedReception?.lotId || this.savedReception?.idLotArrivage;
+        if (!lotId) {
+            this.toastService.error('Impossible de générer le PDF : identifiant du lot manquant.');
+            return;
+        }
+        this.weighingService.generateBonPeseePdf(lotId).subscribe({
+            next: blob => {
+                const pdfUrl = window.URL.createObjectURL(blob);
+                const popup = window.open(pdfUrl, '_blank');
+
+                if (!popup) {
+                    window.URL.revokeObjectURL(pdfUrl);
+                    return;
+                }
+
+                popup.addEventListener('load', () => {
+                    popup.focus();
+                    popup.print();
+                    window.URL.revokeObjectURL(pdfUrl);
+                });
+            },
+            error: () => {
+                this.errorMessage = 'Impossible de generer le PDF.';
+                this.toastService.error(this.errorMessage);
+            },
+        });
+    }
+
+    private applyLotModeValidation(mode: 'existing' | 'new'): void {
+        const existingLotControl = this.form.get('existingLotId');
+        const newLotFields = [
+            'maturite',
+            'dateRecolte',
+            'dateReception',
+            'dureeStockageAvantBroyage',
+            'matierePremiereId',
+            'campagneId',
+        ];
+
+        if (mode === 'existing') {
+            existingLotControl?.setValidators([Validators.required]);
+            newLotFields.forEach(field => {
+                const control = this.form.get(field);
+                control?.clearValidators();
+                control?.updateValueAndValidity({ emitEvent: false });
+            });
+        } else {
+            existingLotControl?.clearValidators();
+            this.form.get('maturite')?.setValidators([Validators.required]);
+            this.form.get('dateRecolte')?.setValidators([Validators.required]);
+            this.form.get('dateReception')?.setValidators([Validators.required]);
+            this.form.get('dureeStockageAvantBroyage')?.setValidators([Validators.required, Validators.min(0)]);
+            const matiereControl = this.form.get('matierePremiereId');
+            const campagneControl = this.form.get('campagneId');
+            matiereControl?.setValidators([Validators.required, Validators.min(1)]);
+            campagneControl?.setValidators([Validators.required]);
+            newLotFields.forEach(field => {
+                this.form.get(field)?.updateValueAndValidity({ emitEvent: false });
+            });
+        }
+        existingLotControl?.updateValueAndValidity({ emitEvent: false });
+    }
+
+    private patchLotIdentityFromSelection(lotId: number): void {
+        if (this.isNewLotMode()) {
+            return;
+        }
+        const lot = this.lots.find(item => item.idLot === lotId);
+        if (!lot) {
+            return;
+        }
+        this.form.patchValue(
+            {
+                origine: lot.origine,
+                varieteOlive: lot.varieteOlive,
+            },
+            { emitEvent: false },
+        );
+    }
+
+    private syncHuilerieAndCampagneFromMatiere(matiereId: number): void {
+        if (!Number.isFinite(matiereId) || matiereId <= 0) {
+            return;
         }
 
-        popup.addEventListener('load', () => {
-          popup.focus();
-          popup.print();
-          window.URL.revokeObjectURL(pdfUrl);
-        });
-      },
-      error: () => {
-        this.errorMessage = 'Impossible de generer le PDF.';
-        this.toastService.error(this.errorMessage);
-      },
-    });
-  }
+        const matiere = this.matieresPremieres.find((item) => Number(item.idMatierePremiere) === matiereId);
+        if (!matiere) {
+            return;
+        }
 
-  private applyLotModeValidation(mode: 'existing' | 'new'): void {
-    console.log('🔄 applyLotModeValidation called with mode:', mode);
-    
-    const existingLotControl = this.form.get('existingLotId');
-    const newLotFields = [
-      'maturite',
-      'dateRecolte',
-      'dateReception',
-      'dureeStockageAvantBroyage',
-      'matierePremiereId',
-      'campagneId',
-    ];
+        const resolvedHuilerieId = this.resolveHuilerieIdFromMatiere(matiere);
+        if (!resolvedHuilerieId) {
+            return;
+        }
 
-    if (mode === 'existing') {
-      console.log('Setting existing lot mode validators');
-      existingLotControl?.setValidators([Validators.required]);
+        const currentHuilerieId = Number(this.form.get('huilerieId')?.value ?? 0);
+        if (currentHuilerieId === resolvedHuilerieId) {
+            this.loadCampagnesForHuilerie(resolvedHuilerieId);
+            return;
+        }
 
-      newLotFields.forEach(field => {
-        const control = this.form.get(field);
-        control?.clearValidators();
-        control?.updateValueAndValidity({ emitEvent: false });
-      });
-    } else {
-      console.log('Setting new lot mode validators');
-      existingLotControl?.clearValidators();
-
-      this.form.get('maturite')?.setValidators([Validators.required]);
-      this.form.get('dateRecolte')?.setValidators([Validators.required]);
-      this.form.get('dateReception')?.setValidators([Validators.required]);
-      this.form.get('dureeStockageAvantBroyage')?.setValidators([Validators.required, Validators.min(0)]);
-      
-      const matiereControl = this.form.get('matierePremiereId');
-      const campagneControl = this.form.get('campagneId');
-      
-      matiereControl?.setValidators([Validators.required, Validators.min(1)]);
-      campagneControl?.setValidators([Validators.required]);
-      
-      console.log('matiere value:', matiereControl?.value, 'campagne value:', campagneControl?.value);
-
-      newLotFields.forEach(field => {
-        this.form.get(field)?.updateValueAndValidity({ emitEvent: false });
-      });
+        this.form.patchValue({ huilerieId: resolvedHuilerieId });
     }
 
-    existingLotControl?.updateValueAndValidity({ emitEvent: false });
-    
-    console.log('After applyLotModeValidation - Form valid:', this.form.valid);
-  }
+    private resolveHuilerieIdFromMatiere(matiere: MatierePremiere): number | null {
+        const directHuilerieId = Number(matiere.huilerieId ?? 0);
+        if (directHuilerieId > 0) {
+            return directHuilerieId;
+        }
 
-  private patchLotIdentityFromSelection(lotId: number): void {
-    if (this.isNewLotMode()) {
-      return;
+        const huilerieNom = String(matiere.huilerieNom ?? '').trim().toLowerCase();
+        if (!huilerieNom) {
+            return null;
+        }
+
+        const match = this.huileries.find((h) => String(h.nom ?? '').trim().toLowerCase() === huilerieNom);
+        return match?.idHuilerie ?? null;
     }
 
-    const lot = this.lots.find(item => item.idLot === lotId);
-    if (!lot) {
-      return;
+    private applyEditPesee(pesee: Pesee): void {
+        const idLot = Number(pesee?.lotId ?? 0);
+        if (!idLot) {
+            return;
+        }
+
+        this.editingId = idLot;
+
+        const lot = this.lots.find((item) => Number(item.idLot) === Number(pesee.lotId));
+        const matiereId = this.resolveMatiereIdFromReference(pesee.matierePremiereReference);
+        const huilerieId = Number(pesee.huilerieId ?? lot?.huilerieId ?? this.form.get('huilerieId')?.value ?? 1);
+        const campagneReference = String(pesee.campagneReference ?? '').trim() || null;
+
+        this.form.patchValue({
+            datePesee: String(pesee.datePesee ?? '').slice(0, 16),
+            poidsBrut: Number(pesee.poidsBrut ?? pesee.pesee ?? 0),
+            poidsTare: Number(pesee.poidsTare ?? 0),
+            origine: String(lot?.origine ?? this.form.get('origine')?.value ?? ''),
+            varieteOlive: String(lot?.varieteOlive ?? this.form.get('varieteOlive')?.value ?? ''),
+            maturite: String(lot?.maturite ?? this.form.get('maturite')?.value ?? ''),
+            dateRecolte: String(lot?.dateRecolte ?? this.form.get('dateRecolte')?.value ?? ''),
+            dateReception: String(lot?.dateReception ?? this.form.get('dateReception')?.value ?? ''),
+            dureeStockageAvantBroyage: Number(lot?.dureeStockageAvantBroyage ?? this.form.get('dureeStockageAvantBroyage')?.value ?? 1),
+            matierePremiereId: matiereId,
+            campagneId: campagneReference,
+            fournisseurNom: String(pesee.fournisseurNom ?? lot?.fournisseurNom ?? ''),
+            fournisseurCIN: String(pesee.fournisseurCIN ?? lot?.fournisseurCIN ?? ''),
+            huilerieId,
+        } as any);
+
+        this.loadCampagnesForHuilerie(huilerieId, campagneReference);
     }
 
-    this.form.patchValue(
-      {
-        origine: lot.origine,
-        varieteOlive: lot.varieteOlive,
-      },
-      { emitEvent: false },
-    );
-  }
+    private resolveMatiereIdFromReference(reference: string | null | undefined): number | null {
+        const normalizedReference = String(reference ?? '').trim().toLowerCase();
+        if (!normalizedReference) {
+            return null;
+        }
 
-  private selectDefaultLot(): void {
-    if (this.isNewLotMode() || this.availableLotsForReception.length === 0) {
-      return;
+        const match = this.matieresPremieres.find((item) =>
+            String(item.reference ?? '').trim().toLowerCase() === normalizedReference,
+        );
+
+        return match?.idMatierePremiere ?? null;
     }
 
-    const availableLot = this.availableLotsForReception[0];
-
-    if (availableLot) {
-      this.form.patchValue(
-        {
-          existingLotId: availableLot.idLot,
-          origine: availableLot.origine,
-          varieteOlive: availableLot.varieteOlive,
-        },
-        { emitEvent: false },
-      );
-      return;
+    private selectDefaultLot(): void {
+        if (this.isNewLotMode() || this.availableLotsForReception.length === 0) {
+            return;
+        }
+        const availableLot = this.availableLotsForReception[0];
+        if (availableLot) {
+            this.form.patchValue(
+                {
+                    existingLotId: availableLot.idLot,
+                    origine: availableLot.origine,
+                    varieteOlive: availableLot.varieteOlive,
+                },
+                { emitEvent: false },
+            );
+            return;
+        }
+        this.form.patchValue({ lotMode: 'new', existingLotId: null }, { emitEvent: false });
+        this.applyLotModeValidation('new');
     }
 
-    this.form.patchValue({ lotMode: 'new', existingLotId: null }, { emitEvent: false });
-    this.applyLotModeValidation('new');
-  }
-
-  private computeAvailableLots(): void {
-    const receivedLotIds = new Set(this.weighings.map((pesee) => Number(pesee.lotId)).filter((id) => !Number.isNaN(id)));
-    this.availableLotsForReception = this.lots.filter((lot) => !receivedLotIds.has(Number(lot.idLot)));
-  }
-
-  private buildCampaignSeasonsFromLots(): string[] {
-    const seasonsFromDates = this.lots
-      .flatMap((lot) => [lot.dateRecolte, lot.dateReception])
-      .map((value) => this.toCampaignSeason(value))
-      .filter((season): season is string => !!season);
-
-    const currentSeason = this.toCampaignSeason(new Date().toISOString().slice(0, 10));
-    const seasons = seasonsFromDates.length > 0 ? seasonsFromDates : [currentSeason];
-
-    return Array.from(new Set(seasons)).sort((a, b) => b.localeCompare(a));
-  }
-
-  private toCampaignSeason(value: string | null | undefined): string {
-    if (!value) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      return month >= 9 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+    private computeAvailableLots(): void {
+        const receivedLotIds = new Set(this.weighings.map((pesee) => Number(pesee.lotId)).filter((id) => !Number.isNaN(id)));
+        this.availableLotsForReception = this.lots.filter((lot) => !receivedLotIds.has(Number(lot.idLot)));
     }
 
-    const year = Number(String(value).slice(0, 4));
-    const month = Number(String(value).slice(5, 7));
-
-    if (!Number.isFinite(year) || year < 2000) {
-      const now = new Date();
-      const nowYear = now.getFullYear();
-      const nowMonth = now.getMonth() + 1;
-      return nowMonth >= 9 ? `${nowYear}/${nowYear + 1}` : `${nowYear - 1}/${nowYear}`;
+    private buildCampaignSeasonsFromLots(): string[] {
+        const seasonsFromDates = this.lots
+            .flatMap((lot) => [lot.dateRecolte, lot.dateReception])
+            .map((value) => this.toCampaignSeason(value))
+            .filter((season): season is string => !!season);
+        const currentSeason = this.toCampaignSeason(new Date().toISOString().slice(0, 10));
+        const seasons = seasonsFromDates.length > 0 ? seasonsFromDates : [currentSeason];
+        return Array.from(new Set(seasons)).sort((a, b) => b.localeCompare(a));
     }
 
-    return Number.isFinite(month) && month >= 9 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
-  }
-
-  private resolveCampaignSeason(candidate: string, dateRecolte: string, dateReception: string): string {
-    if (/^\d{4}\/\d{4}$/.test(candidate)) {
-      return candidate;
+    private toCampaignSeason(value: string | null | undefined): string {
+        if (!value) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            return month >= 9 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+        }
+        const year = Number(String(value).slice(0, 4));
+        const month = Number(String(value).slice(5, 7));
+        if (!Number.isFinite(year) || year < 2000) {
+            const now = new Date();
+            const nowYear = now.getFullYear();
+            const nowMonth = now.getMonth() + 1;
+            return nowMonth >= 9 ? `${nowYear}/${nowYear + 1}` : `${nowYear - 1}/${nowYear}`;
+        }
+        return Number.isFinite(month) && month >= 9 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
     }
-
-    const asYear = Number(candidate);
-    if (Number.isFinite(asYear) && asYear >= 2000) {
-      return `${asYear - 1}/${asYear}`;
-    }
-
-    if (dateRecolte) {
-      return this.toCampaignSeason(dateRecolte);
-    }
-
-    if (dateReception) {
-      return this.toCampaignSeason(dateReception);
-    }
-
-    return this.campagnes[0] ?? this.toCampaignSeason(new Date().toISOString().slice(0, 10));
-  }
 }
+

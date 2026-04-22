@@ -21,6 +21,8 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     huileries: 'HUILERIES',
     dashboard: 'DASHBOARD',
     'stock-mouvement': 'STOCK_MOUVEMENT',
+    campagnes: 'CAMPAGNE_OLIVES',
+    campagne: 'CAMPAGNE_OLIVES',
     'gestion-parametrage': 'COMPTES_PROFILS',
     users: 'COMPTES_PROFILS'
   };
@@ -46,11 +48,12 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     },
     MACHINES: { read: '/pages/machines', create: '/pages/machines/management' },
     MATIERES_PREMIERES: { read: '/pages/matieres-premieres/consulter', create: '/pages/matieres-premieres/gerer' },
-    STOCK: { read: '/pages/stock', create: '/pages/stock/form' },
+    STOCK: { read: '/pages/stock', create: '/pages/stock' },
     LOTS_TRAÇABILITE: { read: '/pages/lots/traceability' },
     DASHBOARD_ADMIN: { read: '/pages/dashboard/admin' },
     HUILERIES: { read: '/pages/huileries/management', create: '/pages/huileries/management' },
-    STOCK_MOUVEMENT: { read: '/pages/stock/history', create: '/pages/stock/form' },
+    STOCK_MOUVEMENT: { read: '/pages/lots/movements/history', create: '/pages/lots/movements/create' },
+    CAMPAGNE_OLIVES: { read: '/pages/campagnes/consulter', create: '/pages/campagnes/gerer' },
     COMPTES_PROFILS: { read: '/admin/profils', create: '/admin/profils' },
     DASHBOARD: { read: '/pages/dashboard/production' }
   };
@@ -138,7 +141,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       return 'DASHBOARD_ADMIN';
     }
 
-    if (segments.includes('stock') && (segments.includes('history') || segments.includes('weighing') || segments.includes('form'))) {
+    if (segments.includes('lots') && segments.includes('movements')) {
       return 'STOCK_MOUVEMENT';
     }
 
@@ -160,6 +163,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       'MATIERES_PREMIERES',
       'STOCK',
       'STOCK_MOUVEMENT',
+      'CAMPAGNE_OLIVES',
       'LOTS_TRAÇABILITE',
       'HUILERIES',
       'DASHBOARD_ADMIN',

@@ -1,0 +1,107 @@
+<mat-card class="olive-card campagnes-card">
+    <mat-card-header>
+        <div class="heading-wrap">
+            <mat-card-title>Campagnes olives - Gestion</mat-card-title>
+            <p class="heading-subtitle">Creez, modifiez et suivez les campagnes par huilerie avec une vue claire.</p>
+        </div>
+    </mat-card-header>
+
+    <mat-card-content>
+        <div class="stats-strip">
+            <article class="stat-pill">
+                <span class="stat-label">Total campagnes</span>
+                <strong class="stat-value">{{ campagnes.length }}</strong>
+            </article>
+            <article class="stat-pill" *ngIf="isEditMode">
+                <span class="stat-label">Mode</span>
+                <strong class="stat-value">Edition</strong>
+            </article>
+        </div>
+
+        <form class="campaign-form" [formGroup]="form" (ngSubmit)="submit()">
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Annee</mat-label>
+                <input matInput formControlName="annee" placeholder="2026" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Huilerie</mat-label>
+                <select matNativeControl formControlName="huilerieId">
+                    <option [value]="null" disabled>Selectionner une huilerie</option>
+                    <option *ngFor="let huilerie of huileries" [value]="huilerie.idHuilerie">{{ huilerie.nom }}</option>
+                </select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Date debut</mat-label>
+                <input matInput type="date" formControlName="dateDebut" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Date fin</mat-label>
+                <input matInput type="date" formControlName="dateFin" />
+            </mat-form-field>
+
+            <div class="form-actions">
+                <button class="app-btn app-btn-primary" type="submit">
+                    {{ isEditMode ? 'Mettre a jour' : 'Enregistrer' }}
+                </button>
+                <button *ngIf="isEditMode" class="app-btn app-btn-ghost" type="button" (click)="cancelEdit()">
+                    Annuler
+                </button>
+            </div>
+
+        </form>
+
+        <div class="table-title-row">
+            <h3 class="table-title">Liste des campagnes</h3>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Annee</th>
+                        <th>Huilerie</th>
+                        <th>Date debut</th>
+                        <th>Date fin</th>
+                        <th class="actions-col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngIf="campagnes.length === 0">
+                        <td colspan="6" class="empty-row">Aucune campagne a afficher.</td>
+                    </tr>
+                    <tr *ngFor="let campagne of campagnes" class="row-hover">
+                        <td>{{ campagne.reference }}</td>
+                        <td>{{ campagne.annee || '-' }}</td>
+                        <td>{{ campagne.huilerieNom || ('#' + campagne.huilerieId) }}</td>
+                        <td>{{ campagne.dateDebut || '-' }}</td>
+                        <td>{{ campagne.dateFin || '-' }}</td>
+                        <td class="row-actions">
+                            <button class="btn-icon action-edit" type="button" title="Modifier" aria-label="Modifier"
+                                (click)="edit(campagne)">
+                                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M4 20h4l10-10-4-4L4 16v4z" />
+                                    <path d="M13 7l4 4" />
+                                </svg>
+                            </button>
+
+                            <button class="btn-icon action-delete" type="button" title="Supprimer"
+                                aria-label="Supprimer" (click)="delete(campagne)">
+                                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M3 6h18" />
+                                    <path d="M8 6V4h8v2" />
+                                    <path d="M6 6l1 14h10l1-14" />
+                                    <path d="M10 11v6" />
+                                    <path d="M14 11v6" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </mat-card-content>
+</mat-card>

@@ -128,29 +128,38 @@ export class OilMillsManagementComponent implements OnInit {
     });
   }
 
-  async askDeleteMachine(item: Machine): Promise<void> {
+  async askToggleMachineActivation(item: Machine): Promise<void> {
+    const isDesactivee = String(item?.etatMachine ?? '').toUpperCase() === 'DESACTIVEE';
+    const actionLabel = isDesactivee ? 'activer' : 'désactiver';
     const confirmed = await this.confirmDialogService.confirm({
-      title: 'Supprimer machine',
-      message: `Voulez-vous vraiment supprimer la machine ${item.nomMachine} ?`,
-      confirmText: 'Supprimer',
+      title: isDesactivee ? 'Activer machine' : 'Désactiver machine',
+      message: `Voulez-vous vraiment ${actionLabel} la machine ${item.nomMachine} ?`,
+      confirmText: isDesactivee ? 'Activer' : 'Désactiver',
       cancelText: 'Annuler',
-      intent: 'danger',
+      intent: isDesactivee ? 'primary' : 'danger',
     });
 
     if (!confirmed) {
       return;
     }
 
-    this.machineService.delete(item.idMachine).subscribe({
+    const request$ = isDesactivee
+      ? this.machineService.activate(item.idMachine)
+      : this.machineService.deactivate(item.idMachine);
+
+    request$.subscribe({
       next: () => {
         if (this.editingMachineId === item.idMachine) {
           this.resetMachineForm();
         }
         this.loadData();
-        this.toastService.success('Machine supprimée avec succès.');
+        this.toastService.success(isDesactivee
+          ? 'Machine activée avec succès.'
+          : 'Machine désactivée avec succès.');
       },
       error: (error: HttpErrorResponse) => {
-        this.toastService.error(this.getHttpErrorMessage(error, 'Echec de suppression de la machine.'));
+        this.toastService.error(this.getHttpErrorMessage(error,
+          isDesactivee ? 'Echec d\'activation de la machine.' : 'Echec de désactivation de la machine.'));
       },
     });
   }
@@ -174,6 +183,7 @@ export class OilMillsManagementComponent implements OnInit {
     if (value === 'EN_SERVICE') return 'En service';
     if (value === 'SURVEILLANCE') return 'Surveillance';
     if (value === 'MAINTENANCE') return 'Maintenance';
+    if (value === 'DESACTIVEE') return 'Désactivée';
     return value;
   }
 

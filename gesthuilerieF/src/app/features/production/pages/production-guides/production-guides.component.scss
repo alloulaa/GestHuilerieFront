@@ -105,7 +105,7 @@
   opacity: 0.8;
 }
 
-.field.field-invalid > span,
+.field.field-invalid>span,
 .value-item__input.field-invalid {
   color: #b03030;
 }
@@ -115,6 +115,13 @@
 .value-item__input.field-invalid input[nbInput] {
   border-color: rgba(176, 48, 48, 0.75) !important;
   box-shadow: 0 0 0 2px rgba(176, 48, 48, 0.14);
+}
+
+.value-item__input--dual {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
 }
 
 .field.field-invalid ::ng-deep button.select-button {
@@ -334,6 +341,36 @@
 .execution-detail-observations-card p {
   margin: 0;
   color: rgba(0, 0, 0, 0.82);
+}
+
+.real-values-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.real-value-item {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(126, 148, 64, 0.08);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.real-value-label {
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.real-value-content {
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 600;
 }
 
 .execution-cards-grid {

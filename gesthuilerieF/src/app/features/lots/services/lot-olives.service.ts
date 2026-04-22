@@ -6,6 +6,22 @@ import { environment } from 'src/environments/environment';
 import { AuthService } from '../../../core/auth/auth.service';
 import { StockService } from '../../stock/services/stock.service';
 
+export interface LotOlivesUpdatePayload {
+  variete?: string;
+  maturite?: string;
+  origine?: string;
+  dateRecolte?: string;
+  dateReception?: string;
+  fournisseurNom?: string;
+  fournisseurCIN?: string;
+  dureeStockageAvantBroyage?: number;
+  pesee?: number;
+  quantiteInitiale?: number;
+  quantiteRestante?: number;
+  matierePremiereReference?: string;
+  campagneReference?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -57,6 +73,16 @@ export class LotOlivesService {
     );
   }
 
+  update(idLot: number, payload: LotOlivesUpdatePayload): Observable<LotOlives> {
+    return this.http.put<LotOlives & { huilerieId?: number; huilerieNom?: string }>(`${this.apiUrl}/${idLot}`, payload).pipe(
+      map((item) => this.normalizeLot(item)),
+    );
+  }
+
+  delete(idLot: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${idLot}`);
+  }
+
   private normalizeLot(item: LotOlives & { huilerieId?: number; huilerieNom?: string }): LotOlives {
     return {
       ...item,
@@ -65,7 +91,10 @@ export class LotOlivesService {
     };
   }
 
-  private filterByCurrentUserHuilerie(items: LotOlives[], stocks: Array<{ referenceId?: number; lotReference?: string }>): LotOlives[] {
+  private filterByCurrentUserHuilerie(
+    items: LotOlives[],
+    stocks: Array<{ referenceId?: number; lotReference?: string; lotReferences?: string[]; quantiteDisponible?: number }>,
+  ): LotOlives[] {
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
     if (!currentHuilerieId) {
       if (!this.missingHuilerieContextLogged) {
@@ -79,33 +108,41 @@ export class LotOlivesService {
     const directScopedLots = lotsWithHuilerie.filter((item) => Number(item?.huilerieId ?? 0) === currentHuilerieId);
 
     // TODO: Remove this fallback when backend always returns huilerieId in /lots payload.
-    const lotIdsFromStocks = new Set(
+    const lotIdsWithAvailableStock = new Set(
       stocks
+        .filter((stock: any) => Number(stock?.quantiteDisponible ?? 0) > 0)
         .map((stock) => Number(stock?.referenceId ?? 0))
         .filter((id) => Number.isFinite(id) && id > 0),
     );
 
-    const lotRefsFromStocks = new Set(
+    const lotRefsWithAvailableStock = new Set(
       stocks
-        .map((stock) => this.normalizeReference(stock?.lotReference))
+        .filter((stock: any) => Number(stock?.quantiteDisponible ?? 0) > 0)
+        .flatMap((stock) => [stock?.lotReference, ...(stock?.lotReferences ?? [])])
+        .map((reference) => this.normalizeReference(reference))
         .filter((value) => !!value),
     );
 
-    const lotIdsFromStockRefs = new Set(
+    const lotIdsFromAvailableStockRefs = new Set(
       stocks
-        .map((stock) => this.extractLotIdFromReference(stock?.lotReference))
+        .filter((stock: any) => Number(stock?.quantiteDisponible ?? 0) > 0)
+        .flatMap((stock) => [stock?.lotReference, ...(stock?.lotReferences ?? [])])
+        .map((reference) => this.extractLotIdFromReference(reference))
         .filter((id): id is number => id != null && Number.isFinite(id) && id > 0),
     );
 
-    const byStockScope = items.filter((item) => {
+    const hasAvailableStock = (item: LotOlives): boolean => {
       const itemLotId = Number(item?.idLot ?? 0);
-      if (itemLotId > 0 && (lotIdsFromStocks.has(itemLotId) || lotIdsFromStockRefs.has(itemLotId))) {
+      if (itemLotId > 0 && (lotIdsWithAvailableStock.has(itemLotId) || lotIdsFromAvailableStockRefs.has(itemLotId))) {
         return true;
       }
 
       const itemReference = this.normalizeReference(item?.reference ?? null);
-      return !!itemReference && lotRefsFromStocks.has(itemReference);
-    });
+      return !!itemReference && lotRefsWithAvailableStock.has(itemReference);
+    };
+
+    const availableDirectScopedLots = directScopedLots.filter(hasAvailableStock);
+    const byStockScope = items.filter(hasAvailableStock);
 
     const scopedByStocksAndHuilerie = byStockScope.filter((item) =>
       Number(item?.huilerieId ?? currentHuilerieId) === currentHuilerieId,
@@ -122,23 +159,23 @@ export class LotOlivesService {
         directScopedLotIds: directScopedLots.map((lot) => lot.idLot),
         stockScopedLotIds: scopedByStocksAndHuilerie.map((lot) => lot.idLot),
         lotHuilerieIds: items.map((lot) => ({ idLot: lot.idLot, huilerieId: lot.huilerieId })),
-        stockLotIds: Array.from(lotIdsFromStocks),
-        stockLotRefs: Array.from(lotRefsFromStocks),
+        stockLotIds: Array.from(lotIdsWithAvailableStock),
+        stockLotRefs: Array.from(lotRefsWithAvailableStock),
       });
       return scopedByStocksAndHuilerie.length > 0 ? scopedByStocksAndHuilerie : byStockScope;
     }
 
     if (byStockScope.length === 0) {
       console.warn('[lot-olives-service] fallback produced 0 lots', {
-        lotIdsFromStocks: Array.from(lotIdsFromStocks),
-        lotIdsFromStockRefs: Array.from(lotIdsFromStockRefs),
-        lotRefsFromStocks: Array.from(lotRefsFromStocks),
+        lotIdsFromStocks: Array.from(lotIdsWithAvailableStock),
+        lotIdsFromStockRefs: Array.from(lotIdsFromAvailableStockRefs),
+        lotRefsFromStocks: Array.from(lotRefsWithAvailableStock),
         lotIdsFromApi: items.map((item) => Number(item?.idLot ?? 0)).filter((id) => id > 0),
         lotRefsFromApi: items.map((item) => this.normalizeReference(item?.reference ?? null)).filter((value) => !!value),
       });
     }
 
-    return directScopedLots.length > 0 ? directScopedLots : byStockScope;
+    return availableDirectScopedLots.length > 0 ? availableDirectScopedLots : byStockScope;
   }
 
   private extractLotIdFromReference(value: unknown): number | null {

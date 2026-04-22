@@ -1,108 +1,113 @@
-<mat-card class="olive-card">
-  <mat-card-header>
-    <mat-card-title>Reception - Nouvelle pesee</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    <form class="grid" [formGroup]="form" (ngSubmit)="submit()">
-      <mat-form-field appearance="outline">
-        <mat-label>Date pesee</mat-label>
-        <input matInput type="datetime-local" formControlName="datePesee" />
-      </mat-form-field>
+<mat-card class="olive-card reception-form-card">
+    <mat-card-header>
+        <div class="heading-wrap">
+            <mat-card-title>Réception - Nouvelle pesée</mat-card-title>
+            <p class="heading-subtitle">Enregistrez une réception rapidement avec toutes les informations de lot.</p>
+        </div>
+    </mat-card-header>
+    <mat-card-content>
+        <div class="stats-strip">
+            <article class="stat-pill">
+                <span class="stat-label">Matières premières</span>
+                <strong class="stat-value">{{ matieresPremieres.length }}</strong>
+            </article>
+            <article class="stat-pill">
+                <span class="stat-label">Campagnes actives</span>
+                <strong class="stat-value">{{ campagnes.length }}</strong>
+            </article>
+            <article class="stat-pill">
+                <span class="stat-label">Huileries</span>
+                <strong class="stat-value">{{ huileries.length }}</strong>
+            </article>
+        </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Poids brut (kg)</mat-label>
-        <input matInput type="number" formControlName="poidsBrut" />
-      </mat-form-field>
+        <form class="reception-form-grid" [formGroup]="form" (ngSubmit)="submit()">
+            <ng-container *ngIf="showSaveSuccessPopup">
+                <div class="save-popup-backdrop">
+                    <div class="save-popup">
+                        <h3>Réception enregistrée</h3>
+                        <p>Le lot/arrivage a été ajouté avec succès.<br>Voulez-vous télécharger le bon de pesée&nbsp;?
+                        </p>
+                        <div class="popup-actions">
+                            <button mat-raised-button color="primary" type="button" (click)="onPopupGeneratePdf()">
+                                Télécharger le bon de pesée
+                            </button>
+                            <button mat-stroked-button type="button" (click)="onPopupSkipPdf()">Ignorer</button>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Poids tare (kg)</mat-label>
-        <input matInput type="number" formControlName="poidsTare" />
-      </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Date pesée</mat-label>
+                <input matInput type="datetime-local" formControlName="datePesee" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Matière première</mat-label>
+                <mat-select formControlName="matierePremiereId">
+                    <mat-option *ngFor="let mp of matieresPremieres" [value]="mp.idMatierePremiere">
+                        {{ mp.reference || ('#' + mp.idMatierePremiere) }} - {{ mp.nom }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Pesée totale (kg)</mat-label>
+                <input matInput type="number" formControlName="poidsBrut" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Maturité</mat-label>
+                <input matInput formControlName="maturite" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Date récolte</mat-label>
+                <input matInput type="date" formControlName="dateRecolte" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Durée stockage avant broyage (jours)</mat-label>
+                <input matInput type="number" formControlName="dureeStockageAvantBroyage" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Campagne</mat-label>
+                <mat-select formControlName="campagneId">
+                    <mat-option *ngFor="let campagne of campagnes" [value]="campagne.reference">
+                        {{ campagne.reference }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Origine</mat-label>
+                <input matInput formControlName="origine" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Variété</mat-label>
+                <input matInput formControlName="varieteOlive" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Fournisseur</mat-label>
+                <input matInput formControlName="fournisseurNom" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>CIN fournisseur</mat-label>
+                <input matInput formControlName="fournisseurCIN" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Huilerie</mat-label>
+                <mat-select formControlName="huilerieId">
+                    <mat-option *ngFor="let h of huileries" [value]="h.idHuilerie">
+                        {{ h.nom }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Poids net (auto)</mat-label>
-        <input matInput type="number" formControlName="poidsNet" readonly />
-      </mat-form-field>
+            <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Mode lot</mat-label>
-        <mat-select formControlName="lotMode">
-          <mat-option value="existing">Lot existant</mat-option>
-          <mat-option value="new">Nouveau lot</mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" *ngIf="!isNewLotMode()">
-        <mat-label>Lot existant</mat-label>
-        <mat-select formControlName="existingLotId">
-          <mat-option *ngFor="let lot of availableLotsForReception" [value]="lot.idLot">
-            #{{ lot.idLot }} - {{ lot.varieteOlive }} ({{ lot.origine }})
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Origine</mat-label>
-        <input matInput formControlName="origine" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Variete</mat-label>
-        <input matInput formControlName="varieteOlive" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
-        <mat-label>Maturite</mat-label>
-        <input matInput formControlName="maturite" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
-        <mat-label>Date recolte</mat-label>
-        <input matInput type="date" formControlName="dateRecolte" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
-        <mat-label>Date reception</mat-label>
-        <input matInput type="date" formControlName="dateReception" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
-        <mat-label>Duree stockage (jours)</mat-label>
-        <input matInput type="number" formControlName="dureeStockageAvantBroyage" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
-        <mat-label>Matiere premiere ID</mat-label>
-        <mat-select formControlName="matierePremiereId">
-          <mat-option *ngFor="let mp of matieresPremieres" [value]="mp.idMatierePremiere">
-            {{ mp.reference || ('#' + mp.idMatierePremiere) }} - {{ mp.nom }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" *ngIf="isNewLotMode()">
-        <mat-label>Campagne</mat-label>
-        <mat-select formControlName="campagneId">
-          <mat-option *ngFor="let c of campagnes" [value]="c">
-            {{ c }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Huilerie ID</mat-label>
-        <mat-select formControlName="huilerieId">
-          <mat-option *ngFor="let h of huileries" [value]="h.idHuilerie">
-            #{{ h.idHuilerie }} - {{ h.nom }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <div class="actions">
-        <button mat-raised-button color="primary" type="submit">Enregistrer</button>
-        <a mat-stroked-button [routerLink]="['/pages/reception']">Retour liste</a>
-      </div>
-
-    </form>
-  </mat-card-content>
+            <div class="actions">
+                <button mat-raised-button color="primary" type="submit">{{ isEditMode ? 'Mettre à jour' : 'Enregistrer'
+                    }}</button>
+                <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">Annuler
+                    édition</button>
+                <a mat-stroked-button [routerLink]="['/pages/reception']">Retour liste</a>
+            </div>
+        </form>
+    </mat-card-content>
 </mat-card>

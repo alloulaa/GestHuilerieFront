@@ -23,6 +23,7 @@ export interface ParametreEtape {
     uniteMesure: string;
     description: string;
     valeur: string;
+    valeurReelle?: string;
 }
 
 export interface GuideProductionCreateDTO {
@@ -46,7 +47,6 @@ export interface GuideProductionCreateDTO {
 export interface ExecutionProduction {
     idExecutionProduction: number;
     reference?: string;
-    codeLot?: string;
     dateDebut: string;
     dateFinPrevue: string;
     dateFinReelle: string | null;
@@ -57,16 +57,14 @@ export interface ExecutionProduction {
     guideProductionReference?: string;
     machineId: number;
     machineNom?: string;
-    lotOlivesId: number;
-    lotOlivesReference?: string;
-    lotOlivesVariete?: string;
-    matierePremiereId?: number;
-    matierePremiereNom?: string;
+    lotId: number;
+    lotReference?: string;
+    lotVariete?: string;
     produitFinalId?: number;
     produitFinalReference?: string | null;
     produitFinalCode?: string;
     produitFinalNomProduit?: string;
-    valeursReelles: ValeurReelleParametre[];
+    valeursReelles?: ValeurReelleParametre[];
     huilerieId?: number;
     huilerieNom?: string;
 }
@@ -76,7 +74,7 @@ export interface ExecutionProductionDTO extends ExecutionProduction {
 }
 
 export interface ExecutionProductionCreate {
-    codeLot: string;
+    reference: string;
     dateDebut: string;
     dateFinPrevue: string;
     dateFinReelle: string | null;
@@ -85,17 +83,13 @@ export interface ExecutionProductionCreate {
     observations: string;
     guideProductionId: number;
     machineId: number;
-    lotOlivesId: number;
-    matierePremiereId: number;
-    valeursReelles: Array<{
-        parametreEtapeId: number;
-        valeurReelle: string;
-    }>;
+    lotId: number;
 }
 
 export interface ValeurReelleParametre {
     idValeurReelleParametre?: number;
     parametreEtapeId: number;
     parametreEtapeNom?: string;
+    valeurEstime?: string;
     valeurReelle: string;
 }

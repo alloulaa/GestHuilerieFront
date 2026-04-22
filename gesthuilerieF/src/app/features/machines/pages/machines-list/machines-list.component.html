@@ -5,7 +5,7 @@
         <p class="eyebrow">Pilotage</p>
         <mat-card-title>Parc machines</mat-card-title>
       </div>
-      <p class="subtitle">Suivi en temps reel des etats, disponibilites et capacites de production.</p>
+      <p class="subtitle">Suivi en temps reel des etats et capacites de production.</p>
     </div>
     <a mat-flat-button color="primary" class="filters-cta" [routerLink]="['/pages/machines/form']">Ouvrir les
       filtres</a>
@@ -14,7 +14,8 @@
   <mat-card-content>
     <div class="filter-bar" *ngIf="isAdmin">
       <input [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom" placeholder="Filtrer par nom d'huilerie" />
-      <button mat-raised-button color="primary" class="filter-btn" type="button" (click)="applyAdminHuilerieFilter()">Filtrer</button>
+      <button mat-raised-button color="primary" class="filter-btn" type="button"
+        (click)="applyAdminHuilerieFilter()">Filtrer</button>
       <button mat-stroked-button type="button" (click)="resetAdminHuilerieFilter()">Réinitialiser</button>
     </div>
 
@@ -35,9 +36,9 @@
         <span class="kpi-label">Maintenance</span>
         <strong class="kpi-value">{{ maintenanceCount }}</strong>
       </article>
-      <article class="kpi-item soft">
-        <span class="kpi-label">Disponibles</span>
-        <strong class="kpi-value">{{ availableCount }}</strong>
+      <article class="kpi-item off">
+        <span class="kpi-label">Desactivee</span>
+        <strong class="kpi-value">{{ desactiveeCount }}</strong>
       </article>
     </div>
 
@@ -48,7 +49,6 @@
             <th>Machine</th>
             <th>Etat</th>
             <th>Capacite (kg/j)</th>
-            <th>Disponibilite</th>
           </tr>
         </thead>
         <tbody>
@@ -57,11 +57,9 @@
             <td><span class="badge" [ngClass]="statusClass(machine.etatMachine)">{{ statusLabel(machine.etatMachine)
                 }}</span></td>
             <td>{{ machine.capacite }}</td>
-            <td><span class="badge" [ngClass]="availabilityClass(machine.availability)">{{ machine.availability
-                }}</span></td>
           </tr>
           <tr *ngIf="machines.length === 0">
-            <td colspan="4" class="empty-state">Aucune machine disponible pour le moment.</td>
+            <td colspan="3" class="empty-state">Aucune machine disponible pour le moment.</td>
           </tr>
         </tbody>
       </table>

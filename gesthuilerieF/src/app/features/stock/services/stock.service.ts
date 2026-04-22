@@ -18,6 +18,14 @@ export class StockService {
     ) { }
 
     getAll(huilerieNom?: string): Observable<Stock[]> {
+        const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+
+        if (!this.authService.isCurrentUserAdmin() && currentHuilerieId) {
+            return this.http.get<unknown>(`${this.apiUrl}/huilerie/${currentHuilerieId}`).pipe(
+                map(response => this.filterByCurrentUserHuilerie(this.toStocks(response))),
+            );
+        }
+
         const params = this.buildHuilerieNomParams(huilerieNom);
 
         return this.http.get<unknown>(this.apiUrl, { params }).pipe(
@@ -27,6 +35,18 @@ export class StockService {
                     map(response => this.filterByCurrentUserHuilerie(this.toStocks(response))),
                 ),
             ),
+        );
+    }
+
+    findById(idStock: number): Observable<Stock> {
+        return this.http.get<unknown>(`${this.apiUrl}/${idStock}`).pipe(
+            map(response => this.toStocks(response)[0] ?? {
+                idStock,
+                huilerieId: 0,
+                typeStock: '',
+                referenceId: 0,
+                quantiteDisponible: 0,
+            }),
         );
     }
 
@@ -50,6 +70,10 @@ export class StockService {
             typeStock: String(item.typeStock ?? item.type_stock ?? ''),
             referenceId: Number(item.referenceId ?? item.reference_id ?? item.lot_id ?? 0),
             lotReference: String(item.lotReference ?? item.referenceLot ?? item.reference_lot ?? item.lotOlivesReference ?? item.lotOlives?.reference ?? item.lot?.reference ?? '').trim() || undefined,
+            lotReferences: Array.isArray(item.lotReferences)
+                ? item.lotReferences.map((value: unknown) => String(value ?? '').trim()).filter((value: string) => !!value)
+                : undefined,
+            matierePremiereId: item.matierePremiereId != null ? Number(item.matierePremiereId) : undefined,
             quantiteDisponible: Number(item.quantiteDisponible ?? item.quantite_disponible ?? 0),
         }));
     }

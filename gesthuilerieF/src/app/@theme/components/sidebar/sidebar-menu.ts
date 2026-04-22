@@ -17,7 +17,7 @@ export const MENU_ITEMS: NbMenuItem[] = [
         icon: 'list-outline',
         link: '/pages/reception/consulter',
       },
-      
+
       {
         title: 'Gérer',
         icon: 'settings-outline',
@@ -26,18 +26,18 @@ export const MENU_ITEMS: NbMenuItem[] = [
     ],
   },
   {
-     title: 'Stock mouvement',
+    title: 'Lots mouvement',
     icon: 'swap-outline',
     children: [
       {
         title: 'Consulter',
         icon: 'list-outline',
-        link: '/pages/stock/history',
+        link: '/pages/lots/movements/consulter',
       },
       {
         title: 'Gérer',
         icon: 'settings-outline',
-        link: '/pages/stock/form',
+        link: '/pages/lots/movements/gerer',
       },
     ],
   },
@@ -103,6 +103,22 @@ export const MENU_ITEMS: NbMenuItem[] = [
     title: 'Traçabilité des Lots',
     icon: 'pricetags-outline',
     link: '/pages/lots/traceability',
+  },
+  {
+    title: 'Campagnes Olives',
+    icon: 'calendar-outline',
+    children: [
+      {
+        title: 'Consulter',
+        icon: 'list-outline',
+        link: '/pages/campagnes/consulter',
+      },
+      {
+        title: 'Gérer',
+        icon: 'settings-outline',
+        link: '/pages/campagnes/gerer',
+      },
+    ],
   },
 
   {
