@@ -16,6 +16,10 @@ export class TraceabilityService {
     return this.http.get<LotTraceability>(`${this.apiUrl}/lot/${lotId}`).pipe(
       map(dto => ({
         ...dto,
+        varieteOlive: (dto as any).varieteOlive ?? (dto as any).variete,
+        methodeRecolte: (dto as any).methodeRecolte ?? (dto as any).methode_recolte,
+        typeSol: (dto as any).typeSol ?? (dto as any).type_sol,
+        tempsDepuisRecolteHeures: (dto as any).tempsDepuisRecolteHeures ?? (dto as any).temps_depuis_recolte_heures,
         cycleVie: (dto.cycleVie ?? []).map(event => ({
           ...event,
           etape: this.normalizeEtape(event.etape),

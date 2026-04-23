@@ -29,7 +29,9 @@
       <div class="form-grid">
         <label>
           Variété
-          <input nbInput fullWidth formControlName="varieteOlive" />
+          <nb-select fullWidth formControlName="varieteOlive">
+            <nb-option *ngFor="let option of varieteOptions" [value]="option">{{ option }}</nb-option>
+          </nb-select>
         </label>
         <label>
           Maturité
@@ -38,6 +40,28 @@
         <label>
           Origine
           <input nbInput fullWidth formControlName="origine" />
+        </label>
+        <label>
+          Region
+          <nb-select fullWidth formControlName="region">
+            <nb-option *ngFor="let option of regionOptions" [value]="option">{{ option }}</nb-option>
+          </nb-select>
+        </label>
+        <label>
+          Methode recolte
+          <nb-select fullWidth formControlName="methodeRecolte">
+            <nb-option *ngFor="let option of methodeRecolteOptions" [value]="option">{{ option }}</nb-option>
+          </nb-select>
+        </label>
+        <label>
+          Type sol
+          <nb-select fullWidth formControlName="typeSol">
+            <nb-option *ngFor="let option of typeSolOptions" [value]="option">{{ option }}</nb-option>
+          </nb-select>
+        </label>
+        <label>
+          Temps depuis recolte (heures)
+          <input nbInput fullWidth type="number" formControlName="tempsDepuisRecolteHeures" />
         </label>
         <label>
           Date récolte
@@ -81,6 +105,10 @@
     <div class="lot-meta">
       <div><strong>Référence lot:</strong> {{ lotReference(currentLot) }}</div>
       <div><strong>Varieté:</strong> {{ currentLot.varieteOlive }}</div>
+      <div><strong>Region:</strong> {{ currentLot.region || '-' }}</div>
+      <div><strong>Methode recolte:</strong> {{ currentLot.methodeRecolte || '-' }}</div>
+      <div><strong>Type sol:</strong> {{ currentLot.typeSol || '-' }}</div>
+      <div><strong>Temps depuis recolte:</strong> {{ currentLot.tempsDepuisRecolteHeures ?? '-' }} h</div>
       <div><strong>Quantite initiale:</strong> {{ currentLot.quantiteInitiale }} kg</div>
       <div><strong>Quantite restante:</strong> {{ currentLot.quantiteRestante }} kg</div>
     </div>
@@ -109,22 +137,22 @@
           <tr>
             <th>Référence analyse laboratoire</th>
             <th>Date</th>
-            <th>Acidité</th>
-            <th>Peroxyde</th>
+            <th>Acidité huile</th>
+            <th>Indice peroxyde</th>
+            <th>Polyphenols</th>
             <th>K232</th>
             <th>K270</th>
-            <th>Classe</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let analysis of analyses">
             <td>{{ analysisReference(analysis) }}</td>
             <td>{{ analysis.dateAnalyse }}</td>
-            <td>{{ analysis.acidite }}</td>
-            <td>{{ analysis.indicePeroxyde }}</td>
+            <td>{{ analysis.acidite_huile_pourcent }}</td>
+            <td>{{ analysis.indice_peroxyde_meq_o2_kg }}</td>
+            <td>{{ analysis.polyphenols_mg_kg }}</td>
             <td>{{ analysis.k232 }}</td>
             <td>{{ analysis.k270 }}</td>
-            <td>{{ analysis.classeQualiteFinale }}</td>
           </tr>
           <tr *ngIf="analyses.length === 0">
             <td colspan="7" class="empty-state">Aucune analyse laboratoire pour ce lot.</td>

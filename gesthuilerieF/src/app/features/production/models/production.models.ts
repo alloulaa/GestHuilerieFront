@@ -20,6 +20,7 @@ export interface EtapeProduction {
 export interface ParametreEtape {
     idParametreEtape?: number;
     nom: string;
+    codeParametre?: string;
     uniteMesure: string;
     description: string;
     valeur: string;
@@ -37,11 +38,23 @@ export interface GuideProductionCreateDTO {
         description: string;
         parametres: Array<{
             nom: string;
+            codeParametre?: string;
             uniteMesure: string;
             description: string;
             valeur: string;
         }>;
     }>;
+}
+
+export interface Prediction {
+    idPrediction?: number;
+    modePrediction: string;
+    qualitePredite?: string;
+    probabiliteQualite?: number;
+    rendementPreditPourcent?: number;
+    quantiteHuileRecalculeeLitres?: number;
+    executionProductionId?: number;
+    dateCreation?: string;
 }
 
 export interface ExecutionProduction {
@@ -53,6 +66,7 @@ export interface ExecutionProduction {
     statut: string;
     rendement: number;
     observations: string;
+    controleTemperature?: boolean;
     guideProductionId: number;
     guideProductionReference?: string;
     machineId: number;
@@ -65,6 +79,7 @@ export interface ExecutionProduction {
     produitFinalCode?: string;
     produitFinalNomProduit?: string;
     valeursReelles?: ValeurReelleParametre[];
+    predictions?: Prediction[];
     huilerieId?: number;
     huilerieNom?: string;
 }
@@ -81,6 +96,7 @@ export interface ExecutionProductionCreate {
     statut: string;
     rendement: number;
     observations: string;
+    controleTemperature?: boolean;
     guideProductionId: number;
     machineId: number;
     lotId: number;

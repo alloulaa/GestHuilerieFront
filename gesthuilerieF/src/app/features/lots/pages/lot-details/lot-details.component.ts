@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NbButtonModule, NbCardModule, NbInputModule } from '@nebular/theme';
+import { NbButtonModule, NbCardModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { LotOlives, AnalyseLaboratoire, TraceabilityEvent } from '../../models/lot.models';
 import { Pesee } from '../../../stock/models/stock.models';
 import { LotManagementService } from '../../services/lot-management.service';
@@ -13,13 +13,19 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LotOlivesService } from '../../services/lot-olives.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import {
+  METHODE_RECOLTE_OPTIONS,
+  REGION_OPTIONS,
+  TYPE_SOL_OPTIONS,
+  VARIETE_OPTIONS,
+} from '../../../../shared/constants/domain-options';
 
 @Component({
   selector: 'app-lot-details',
   templateUrl: './lot-details.component.html',
   styleUrls: ['./lot-details.component.scss'],
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, NbCardModule, NbButtonModule, NbInputModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, NbCardModule, NbButtonModule, NbInputModule, NbSelectModule],
 })
 export class LotDetailsComponent implements OnInit {
   lot: LotOlives | null = null;
@@ -28,6 +34,11 @@ export class LotDetailsComponent implements OnInit {
   analyses: AnalyseLaboratoire[] = [];
   traceabilityErrorMessage = '';
   editingMode = false;
+
+  readonly varieteOptions = VARIETE_OPTIONS;
+  readonly regionOptions = REGION_OPTIONS;
+  readonly methodeRecolteOptions = METHODE_RECOLTE_OPTIONS;
+  readonly typeSolOptions = TYPE_SOL_OPTIONS;
 
   form!: FormGroup;
 
@@ -48,6 +59,13 @@ export class LotDetailsComponent implements OnInit {
       varieteOlive: ['', [Validators.required]],
       maturite: [''],
       origine: ['', [Validators.required]],
+      region: [''],
+      methodeRecolte: [''],
+      typeSol: [''],
+      tempsDepuisRecolteHeures: [0, [Validators.min(0)]],
+      humiditePourcent: [0, [Validators.min(0), Validators.max(100)]],
+      aciditeOlivesPourcent: [0, [Validators.min(0), Validators.max(100)]],
+      tauxFeuillesPourcent: [0, [Validators.min(0), Validators.max(100)]],
       dateRecolte: [''],
       dateReception: [''],
       fournisseurNom: [''],
@@ -151,14 +169,21 @@ export class LotDetailsComponent implements OnInit {
     const raw = this.form.getRawValue();
     this.lotOlivesService.update(this.lot.idLot, {
       variete: String(raw.varieteOlive ?? '').trim(),
-      maturite: String(raw.maturite ?? '').trim(),
+      maturite_niveau_1_5: String(raw.maturite ?? '').trim(),
       origine: String(raw.origine ?? '').trim(),
+      region: String(raw.region ?? '').trim(),
+      methode_recolte: String(raw.methodeRecolte ?? '').trim(),
+      type_sol: String(raw.typeSol ?? '').trim(),
+      temps_depuis_recolte_heures: Number(raw.tempsDepuisRecolteHeures ?? 0),
+      humidite_pourcent: Number(raw.humiditePourcent ?? 0),
+      acidite_olives_pourcent: Number(raw.aciditeOlivesPourcent ?? 0),
+      taux_feuilles_pourcent: Number(raw.tauxFeuillesPourcent ?? 0),
       dateRecolte: String(raw.dateRecolte ?? '').trim(),
       dateReception: String(raw.dateReception ?? '').trim(),
       fournisseurNom: String(raw.fournisseurNom ?? '').trim(),
       fournisseurCIN: String(raw.fournisseurCIN ?? '').trim(),
-      dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage ?? 0),
-      pesee: Number(raw.quantiteInitiale ?? 0),
+      duree_stockage_jours: Number(raw.dureeStockageAvantBroyage ?? 0),
+      poids_olives_kg: Number(raw.quantiteInitiale ?? 0),
       quantiteInitiale: Number(raw.quantiteInitiale ?? 0),
       quantiteRestante: Number(raw.quantiteRestante ?? 0),
       matierePremiereReference: String(raw.matierePremiereReference ?? '').trim(),
@@ -236,6 +261,13 @@ export class LotDetailsComponent implements OnInit {
       varieteOlive: lot.varieteOlive ?? '',
       maturite: lot.maturite ?? '',
       origine: lot.origine ?? '',
+      region: lot.region ?? '',
+      methodeRecolte: lot.methodeRecolte ?? '',
+      typeSol: lot.typeSol ?? '',
+      tempsDepuisRecolteHeures: Number(lot.tempsDepuisRecolteHeures ?? 0),
+      humiditePourcent: Number(lot.humiditePourcent ?? 0),
+      aciditeOlivesPourcent: Number(lot.aciditeOlivesPourcent ?? 0),
+      tauxFeuillesPourcent: Number(lot.tauxFeuillesPourcent ?? 0),
       dateRecolte: lot.dateRecolte ?? '',
       dateReception: lot.dateReception ?? '',
       fournisseurNom: lot.fournisseurNom ?? '',

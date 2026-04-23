@@ -47,22 +47,77 @@
         <thead>
           <tr>
             <th>Machine</th>
+            <th>Type machine</th>
             <th>Etat</th>
             <th>Capacite (kg/j)</th>
+            <th>A propos</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let machine of machines">
             <td class="machine-name">{{ machine.nomMachine }}</td>
+            <td>{{ machine.typeMachine }}</td>
             <td><span class="badge" [ngClass]="statusClass(machine.etatMachine)">{{ statusLabel(machine.etatMachine)
                 }}</span></td>
             <td>{{ machine.capacite }}</td>
+            <td>
+              <button class="btn-about" type="button" (click)="openAbout(machine.typeMachine)"
+                [title]="'Voir les caracteristiques de ' + machine.typeMachine">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+                Details
+              </button>
+            </td>
           </tr>
           <tr *ngIf="machines.length === 0">
-            <td colspan="3" class="empty-state">Aucune machine disponible pour le moment.</td>
+            <td colspan="5" class="empty-state">Aucune machine disponible pour le moment.</td>
           </tr>
         </tbody>
       </table>
     </div>
   </mat-card-content>
 </mat-card>
+
+<!-- Modal A propos -->
+<div class="about-backdrop" *ngIf="aboutModalOpen" (click)="closeAbout()">
+  <div class="about-card" (click)="$event.stopPropagation()">
+    <div class="about-header">
+      <h3>{{ selectedTypeInfo?.label }}</h3>
+      <button class="about-close" type="button" (click)="closeAbout()" aria-label="Fermer">✕</button>
+    </div>
+    <div class="about-body" *ngIf="selectedTypeInfo">
+      <p class="about-desc">{{ selectedTypeInfo.description }}</p>
+
+      <div class="about-meta">
+        <span class="meta-pill">Rendement: {{ selectedTypeInfo.rendement }}</span>
+        <span class="meta-pill">Qualité: {{ selectedTypeInfo.qualite }}</span>
+        <span class="meta-pill">Type: {{ selectedTypeInfo.type }}</span>
+        <span class="meta-pill" *ngIf="selectedTypeInfo.ajoutEau">Ajout d'eau: Oui</span>
+        <span class="meta-pill" *ngIf="!selectedTypeInfo.ajoutEau">Ajout d'eau: Non</span>
+      </div>
+
+      <div class="about-section">
+        <h4>Étapes prédéfinies</h4>
+        <ol class="about-steps">
+          <li *ngFor="let etape of selectedTypeInfo.etapes">{{ etape }}</li>
+        </ol>
+      </div>
+
+      <div class="about-section">
+        <h4>Caractéristiques</h4>
+        <ul class="about-list">
+          <li *ngFor="let c of selectedTypeInfo.caracteristiques">{{ c }}</li>
+        </ul>
+      </div>
+
+      <div class="about-section about-impact">
+        <h4>Impact sur la prédiction ML</h4>
+        <p>{{ selectedTypeInfo.impactPrediction }}</p>
+      </div>
+    </div>
+  </div>
+</div>

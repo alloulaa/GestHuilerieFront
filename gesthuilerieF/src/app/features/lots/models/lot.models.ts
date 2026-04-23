@@ -4,6 +4,14 @@ export interface LotOlives {
   varieteOlive: string;
   maturite: string;
   origine: string;
+  region?: string;
+  methodeRecolte?: string;
+  typeSol?: string;
+  tempsDepuisRecolteHeures?: number;
+  humiditePourcent?: number;
+  aciditeOlivesPourcent?: number;
+  tauxFeuillesPourcent?: number;
+  lavageEffectue?: string;
   dateRecolte: string;
   dateReception: string;
   fournisseurNom?: string;
@@ -21,11 +29,11 @@ export interface LotOlives {
 export interface AnalyseLaboratoire {
   idAnalyse: number;
   reference?: string;
-  acidite: number;
-  indicePeroxyde: number;
+  acidite_huile_pourcent: number;
+  indice_peroxyde_meq_o2_kg: number;
+  polyphenols_mg_kg: number;
   k232: number;
   k270: number;
-  classeQualiteFinale: string;
   dateAnalyse: string;
   lotId: number;
 }
@@ -40,6 +48,10 @@ export interface LotTraceability {
   lotId: number;
   varieteOlive: string;
   origine: string;
+  region?: string;
+  methodeRecolte?: string;
+  typeSol?: string;
+  tempsDepuisRecolteHeures?: number;
   quantiteInitiale: number;
   quantiteRestante: number;
   pesees?: {
@@ -55,11 +67,11 @@ export interface LotTraceability {
   analyses: {
     idAnalyse: number;
     date: string;
-    acidite: number;
-    indicePeroxyde: number;
+    acidite_huile_pourcent: number;
+    indice_peroxyde_meq_o2_kg: number;
+    polyphenols_mg_kg: number;
     k232: number;
     k270: number;
-    classeQualiteFinale: string;
   }[];
   cycleVie: TraceabilityEvent[];
 }

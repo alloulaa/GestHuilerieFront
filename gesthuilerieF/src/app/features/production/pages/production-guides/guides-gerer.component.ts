@@ -40,6 +40,34 @@ export class GuidesGererComponent implements OnInit {
   executionMessage = '';
   executionError = '';
 
+  readonly fixedParametreOptions: Array<{ code: string; unite: string; description: string; valeur: string }> = [
+    {
+      code: 'temperature_malaxage_c',
+      unite: 'C',
+      description: 'Temperature de malaxage',
+      valeur: '27',
+    },
+    {
+      code: 'duree_malaxage_min',
+      unite: 'min',
+      description: 'Duree de malaxage',
+      valeur: '40',
+    },
+    {
+      code: 'vitesse_decanteur_tr_min',
+      unite: 'tr/min',
+      description: 'Vitesse du decanteur',
+      valeur: '3200',
+    },
+    {
+      code: 'pression_extraction_bar',
+      unite: 'bar',
+      description: 'Pression d extraction',
+      valeur: '2.5',
+    },
+  ];
+  readonly customParametreCode = 'autre';
+
   readonly guideForm;
   readonly executionForm;
 
@@ -167,7 +195,9 @@ export class GuidesGererComponent implements OnInit {
   createParametreGroup() {
     return this.fb.group({
       idParametreEtape: [null as number | null],
-      nom: ['', [Validators.required]],
+      codeParametre: ['', [Validators.required]],
+      nom: [''],
+      nomPersonnalise: [''],
       uniteMesure: ['', [Validators.required]],
       valeur: ['', [Validators.required]],
       description: ['', [Validators.required]],
@@ -193,6 +223,44 @@ export class GuidesGererComponent implements OnInit {
     parametres.removeAt(parametreIndex);
   }
 
+  onParametreCodeChange(etapeIndex: number, parametreIndex: number): void {
+    const group = this.getParametres(etapeIndex).at(parametreIndex);
+    const selectedCode = String(group.get('codeParametre')?.value ?? '').trim();
+    const customNameControl = group.get('nomPersonnalise');
+
+    if (!customNameControl) {
+      return;
+    }
+
+    if (selectedCode === this.customParametreCode) {
+      group.patchValue({ nom: '' });
+      customNameControl.setValidators([Validators.required]);
+      customNameControl.updateValueAndValidity();
+      return;
+    }
+
+    customNameControl.clearValidators();
+    customNameControl.setValue('');
+    customNameControl.updateValueAndValidity();
+
+    const selectedOption = this.fixedParametreOptions.find((option) => option.code === selectedCode);
+    if (!selectedOption) {
+      return;
+    }
+
+    group.patchValue({
+      nom: selectedOption.code,
+      uniteMesure: selectedOption.unite,
+      description: selectedOption.description,
+      valeur: selectedOption.valeur,
+    });
+  }
+
+  isCustomParamSelected(etapeIndex: number, parametreIndex: number): boolean {
+    const selectedCode = this.getParametres(etapeIndex).at(parametreIndex).get('codeParametre')?.value;
+    return String(selectedCode ?? '') === this.customParametreCode;
+  }
+
   getParametres(etapeIndex: number): FormArray {
     return this.etapes.at(etapeIndex).get('parametres') as FormArray;
   }
@@ -216,7 +284,8 @@ export class GuidesGererComponent implements OnInit {
         description: String(e.description ?? '').trim(),
         parametres: (e.parametres ?? []).map((p: any) => ({
           ...(p.idParametreEtape ? { idParametreEtape: Number(p.idParametreEtape) } : {}),
-          nom: String(p.nom ?? '').trim(),
+          codeParametre: String(p.codeParametre ?? '').trim(),
+          nom: this.resolveParametreNom(p),
           uniteMesure: String(p.uniteMesure ?? '').trim(),
           description: String(p.description ?? '').trim(),
           valeur: String(p.valeur ?? '').trim(),
@@ -309,13 +378,41 @@ export class GuidesGererComponent implements OnInit {
   }
 
   private createParametreGroupFromGuide(parametre: ParametreEtape) {
-    return this.fb.group({
+    const isFixedParam = this.isFixedParametreCode(parametre.codeParametre, parametre.nom);
+    const codeParametre = isFixedParam
+      ? String(parametre.codeParametre ?? parametre.nom ?? '').trim()
+      : this.customParametreCode;
+
+    const group = this.fb.group({
       idParametreEtape: [parametre.idParametreEtape ?? null],
-      nom: [String(parametre.nom ?? '').trim(), [Validators.required]],
+      codeParametre: [codeParametre, [Validators.required]],
+      nom: [isFixedParam ? String(parametre.nom ?? '').trim() : ''],
+      nomPersonnalise: [isFixedParam ? '' : String(parametre.nom ?? '').trim()],
       uniteMesure: [String(parametre.uniteMesure ?? '').trim(), [Validators.required]],
       valeur: [String(parametre.valeur ?? '').trim(), [Validators.required]],
       description: [String(parametre.description ?? '').trim(), [Validators.required]],
     });
+
+    if (!isFixedParam) {
+      group.get('nomPersonnalise')?.setValidators([Validators.required]);
+      group.get('nomPersonnalise')?.updateValueAndValidity({ emitEvent: false });
+    }
+
+    return group;
+  }
+
+  private resolveParametreNom(parametre: Record<string, unknown>): string {
+    const codeParametre = String(parametre['codeParametre'] ?? '').trim();
+    if (codeParametre === this.customParametreCode) {
+      return String(parametre['nomPersonnalise'] ?? '').trim();
+    }
+    return String(parametre['nom'] ?? '').trim();
+  }
+
+  private isFixedParametreCode(codeParametre: unknown, nom: unknown): boolean {
+    const normalizedCode = String(codeParametre ?? '').trim();
+    const normalizedNom = String(nom ?? '').trim();
+    return this.fixedParametreOptions.some((option) => option.code === normalizedCode || option.code === normalizedNom);
   }
 
   async askDeleteGuide(guide: GuideProduction): Promise<void> {

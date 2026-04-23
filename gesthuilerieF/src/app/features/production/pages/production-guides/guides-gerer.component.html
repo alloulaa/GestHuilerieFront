@@ -91,7 +91,15 @@
 
                 <div *ngFor="let param of getParametres(i).controls; let j = index" class="param-item"
                   [formGroupName]="j">
-                  <input class="form-input param-input" type="text" formControlName="nom" placeholder="Nom" />
+                  <select class="form-select param-input" formControlName="codeParametre"
+                    (change)="onParametreCodeChange(i, j)">
+                    <option value="">-- Parametre --</option>
+                    <option *ngFor="let option of fixedParametreOptions" [value]="option.code">{{ option.code }}
+                    </option>
+                    <option [value]="customParametreCode">Autre</option>
+                  </select>
+                  <input *ngIf="isCustomParamSelected(i, j)" class="form-input param-input" type="text"
+                    formControlName="nomPersonnalise" placeholder="Nom personnalise" />
                   <input class="form-input param-input" type="text" formControlName="uniteMesure" placeholder="Unité" />
                   <input class="form-input param-input" type="text" formControlName="valeur" placeholder="Valeur" />
                   <input class="form-input param-input" type="text" formControlName="description"
@@ -136,8 +144,10 @@
             </div>
           </div>
           <div class="card-actions">
-            <button class="action-btn btn-edit" type="button" (click)="editGuide(guide)" [disabled]="!canUpdate">Éditer</button>
-            <button class="action-btn btn-delete" type="button" (click)="askDeleteGuide(guide)" [disabled]="!canDelete">Supprimer</button>
+            <button class="action-btn btn-edit" type="button" (click)="editGuide(guide)"
+              [disabled]="!canUpdate">Éditer</button>
+            <button class="action-btn btn-delete" type="button" (click)="askDeleteGuide(guide)"
+              [disabled]="!canDelete">Supprimer</button>
           </div>
         </div>
       </div>

@@ -79,9 +79,56 @@
                 <input matInput formControlName="origine" />
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Variété</mat-label>
-                <input matInput formControlName="varieteOlive" />
+                <mat-label>Region</mat-label>
+                <mat-select formControlName="region">
+                    <mat-option *ngFor="let option of regionOptions" [value]="option">{{ option }}</mat-option>
+                </mat-select>
             </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Variété</mat-label>
+                <mat-select formControlName="varieteOlive">
+                    <mat-option *ngFor="let option of varieteOptions" [value]="option">{{ option }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Methode de recolte</mat-label>
+                <mat-select formControlName="methodeRecolte">
+                    <mat-option *ngFor="let option of methodeRecolteOptions" [value]="option">{{ option }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Type de sol</mat-label>
+                <mat-select formControlName="typeSol">
+                    <mat-option *ngFor="let option of typeSolOptions" [value]="option">{{ option }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Temps depuis recolte (heures)</mat-label>
+                <input matInput type="number" min="0" formControlName="tempsDepuisRecolteHeures" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Humidité (%)</mat-label>
+                <input matInput type="number" min="0" max="100" formControlName="humiditePourcent" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Acidité des olives (%)</mat-label>
+                <input matInput type="number" min="0" max="100" formControlName="aciditeOlivesPourcent" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Taux de feuilles (%)</mat-label>
+                <input matInput type="number" min="0" max="100" formControlName="tauxFeuillesPourcent" />
+            </mat-form-field>
+            <div class="form-field wash-field">
+                <span class="field-label">Lavage effectué</span>
+                <div class="radio-group" role="radiogroup" aria-label="Lavage effectué">
+                    <label class="radio-label">
+                        <input type="radio" value="Oui" formControlName="lavageEffectue" /> Oui
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" value="Non" formControlName="lavageEffectue" /> Non
+                    </label>
+                </div>
+            </div>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Fournisseur</mat-label>
                 <input matInput formControlName="fournisseurNom" />

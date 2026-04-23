@@ -122,8 +122,9 @@ export class ReceptionGererComponent implements OnInit {
     });
 
     this.analysisForm = this.fb.group({
-      acidite: [0.6, [Validators.required, Validators.min(0), Validators.max(10)]],
-      indicePeroxyde: [8.0, [Validators.required, Validators.min(0), Validators.max(100)]],
+      acidite_huile_pourcent: [0.6, [Validators.required, Validators.min(0), Validators.max(10)]],
+      indice_peroxyde_meq_o2_kg: [8.0, [Validators.required, Validators.min(0), Validators.max(100)]],
+      polyphenols_mg_kg: [50.0, [Validators.required, Validators.min(0), Validators.max(10000)]],
       k232: [1.9, [Validators.required, Validators.min(0), Validators.max(10)]],
       k270: [0.18, [Validators.required, Validators.min(0), Validators.max(10)]],
     });
@@ -542,8 +543,9 @@ export class ReceptionGererComponent implements OnInit {
     this.analysisSaveError = '';
     this.selectedLotForAnalysis = lot;
     this.analysisForm.reset({
-      acidite: 0.6,
-      indicePeroxyde: 8.0,
+      acidite_huile_pourcent: 0.6,
+      indice_peroxyde_meq_o2_kg: 8.0,
+      polyphenols_mg_kg: 50.0,
       k232: 1.9,
       k270: 0.18,
     });
@@ -569,8 +571,9 @@ export class ReceptionGererComponent implements OnInit {
 
     this.analyseLaboratoireService.addToStore({
       lotId: this.selectedLotForAnalysis.idLot,
-      acidite: Number(raw.acidite),
-      indicePeroxyde: Number(raw.indicePeroxyde),
+      acidite_huile_pourcent: Number(raw.acidite_huile_pourcent),
+      indice_peroxyde_meq_o2_kg: Number(raw.indice_peroxyde_meq_o2_kg),
+      polyphenols_mg_kg: Number(raw.polyphenols_mg_kg),
       k232: Number(raw.k232),
       k270: Number(raw.k270),
     }).subscribe({

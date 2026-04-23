@@ -19,6 +19,14 @@ export interface CreatePeseeInput {
   maturite: string;
   dateRecolte: string;
   dateReception: string;
+  region?: string;
+  methodeRecolte?: string;
+  typeSol?: string;
+  tempsDepuisRecolteHeures?: number;
+  humiditePourcent?: number;
+  aciditeOlivesPourcent?: number;
+  tauxFeuillesPourcent?: number;
+  lavageEffectue?: string;
   dureeStockageAvantBroyage: number;
   matierePremiereReference: string;
   campagneReference: string;
@@ -132,16 +140,27 @@ export class LotManagementService {
     const payload: ReceptionPeseeCreatePayload = {
       datePesee: input.datePesee,
       pesee: Number(input.pesee ?? input.poidsBrut ?? 0),
+      poids_olives_kg: Number(input.pesee ?? input.poidsBrut ?? 0),
       huilerieId: Number(input.huilerieId),
       origine: input.origine,
       variete: input.varieteOlive,
       varieteOlive: input.varieteOlive,
       fournisseurNom: input.fournisseurNom,
       fournisseurCIN: input.fournisseurCIN,
-      maturite: input.maturite,
+      maturite_niveau_1_5: input.maturite,
       dateRecolte: input.dateRecolte,
       dateReception: input.dateReception,
-      dureeStockageAvantBroyage: Number(input.dureeStockageAvantBroyage),
+      region: input.region,
+      methode_recolte: input.methodeRecolte,
+      type_sol: input.typeSol,
+      temps_depuis_recolte_heures: input.tempsDepuisRecolteHeures != null
+        ? Number(input.tempsDepuisRecolteHeures)
+        : undefined,
+      humidite_pourcent: input.humiditePourcent != null ? Number(input.humiditePourcent) : undefined,
+      acidite_olives_pourcent: input.aciditeOlivesPourcent != null ? Number(input.aciditeOlivesPourcent) : undefined,
+      taux_feuilles_pourcent: input.tauxFeuillesPourcent != null ? Number(input.tauxFeuillesPourcent) : undefined,
+      lavage_effectue: String(input.lavageEffectue ?? '').trim() || undefined,
+      duree_stockage_jours: Number(input.dureeStockageAvantBroyage),
       matierePremiereReference: String(input.matierePremiereReference ?? '').trim() || undefined,
       campagneReference: String(input.campagneReference ?? '').trim() || undefined,
     };
@@ -159,16 +178,27 @@ export class LotManagementService {
     const payload: ReceptionPeseeCreatePayload = {
       datePesee: input.datePesee,
       pesee: Number(input.pesee ?? input.poidsBrut ?? 0),
+      poids_olives_kg: Number(input.pesee ?? input.poidsBrut ?? 0),
       huilerieId: Number(input.huilerieId),
       origine: input.origine,
       variete: input.varieteOlive,
       varieteOlive: input.varieteOlive,
       fournisseurNom: input.fournisseurNom,
       fournisseurCIN: input.fournisseurCIN,
-      maturite: input.maturite,
+      maturite_niveau_1_5: input.maturite,
       dateRecolte: input.dateRecolte,
       dateReception: input.dateReception,
-      dureeStockageAvantBroyage: Number(input.dureeStockageAvantBroyage),
+      region: input.region,
+      methode_recolte: input.methodeRecolte,
+      type_sol: input.typeSol,
+      temps_depuis_recolte_heures: input.tempsDepuisRecolteHeures != null
+        ? Number(input.tempsDepuisRecolteHeures)
+        : undefined,
+      humidite_pourcent: input.humiditePourcent != null ? Number(input.humiditePourcent) : undefined,
+      acidite_olives_pourcent: input.aciditeOlivesPourcent != null ? Number(input.aciditeOlivesPourcent) : undefined,
+      taux_feuilles_pourcent: input.tauxFeuillesPourcent != null ? Number(input.tauxFeuillesPourcent) : undefined,
+      lavage_effectue: String(input.lavageEffectue ?? '').trim() || undefined,
+      duree_stockage_jours: Number(input.dureeStockageAvantBroyage),
       matierePremiereReference: String(input.matierePremiereReference ?? '').trim() || undefined,
       campagneReference: String(input.campagneReference ?? '').trim() || undefined,
     };

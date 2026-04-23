@@ -188,6 +188,96 @@
   gap: 0.6rem;
 }
 
+/* Panneau d'informations du type de machine */
+.type-info-panel {
+  grid-column: 1 / -1;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: rgba(118, 132, 87, 0.07);
+  border: 1px solid rgba(118, 132, 87, 0.2);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.type-info-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.type-info-header strong {
+  font-size: 1rem;
+  color: #263320;
+}
+
+.type-info-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary-800);
+  background: var(--color-primary-100);
+  border: 1px solid var(--color-primary-200);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.type-info-tag.qualite {
+  color: #5a7c3a;
+  background: rgba(126, 148, 64, 0.14);
+  border-color: rgba(126, 148, 64, 0.35);
+}
+
+.type-info-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #4a5a3a;
+  line-height: 1.5;
+}
+
+.type-info-details {
+  summary {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #2b3d22;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .type-info-steps {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.3rem;
+
+    li {
+      font-size: 0.85rem;
+      color: #3f4f32;
+      line-height: 1.45;
+    }
+  }
+}
+
+.type-info-impact {
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(93, 141, 75, 0.08);
+  border: 1px solid rgba(93, 141, 75, 0.18);
+
+  strong {
+    display: block;
+    font-size: 0.85rem;
+    color: #2b3d22;
+    margin-bottom: 0.25rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #3f4f32;
+    line-height: 1.5;
+  }
+}
+
 @media (max-width: 920px) {
   .panel-toolbar {
     grid-template-columns: 1fr;

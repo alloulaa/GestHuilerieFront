@@ -18,8 +18,29 @@
 
       <div class="form-group">
         <label class="form-label">Type machine *</label>
-        <input nbInput fullWidth formControlName="typeMachine" placeholder="Type machine"
-          [status]="isMachineFieldInvalid('typeMachine') ? 'danger' : 'basic'" />
+        <nb-select fullWidth formControlName="typeMachine"
+          [status]="isMachineFieldInvalid('typeMachine') ? 'danger' : 'basic'">
+          <nb-option *ngFor="let option of typeMachineOptions" [value]="option">{{ option }}</nb-option>
+        </nb-select>
+      </div>
+
+      <div class="type-info-panel" *ngIf="selectedTypeInfo">
+        <div class="type-info-header">
+          <strong>{{ selectedTypeInfo.label }}</strong>
+          <span class="type-info-tag">{{ selectedTypeInfo.rendement }}</span>
+          <span class="type-info-tag qualite">{{ selectedTypeInfo.qualite }}</span>
+        </div>
+        <p class="type-info-desc">{{ selectedTypeInfo.description }}</p>
+        <details class="type-info-details">
+          <summary>Étapes prédéfinies de processus</summary>
+          <ol class="type-info-steps">
+            <li *ngFor="let etape of selectedTypeInfo.etapes">{{ etape }}</li>
+          </ol>
+        </details>
+        <div class="type-info-impact">
+          <strong>Impact sur la prédiction ML</strong>
+          <p>{{ selectedTypeInfo.impactPrediction }}</p>
+        </div>
       </div>
 
       <div class="form-group">
@@ -79,11 +100,12 @@
                 [disabled]="!canUpdate" aria-label="Editer machine">
                 <nb-icon icon="edit-outline"></nb-icon>
               </button>
-              <button nbButton ghost [status]="m.etatMachine === 'DESACTIVEE' ? 'success' : 'danger'" size="small" type="button" (click)="askToggleMachineActivation(m)"
-                title="Action machine"
-                [disabled]="!canDelete" [attr.aria-label]="m.etatMachine === 'DESACTIVEE' ? 'Activer machine' : 'Désactiver machine'"
+              <button nbButton ghost [status]="m.etatMachine === 'DESACTIVEE' ? 'success' : 'danger'" size="small"
+                type="button" (click)="askToggleMachineActivation(m)" title="Action machine" [disabled]="!canDelete"
+                [attr.aria-label]="m.etatMachine === 'DESACTIVEE' ? 'Activer machine' : 'Désactiver machine'"
                 [title]="m.etatMachine === 'DESACTIVEE' ? 'Activer machine' : 'Désactiver machine'">
-                <nb-icon [icon]="m.etatMachine === 'DESACTIVEE' ? 'checkmark-circle-2-outline' : 'close-circle-outline'"></nb-icon>
+                <nb-icon
+                  [icon]="m.etatMachine === 'DESACTIVEE' ? 'checkmark-circle-2-outline' : 'close-circle-outline'"></nb-icon>
               </button>
             </td>
           </tr>

@@ -51,8 +51,9 @@ export class QualityYieldComponent implements OnInit {
     });
 
     this.analysisForm = this.formBuilder.group({
-      acidite: [0.6, [Validators.required, Validators.min(0), Validators.max(10)]],
-      indicePeroxyde: [8.0, [Validators.required, Validators.min(0), Validators.max(100)]],
+      acidite_huile_pourcent: [0.6, [Validators.required, Validators.min(0), Validators.max(10)]],
+      indice_peroxyde_meq_o2_kg: [8.0, [Validators.required, Validators.min(0), Validators.max(100)]],
+      polyphenols_mg_kg: [50.0, [Validators.required, Validators.min(0), Validators.max(10000)]],
       k232: [1.9, [Validators.required, Validators.min(0), Validators.max(10)]],
       k270: [0.18, [Validators.required, Validators.min(0), Validators.max(10)]],
       lotId: [31, [Validators.required]],
@@ -179,23 +180,17 @@ export class QualityYieldComponent implements OnInit {
     }
 
     const payload = this.analysisForm.getRawValue();
-    const qualiteClass = this.classifyQuality(
-      Number(payload.acidite ?? 0),
-      Number(payload.indicePeroxyde ?? 0),
-      Number(payload.k232 ?? 0),
-      Number(payload.k270 ?? 0),
-    );
 
     if (this.editingAnalysisId !== null) {
       this.analyses = this.analyses.map(a =>
         a.idAnalyse === this.editingAnalysisId
           ? {
             ...a,
-            acidite: Number(payload.acidite ?? 0),
-            indicePeroxyde: Number(payload.indicePeroxyde ?? 0),
+            acidite_huile_pourcent: Number(payload.acidite_huile_pourcent ?? 0),
+            indice_peroxyde_meq_o2_kg: Number(payload.indice_peroxyde_meq_o2_kg ?? 0),
+            polyphenols_mg_kg: Number(payload.polyphenols_mg_kg ?? 0),
             k232: Number(payload.k232 ?? 0),
             k270: Number(payload.k270 ?? 0),
-            classeQualiteFinale: qualiteClass,
             dateAnalyse: new Date().toISOString().split('T')[0],
           }
           : a,
@@ -206,11 +201,11 @@ export class QualityYieldComponent implements OnInit {
         ...this.analyses,
         {
           idAnalyse: newId,
-          acidite: Number(payload.acidite ?? 0),
-          indicePeroxyde: Number(payload.indicePeroxyde ?? 0),
+          acidite_huile_pourcent: Number(payload.acidite_huile_pourcent ?? 0),
+          indice_peroxyde_meq_o2_kg: Number(payload.indice_peroxyde_meq_o2_kg ?? 0),
+          polyphenols_mg_kg: Number(payload.polyphenols_mg_kg ?? 0),
           k232: Number(payload.k232 ?? 0),
           k270: Number(payload.k270 ?? 0),
-          classeQualiteFinale: qualiteClass,
           dateAnalyse: new Date().toISOString().split('T')[0],
           lotId: Number(payload.lotId ?? 31),
         },
@@ -223,8 +218,9 @@ export class QualityYieldComponent implements OnInit {
   editAnalysis(analysis: AnalyseLaboratoire): void {
     this.editingAnalysisId = analysis.idAnalyse;
     this.analysisForm.patchValue({
-      acidite: analysis.acidite,
-      indicePeroxyde: analysis.indicePeroxyde,
+      acidite_huile_pourcent: analysis.acidite_huile_pourcent,
+      indice_peroxyde_meq_o2_kg: analysis.indice_peroxyde_meq_o2_kg,
+      polyphenols_mg_kg: analysis.polyphenols_mg_kg,
       k232: analysis.k232,
       k270: analysis.k270,
       lotId: analysis.lotId,
@@ -242,8 +238,9 @@ export class QualityYieldComponent implements OnInit {
     this.editingAnalysisId = null;
     const lotId = this.selectedLotId ?? 31;
     this.analysisForm.reset({
-      acidite: 0.6,
-      indicePeroxyde: 8.0,
+      acidite_huile_pourcent: 0.6,
+      indice_peroxyde_meq_o2_kg: 8.0,
+      polyphenols_mg_kg: 50.0,
       k232: 1.9,
       k270: 0.18,
       lotId,
@@ -252,31 +249,5 @@ export class QualityYieldComponent implements OnInit {
 
   getAnalysesForLot(lotId: number): AnalyseLaboratoire[] {
     return this.analyses.filter(a => a.lotId === lotId);
-  }
-
-  getQualityClass(analysis: AnalyseLaboratoire): string {
-    return analysis.classeQualiteFinale || 'N/A';
-  }
-
-  getQualityColor(qualite: string): string {
-    if (qualite === 'A') return 'success';
-    if (qualite === 'A-') return 'info';
-    if (qualite === 'B+') return 'warning';
-    if (qualite === 'B') return 'warning';
-    return 'danger';
-  }
-
-  private classifyQuality(acidite: number, indicePeroxyde: number, k232: number, k270: number): string {
-    // Classification based on standard olive oil quality criteria
-    if (acidite <= 0.8 && indicePeroxyde <= 20 && k232 <= 2.5 && k270 <= 0.25) {
-      return 'A'; // Extra Virgin
-    }
-    if (acidite <= 2 && indicePeroxyde <= 60 && k232 <= 2.7 && k270 <= 0.30) {
-      return 'A-'; // Virgin
-    }
-    if (acidite <= 3.3 && indicePeroxyde <= 150) {
-      return 'B+'; // Lampante Virgin
-    }
-    return 'B'; // Lampante
   }
 }

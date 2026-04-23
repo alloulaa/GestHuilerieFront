@@ -11,6 +11,8 @@ import { catchError } from 'rxjs/operators';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { TYPE_MACHINE_OPTIONS } from '../../../../shared/constants/domain-options';
+import { MACHINE_TYPE_DATA, MachineTypeInfo } from '../../../../shared/constants/machine-type-data';
 
 @Component({
   selector: 'app-oil-mills-management',
@@ -36,7 +38,15 @@ export class OilMillsManagementComponent implements OnInit {
 
   editingMachineId: number | null = null;
 
+  readonly typeMachineOptions = TYPE_MACHINE_OPTIONS;
+  readonly machineTypeData = MACHINE_TYPE_DATA;
+
   readonly machineForm;
+
+  get selectedTypeInfo(): MachineTypeInfo | null {
+    const type = this.machineForm.get('typeMachine')?.value;
+    return type ? MACHINE_TYPE_DATA[type] ?? null : null;
+  }
 
   constructor(
     private formBuilder: FormBuilder,
@@ -48,7 +58,7 @@ export class OilMillsManagementComponent implements OnInit {
   ) {
     this.machineForm = this.formBuilder.group({
       nomMachine: ['', [Validators.required]],
-      typeMachine: ['', [Validators.required]],
+      typeMachine: this.formBuilder.control<string | null>(this.typeMachineOptions[0], [Validators.required]),
       etatMachine: ['EN_SERVICE', [Validators.required]],
       capacite: [0, [Validators.required, Validators.min(1)]],
       huilerieId: [0, [Validators.required, Validators.min(1)]],
@@ -168,7 +178,7 @@ export class OilMillsManagementComponent implements OnInit {
     this.editingMachineId = null;
     this.machineForm.reset({
       nomMachine: '',
-      typeMachine: '',
+      typeMachine: this.typeMachineOptions[0],
       etatMachine: 'EN_SERVICE',
       capacite: 0,
       huilerieId: this.allHuileries[0]?.idHuilerie ?? 0,

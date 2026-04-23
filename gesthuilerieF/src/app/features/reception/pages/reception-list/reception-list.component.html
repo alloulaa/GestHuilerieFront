@@ -57,13 +57,17 @@
             <th>Date</th>
             <th>Lot</th>
             <th>Pesee</th>
+            <th>Region</th>
+            <th>Methode recolte</th>
+            <th>Type sol</th>
+            <th>Temps depuis recolte (h)</th>
             <th>Fournisseur</th>
             <th *ngIf="!showFilters">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="pesees.length === 0">
-            <td [attr.colspan]="(isAdmin ? 6 : 5) + (!showFilters ? 1 : 0)" class="table-empty">Aucune reception a
+            <td [attr.colspan]="(isAdmin ? 10 : 9) + (!showFilters ? 1 : 0)" class="table-empty">Aucune reception a
               afficher.</td>
           </tr>
           <tr *ngFor="let pesee of pesees">
@@ -72,6 +76,10 @@
             <td>{{ pesee.datePesee | date:'dd/MM/yyyy HH:mm' }}</td>
             <td>{{ pesee.lotId }}</td>
             <td>{{ pesee.pesee }} kg</td>
+            <td>{{ getLotValue(pesee, 'region') }}</td>
+            <td>{{ getLotValue(pesee, 'methodeRecolte') }}</td>
+            <td>{{ getLotValue(pesee, 'typeSol') }}</td>
+            <td>{{ getLotValue(pesee, 'tempsDepuisRecolteHeures') }}</td>
             <td>{{ pesee.fournisseurNom || '-' }} / {{ pesee.fournisseurCIN || '-' }}</td>
             <td *ngIf="!showFilters" class="actions-cell">
               <button nbButton ghost status="primary" size="small" type="button" class="icon-action-btn"
@@ -98,13 +106,19 @@
 
         <div class="analysis-grid">
           <label>
-            Acidite
-            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.acidite" name="acidite" />
+            Acidite huile
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.acidite_huile_pourcent"
+              name="acidite_huile_pourcent" />
           </label>
           <label>
             Indice peroxyde
-            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.indicePeroxyde"
-              name="indicePeroxyde" />
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.indice_peroxyde_meq_o2_kg"
+              name="indice_peroxyde_meq_o2_kg" />
+          </label>
+          <label>
+            Polyphenols
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.polyphenols_mg_kg"
+              name="polyphenols_mg_kg" />
           </label>
           <label>
             K232

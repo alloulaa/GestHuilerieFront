@@ -61,7 +61,7 @@
         <button nbButton status="primary" type="submit">
           {{ editingLotId ? 'Mettre a jour lot' : 'Creer lot' }}
         </button>
-          <button *ngIf="editingLotId" nbButton status="basic" outline class="app-cancel-btn" type="button"
+        <button *ngIf="editingLotId" nbButton status="basic" outline class="app-cancel-btn" type="button"
           (click)="resetLotForm()">Annuler</button>
       </div>
     </form>
@@ -113,13 +113,19 @@
   <nb-card-body>
     <form class="entity-form" [formGroup]="analysisForm" (ngSubmit)="submitAnalysis()">
       <div class="form-group">
-        <label class="form-label">Acidite (%) *</label>
-        <input nbInput fullWidth type="number" step="0.01" formControlName="acidite" placeholder="0.6" />
+        <label class="form-label">Acidite huile (%) *</label>
+        <input nbInput fullWidth type="number" step="0.01" formControlName="acidite_huile_pourcent" placeholder="0.6" />
       </div>
 
       <div class="form-group">
-        <label class="form-label">Indice Peroxyde *</label>
-        <input nbInput fullWidth type="number" step="0.1" formControlName="indicePeroxyde" placeholder="8.0" />
+        <label class="form-label">Indice peroxyde (meq O2/kg) *</label>
+        <input nbInput fullWidth type="number" step="0.1" formControlName="indice_peroxyde_meq_o2_kg"
+          placeholder="8.0" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Polyphenols (mg/kg) *</label>
+        <input nbInput fullWidth type="number" step="0.1" formControlName="polyphenols_mg_kg" placeholder="50.0" />
       </div>
 
       <div class="form-group">
@@ -136,7 +142,7 @@
         <button nbButton status="primary" type="submit">
           {{ editingAnalysisId ? 'Mettre a jour analyse' : 'Ajouter analyse' }}
         </button>
-          <button *ngIf="editingAnalysisId" nbButton status="basic" outline class="app-cancel-btn" type="button"
+        <button *ngIf="editingAnalysisId" nbButton status="basic" outline class="app-cancel-btn" type="button"
           (click)="resetAnalysisForm()">Annuler</button>
       </div>
     </form>
@@ -146,11 +152,11 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Acidite (%)</th>
-            <th>Indice Peroxyde</th>
+            <th>Acidite huile (%)</th>
+            <th>Indice peroxyde</th>
+            <th>Polyphenols</th>
             <th>K232</th>
             <th>K270</th>
-            <th>Qualite</th>
             <th>Date Analyse</th>
             <th>Actions</th>
           </tr>
@@ -158,15 +164,11 @@
         <tbody>
           <tr *ngFor="let analysis of getAnalysesForLot(selectedLotId || 31)">
             <td>{{ analysis.idAnalyse }}</td>
-            <td>{{ analysis.acidite }}</td>
-            <td>{{ analysis.indicePeroxyde }}</td>
+            <td>{{ analysis.acidite_huile_pourcent }}</td>
+            <td>{{ analysis.indice_peroxyde_meq_o2_kg }}</td>
+            <td>{{ analysis.polyphenols_mg_kg }}</td>
             <td>{{ analysis.k232 }}</td>
             <td>{{ analysis.k270 }}</td>
-            <td>
-              <span class="quality-badge" [class]="'q-' + analysis.classeQualiteFinale">
-                {{ analysis.classeQualiteFinale }}
-              </span>
-            </td>
             <td>{{ analysis.dateAnalyse }}</td>
             <td class="actions">
               <button nbButton ghost status="primary" size="small" type="button" (click)="editAnalysis(analysis)"

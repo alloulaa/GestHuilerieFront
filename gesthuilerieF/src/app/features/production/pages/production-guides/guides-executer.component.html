@@ -49,13 +49,41 @@
           <input nbInput fullWidth type="number" step="0.01" min="0" formControlName="rendement" placeholder="0.0" />
         </label>
 
-        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('machineId')">
-          <span>Machine *</span>
-          <nb-select fullWidth formControlName="machineId" placeholder="Sélectionner">
-            <nb-option *ngFor="let machine of filteredMachines" [value]="machine.idMachine">
-              {{ machine.nomMachine }}
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('controleTemperature')">
+          <span>Contrôle température *</span>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" [value]="true" formControlName="controleTemperature" /> Oui
+            </label>
+            <label class="radio-label">
+              <input type="radio" [value]="false" formControlName="controleTemperature" /> Non
+            </label>
+          </div>
+        </label>
+
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('typeMachine')">
+          <span>Type machine *</span>
+          <nb-select fullWidth formControlName="typeMachine" placeholder="Sélectionner"
+            (selectedChange)="onTypeMachineSelectionChange($event)">
+            <nb-option *ngFor="let option of typeMachineOptions" [value]="option">
+              {{ option }}
             </nb-option>
           </nb-select>
+        </label>
+
+        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('machineId')">
+          <span>Machine *</span>
+          <input type="hidden" formControlName="machineId" />
+          <div class="machine-choice-list" *ngIf="filteredMachines.length > 0; else noMachineForSelectedType">
+            <button type="button" class="machine-choice" *ngFor="let machine of filteredMachines"
+              [class.machine-choice--active]="isSelectedMachine(machine.idMachine)"
+              (click)="onMachineSelectionChange(machine.idMachine)">
+              {{ machine.nomMachine }}
+            </button>
+          </div>
+          <ng-template #noMachineForSelectedType>
+            <p class="empty-state">Aucune machine disponible pour le type sélectionné.</p>
+          </ng-template>
         </label>
 
         <label class="field" [class.field-invalid]="isExecutionFieldInvalid('lotId')">
@@ -178,6 +206,8 @@
           <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
               }}</strong></div>
           <div class="execution-detail-item"><span>Rendement</span><strong>{{ execution.rendement }}</strong></div>
+          <div class="execution-detail-item"><span>Contrôle température</span><strong>{{ execution.controleTemperature ?
+              'Oui' : 'Non' }}</strong></div>
           <div class="execution-detail-item"><span>Date début</span><strong>{{ execution.dateDebut || '-' }}</strong>
           </div>
         </div>

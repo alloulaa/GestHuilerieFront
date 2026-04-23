@@ -19,6 +19,12 @@ import { Huilerie } from '../../../machines/models/enterprise.models';
 import { RawMaterialService } from '../../../matieres-premieres/services/raw-material.service';
 import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
 import { ToastService } from '../../../../core/services/toast.service';
+import {
+    METHODE_RECOLTE_OPTIONS,
+    REGION_OPTIONS,
+    TYPE_SOL_OPTIONS,
+    VARIETE_OPTIONS,
+} from '../../../../shared/constants/domain-options';
 
 @Component({
     selector: 'app-reception-form',
@@ -51,6 +57,12 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
     savedReception: Pesee | null = null;
     editingId: number | null = null;
 
+    readonly varieteOptions = VARIETE_OPTIONS;
+    readonly regionOptions = REGION_OPTIONS;
+    readonly methodeRecolteOptions = METHODE_RECOLTE_OPTIONS;
+    readonly typeSolOptions = TYPE_SOL_OPTIONS;
+    readonly lavageEffectueOptions = ['Oui', 'Non'];
+
     readonly form;
 
     constructor(
@@ -75,6 +87,14 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             maturite: [''],
             dateRecolte: [new Date().toISOString().slice(0, 10)],
             dateReception: [new Date().toISOString().slice(0, 10)],
+            region: [''],
+            methodeRecolte: [''],
+            typeSol: [''],
+            tempsDepuisRecolteHeures: [0, [Validators.min(0)]],
+            humiditePourcent: [0, [Validators.min(0), Validators.max(100)]],
+            aciditeOlivesPourcent: [0, [Validators.min(0), Validators.max(100)]],
+            tauxFeuillesPourcent: [0, [Validators.min(0), Validators.max(100)]],
+            lavageEffectue: [''],
             dureeStockageAvantBroyage: [1],
             matierePremiereId: [null as number | null],
             campagneId: [null as string | null],
@@ -223,6 +243,14 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             maturite: String(raw.maturite ?? ''),
             dateRecolte: String(raw.dateRecolte ?? ''),
             dateReception: String(raw.dateReception ?? ''),
+            region: String(raw.region ?? ''),
+            methodeRecolte: String(raw.methodeRecolte ?? ''),
+            typeSol: String(raw.typeSol ?? ''),
+            tempsDepuisRecolteHeures: Number(raw.tempsDepuisRecolteHeures ?? 0),
+            humiditePourcent: Number(raw.humiditePourcent ?? 0),
+            aciditeOlivesPourcent: Number(raw.aciditeOlivesPourcent ?? 0),
+            tauxFeuillesPourcent: Number(raw.tauxFeuillesPourcent ?? 0),
+            lavageEffectue: String(raw.lavageEffectue ?? '').trim() || undefined,
             dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
             matierePremiereReference: matiere?.reference ?? '',
             campagneReference: campagne?.reference ?? '',
@@ -292,6 +320,14 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             maturite: '',
             dateRecolte: new Date().toISOString().slice(0, 10),
             dateReception: new Date().toISOString().slice(0, 10),
+            region: '',
+            methodeRecolte: '',
+            typeSol: '',
+            tempsDepuisRecolteHeures: 0,
+            humiditePourcent: 0,
+            aciditeOlivesPourcent: 0,
+            tauxFeuillesPourcent: 0,
+            lavageEffectue: '',
             dureeStockageAvantBroyage: 1,
             matierePremiereId: this.matieresPremieres[0]?.idMatierePremiere ?? null,
             campagneId: null,
@@ -300,6 +336,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             fournisseurCIN: '',
         });
     }
+
+
 
     private generateReceptionPdf(): void {
         const lotId = this.savedReception?.lotId || this.savedReception?.idLotArrivage;
@@ -377,6 +415,14 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             {
                 origine: lot.origine,
                 varieteOlive: lot.varieteOlive,
+                region: lot.region,
+                methodeRecolte: lot.methodeRecolte,
+                typeSol: lot.typeSol,
+                tempsDepuisRecolteHeures: lot.tempsDepuisRecolteHeures,
+                humiditePourcent: lot.humiditePourcent ?? 0,
+                aciditeOlivesPourcent: lot.aciditeOlivesPourcent ?? 0,
+                tauxFeuillesPourcent: lot.tauxFeuillesPourcent ?? 0,
+                lavageEffectue: lot.lavageEffectue ?? '',
             },
             { emitEvent: false },
         );
@@ -443,6 +489,14 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             maturite: String(lot?.maturite ?? this.form.get('maturite')?.value ?? ''),
             dateRecolte: String(lot?.dateRecolte ?? this.form.get('dateRecolte')?.value ?? ''),
             dateReception: String(lot?.dateReception ?? this.form.get('dateReception')?.value ?? ''),
+            region: String(lot?.region ?? this.form.get('region')?.value ?? ''),
+            methodeRecolte: String(lot?.methodeRecolte ?? this.form.get('methodeRecolte')?.value ?? ''),
+            typeSol: String(lot?.typeSol ?? this.form.get('typeSol')?.value ?? ''),
+            tempsDepuisRecolteHeures: Number(lot?.tempsDepuisRecolteHeures ?? this.form.get('tempsDepuisRecolteHeures')?.value ?? 0),
+            humiditePourcent: Number(lot?.humiditePourcent ?? this.form.get('humiditePourcent')?.value ?? 0),
+            aciditeOlivesPourcent: Number(lot?.aciditeOlivesPourcent ?? this.form.get('aciditeOlivesPourcent')?.value ?? 0),
+            tauxFeuillesPourcent: Number(lot?.tauxFeuillesPourcent ?? this.form.get('tauxFeuillesPourcent')?.value ?? 0),
+            lavageEffectue: String(lot?.lavageEffectue ?? this.form.get('lavageEffectue')?.value ?? ''),
             dureeStockageAvantBroyage: Number(lot?.dureeStockageAvantBroyage ?? this.form.get('dureeStockageAvantBroyage')?.value ?? 1),
             matierePremiereId: matiereId,
             campagneId: campagneReference,
@@ -478,6 +532,13 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                     existingLotId: availableLot.idLot,
                     origine: availableLot.origine,
                     varieteOlive: availableLot.varieteOlive,
+                    region: availableLot.region,
+                    methodeRecolte: availableLot.methodeRecolte,
+                    typeSol: availableLot.typeSol,
+                    tempsDepuisRecolteHeures: availableLot.tempsDepuisRecolteHeures,
+                    humiditePourcent: availableLot.humiditePourcent ?? 0,
+                    aciditeOlivesPourcent: availableLot.aciditeOlivesPourcent ?? 0,
+                    tauxFeuillesPourcent: availableLot.tauxFeuillesPourcent ?? 0,
                 },
                 { emitEvent: false },
             );

@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Machine } from '../../models/enterprise.models';
 import { MachineService } from '../../services/machine.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { MACHINE_TYPE_DATA, MachineTypeInfo } from '../../../../shared/constants/machine-type-data';
 
 @Component({
   selector: 'app-machines-list',
@@ -18,6 +19,8 @@ import { PermissionService } from '../../../../core/services/permission.service'
 export class MachinesListComponent implements OnInit {
   machines: Machine[] = [];
   selectedHuilerieNom = '';
+  aboutModalOpen = false;
+  selectedTypeInfo: MachineTypeInfo | null = null;
 
   constructor(
     private machineService: MachineService,
@@ -85,5 +88,15 @@ export class MachinesListComponent implements OnInit {
 
   get desactiveeCount(): number {
     return this.machines.filter((machine) => machine.etatMachine === 'DESACTIVEE').length;
+  }
+
+  openAbout(typeMachine: string): void {
+    this.selectedTypeInfo = MACHINE_TYPE_DATA[typeMachine] ?? null;
+    this.aboutModalOpen = true;
+  }
+
+  closeAbout(): void {
+    this.aboutModalOpen = false;
+    this.selectedTypeInfo = null;
   }
 }

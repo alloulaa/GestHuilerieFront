@@ -25,11 +25,11 @@ export class AnalyseLaboratoireService {
         return list.map((item: any) => ({
           idAnalyse: Number(item.idAnalyse ?? item.id_analyse ?? 0),
           reference: String(item.reference ?? item.analyseReference ?? '').trim() || undefined,
-          acidite: Number(item.acidite ?? 0),
-          indicePeroxyde: Number(item.indicePeroxyde ?? item.indice_peroxyde ?? 0),
+          acidite_huile_pourcent: Number(item.acidite_huile_pourcent ?? item.acidite ?? item.aciditeHuilePourcent ?? 0),
+          indice_peroxyde_meq_o2_kg: Number(item.indice_peroxyde_meq_o2_kg ?? item.indicePeroxyde ?? item.indice_peroxyde ?? 0),
+          polyphenols_mg_kg: Number(item.polyphenols_mg_kg ?? item.polyphenolsMgKg ?? item.polyphenols ?? 0),
           k232: Number(item.k232 ?? 0),
           k270: Number(item.k270 ?? 0),
-          classeQualiteFinale: String(item.classeQualiteFinale ?? item.classe_qualite_finale ?? ''),
           dateAnalyse: String(item.dateAnalyse ?? item.date_analyse ?? ''),
           lotId: Number(item.lotId ?? item.lot_id ?? lotId),
         }));
@@ -39,11 +39,11 @@ export class AnalyseLaboratoireService {
 
   addToStore(payload: {
     lotId: number;
-    acidite: number;
-    indicePeroxyde: number;
+    acidite_huile_pourcent: number;
+    indice_peroxyde_meq_o2_kg: number;
+    polyphenols_mg_kg: number;
     k232: number;
     k270: number;
-    classeQualiteFinale?: string;
     dateAnalyse?: string;
   }): Observable<AnalyseLaboratoire> {
     return this.http.post<AnalyseLaboratoire>(this.apiUrl, payload);

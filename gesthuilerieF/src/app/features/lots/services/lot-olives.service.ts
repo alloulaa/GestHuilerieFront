@@ -8,14 +8,22 @@ import { StockService } from '../../stock/services/stock.service';
 
 export interface LotOlivesUpdatePayload {
   variete?: string;
-  maturite?: string;
+  maturite_niveau_1_5?: string;
   origine?: string;
+  region?: string;
+  methode_recolte?: string;
+  type_sol?: string;
+  temps_depuis_recolte_heures?: number;
+  humidite_pourcent?: number;
+  acidite_olives_pourcent?: number;
+  taux_feuilles_pourcent?: number;
+  lavage_effectue?: string;
   dateRecolte?: string;
   dateReception?: string;
   fournisseurNom?: string;
   fournisseurCIN?: string;
-  dureeStockageAvantBroyage?: number;
-  pesee?: number;
+  duree_stockage_jours?: number;
+  poids_olives_kg?: number;
   quantiteInitiale?: number;
   quantiteRestante?: number;
   matierePremiereReference?: string;
@@ -83,9 +91,20 @@ export class LotOlivesService {
     return this.http.delete<void>(`${this.apiUrl}/${idLot}`);
   }
 
-  private normalizeLot(item: LotOlives & { huilerieId?: number; huilerieNom?: string }): LotOlives {
+  private normalizeLot(item: any): LotOlives {
     return {
       ...item,
+      varieteOlive: item?.varieteOlive ?? item?.variete ?? '',
+      maturite: item?.maturite ?? item?.maturite_niveau_1_5 ?? '',
+      methodeRecolte: item?.methodeRecolte ?? item?.methode_recolte,
+      typeSol: item?.typeSol ?? item?.type_sol,
+      tempsDepuisRecolteHeures: item?.tempsDepuisRecolteHeures ?? item?.temps_depuis_recolte_heures,
+      humiditePourcent: item?.humiditePourcent ?? item?.humidite_pourcent,
+      aciditeOlivesPourcent: item?.aciditeOlivesPourcent ?? item?.acidite_olives_pourcent,
+      tauxFeuillesPourcent: item?.tauxFeuillesPourcent ?? item?.taux_feuilles_pourcent,
+      lavageEffectue: item?.lavageEffectue ?? item?.lavage_effectue,
+      dureeStockageAvantBroyage: item?.dureeStockageAvantBroyage ?? item?.duree_stockage_jours,
+      pesee: item?.pesee ?? item?.poids_olives_kg,
       huilerieId: item?.huilerieId,
       huilerieNom: item?.huilerieNom,
     };

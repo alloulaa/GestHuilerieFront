@@ -18,6 +18,7 @@ import { GuideProductionService } from '../../services/guide-production.service'
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { TYPE_MACHINE_OPTIONS } from '../../../../shared/constants/domain-options';
 import { of, switchMap } from 'rxjs';
 
 @Component({
@@ -43,6 +44,8 @@ export class GuidesExecuterComponent implements OnInit {
   executionError = '';
   submittingExecution = false;
   selectedExecution: ExecutionProduction | null = null;
+
+  readonly typeMachineOptions = TYPE_MACHINE_OPTIONS;
 
   readonly executionForm;
 
@@ -77,7 +80,9 @@ export class GuidesExecuterComponent implements OnInit {
       statut: ['EN_COURS', [Validators.required]],
       rendement: [0, [Validators.required, Validators.min(0)]],
       observations: [''],
+      controleTemperature: [false, [Validators.required]],
       guideProductionId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
+      typeMachine: this.fb.control<string | null>(null, { validators: [Validators.required] }),
       machineId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
       lotId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
       valeursReelles: this.fb.array([]),
@@ -178,24 +183,97 @@ export class GuidesExecuterComponent implements OnInit {
       this.executionForm.patchValue({ guideProductionId: null });
       this.executionValueRows = [];
       this.valeursReelles.clear();
-      this.filteredMachines = [];
-      this.filteredLots = [];
+      this.refreshFilteredDataForSelectedGuide();
       return;
     }
 
-    const guide = this.guides.find((item) => item.idGuideProduction === numericGuideId);
+    this.executionForm.patchValue({ guideProductionId: numericGuideId });
+    this.refreshFilteredDataForSelectedGuide();
+  }
+
+  onTypeMachineSelectionChange(typeMachine: string | null): void {
+    const normalizedTypeMachine = String(typeMachine ?? '').trim();
+    if (!normalizedTypeMachine) {
+      this.machines = [];
+      this.filteredMachines = [];
+      this.executionForm.patchValue({ machineId: null });
+      return;
+    }
+
+    this.machineService.getAll(undefined, normalizedTypeMachine).subscribe({
+      next: (items) => {
+        const normalizedSelectedType = normalizedTypeMachine.toLowerCase();
+        this.machines = (items ?? []).filter((machine) => {
+          const currentType = String(machine?.typeMachine ?? '').trim().toLowerCase();
+          return currentType === normalizedSelectedType && this.isMachineActive(machine);
+        });
+        this.refreshFilteredDataForSelectedGuide();
+      },
+      error: () => {
+        this.machines = [];
+        this.filteredMachines = [];
+        this.executionForm.patchValue({ machineId: null });
+        this.toastService.error('Impossible de charger les machines pour le type sélectionné.');
+      },
+    });
+  }
+
+  onMachineSelectionChange(machineId: number): void {
+    this.executionForm.patchValue({ machineId: Number(machineId) });
+  }
+
+  isSelectedMachine(machineId: number): boolean {
+    return Number(this.executionForm.get('machineId')?.value ?? 0) === Number(machineId);
+  }
+
+  private refreshFilteredDataForSelectedGuide(): void {
+    const guideId = Number(this.executionForm.get('guideProductionId')?.value ?? 0);
+    if (!guideId) {
+      this.filteredLots = [];
+      this.refreshFilteredMachines();
+      return;
+    }
+
+    const guide = this.guides.find((item) => item.idGuideProduction === guideId);
     if (guide) {
       // Filtrage lots et machines par huilerie du guide
-      this.filteredMachines = this.machines.filter(m => m.huilerieId === guide.huilerieId);
       this.filteredLots = this.filterLotsByGuideHuilerie(guide.huilerieId);
-      // Réinitialiser le lot/machine si non valide
-      if (!this.filteredMachines.some(m => m.idMachine === this.executionForm.get('machineId')?.value)) {
-        this.executionForm.patchValue({ machineId: null });
-      }
-      if (!this.filteredLots.some(l => l.idLot === this.executionForm.get('lotId')?.value)) {
+      this.refreshFilteredMachines(guide);
+
+      // Réinitialiser le lot si non valide
+      if (!this.filteredLots.some((l) => l.idLot === this.executionForm.get('lotId')?.value)) {
         this.executionForm.patchValue({ lotId: null });
       }
     }
+  }
+
+  private refreshFilteredMachines(guide?: GuideProduction): void {
+    const selectedType = String(this.executionForm.get('typeMachine')?.value ?? '').trim().toLowerCase();
+    const baseMachines = this.machines.filter((machine) => {
+      const machineType = String(machine?.typeMachine ?? '').trim().toLowerCase();
+      if (!selectedType || machineType !== selectedType) {
+        return false;
+      }
+
+      return this.isMachineActive(machine);
+    });
+
+    this.filteredMachines = guide
+      ? baseMachines.filter((machine) => machine.huilerieId === guide.huilerieId)
+      : baseMachines;
+
+    if (this.filteredMachines.length === 1) {
+      this.executionForm.patchValue({ machineId: this.filteredMachines[0].idMachine });
+      return;
+    }
+
+    if (!this.filteredMachines.some((machine) => machine.idMachine === this.executionForm.get('machineId')?.value)) {
+      this.executionForm.patchValue({ machineId: null });
+    }
+  }
+
+  private isMachineActive(machine: Machine): boolean {
+    return String(machine?.etatMachine ?? '').trim().toUpperCase() === 'EN_SERVICE';
   }
 
   submitExecution(): void {
@@ -226,6 +304,7 @@ export class GuidesExecuterComponent implements OnInit {
       statut: String(raw.statut ?? 'EN_COURS'),
       rendement: Number(raw.rendement ?? 0),
       observations: String(raw.observations ?? '').trim(),
+      controleTemperature: raw.controleTemperature === true,
       guideProductionId: Number(raw.guideProductionId),
       guideId: Number(raw.guideProductionId),
       idGuideProduction: Number(raw.guideProductionId),
@@ -361,7 +440,6 @@ export class GuidesExecuterComponent implements OnInit {
 
   private loadReferenceData(): void {
     this.guideProductionService.getAll().subscribe((items) => (this.guides = items));
-    this.machineService.getAll().subscribe((items) => (this.machines = items));
     this.lotOlivesService.getAll().subscribe((items) => {
       this.refreshAvailableLots(items);
       this.refreshFilteredLotsForSelectedGuide();
@@ -582,7 +660,9 @@ export class GuidesExecuterComponent implements OnInit {
       statut: 'EN_COURS',
       rendement: 0,
       observations: '',
+      controleTemperature: false,
       guideProductionId,
+      typeMachine: null,
       machineId: null,
       lotId: null,
     });

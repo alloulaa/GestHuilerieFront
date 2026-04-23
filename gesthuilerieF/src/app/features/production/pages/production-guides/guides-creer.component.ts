@@ -21,6 +21,34 @@ export class GuidesCreerComponent implements OnInit {
   guideError = '';
   submittingGuide = false;
 
+  readonly fixedParametreOptions: Array<{ code: string; unite: string; description: string; valeur: string }> = [
+    {
+      code: 'temperature_malaxage_c',
+      unite: 'C',
+      description: 'Temperature de malaxage',
+      valeur: '27',
+    },
+    {
+      code: 'duree_malaxage_min',
+      unite: 'min',
+      description: 'Duree de malaxage',
+      valeur: '40',
+    },
+    {
+      code: 'vitesse_decanteur_tr_min',
+      unite: 'tr/min',
+      description: 'Vitesse du decanteur',
+      valeur: '3200',
+    },
+    {
+      code: 'pression_extraction_bar',
+      unite: 'bar',
+      description: 'Pression d extraction',
+      valeur: '2.5',
+    },
+  ];
+  readonly customParametreCode = 'autre';
+
   readonly guideForm;
 
   constructor(
@@ -76,6 +104,44 @@ export class GuidesCreerComponent implements OnInit {
     parametres.removeAt(parametreIndex);
   }
 
+  onParametreCodeChange(etapeIndex: number, parametreIndex: number): void {
+    const group = this.getParametres(etapeIndex).at(parametreIndex);
+    const selectedCode = String(group.get('codeParametre')?.value ?? '').trim();
+    const customNameControl = group.get('nomPersonnalise');
+
+    if (!customNameControl) {
+      return;
+    }
+
+    if (selectedCode === this.customParametreCode) {
+      group.patchValue({ nom: '' });
+      customNameControl.setValidators([Validators.required]);
+      customNameControl.updateValueAndValidity();
+      return;
+    }
+
+    customNameControl.clearValidators();
+    customNameControl.setValue('');
+    customNameControl.updateValueAndValidity();
+
+    const selectedOption = this.fixedParametreOptions.find((option) => option.code === selectedCode);
+    if (!selectedOption) {
+      return;
+    }
+
+    group.patchValue({
+      nom: selectedOption.code,
+      uniteMesure: selectedOption.unite,
+      description: selectedOption.description,
+      valeur: selectedOption.valeur,
+    });
+  }
+
+  isCustomParamSelected(etapeIndex: number, parametreIndex: number): boolean {
+    const selectedCode = this.getParametres(etapeIndex).at(parametreIndex).get('codeParametre')?.value;
+    return String(selectedCode ?? '') === this.customParametreCode;
+  }
+
   submitGuide(): void {
     if (this.guideForm.invalid) {
       this.guideForm.markAllAsTouched();
@@ -127,7 +193,9 @@ export class GuidesCreerComponent implements OnInit {
 
   private createParametreGroup(): ReturnType<FormBuilder['group']> {
     return this.fb.group({
-      nom: ['', [Validators.required]],
+      codeParametre: ['', [Validators.required]],
+      nom: [''],
+      nomPersonnalise: [''],
       uniteMesure: ['', [Validators.required]],
       description: ['', [Validators.required]],
       valeur: ['', [Validators.required]],
@@ -151,11 +219,20 @@ export class GuidesCreerComponent implements OnInit {
 
   private mapParametresPayload(parametres: unknown[]): ParametreEtape[] {
     return (parametres as Array<Record<string, unknown>>).map((parametre) => ({
-      nom: String(parametre['nom'] ?? '').trim(),
+      codeParametre: String(parametre['codeParametre'] ?? '').trim(),
+      nom: this.resolveParametreNom(parametre),
       uniteMesure: String(parametre['uniteMesure'] ?? '').trim(),
       description: String(parametre['description'] ?? '').trim(),
       valeur: String(parametre['valeur'] ?? '').trim(),
     }));
+  }
+
+  private resolveParametreNom(parametre: Record<string, unknown>): string {
+    const codeParametre = String(parametre['codeParametre'] ?? '').trim();
+    if (codeParametre === this.customParametreCode) {
+      return String(parametre['nomPersonnalise'] ?? '').trim();
+    }
+    return String(parametre['nom'] ?? '').trim();
   }
 
   private resetGuideForm(): void {

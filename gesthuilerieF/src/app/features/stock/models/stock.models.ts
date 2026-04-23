@@ -20,15 +20,24 @@ export interface Pesee {
 export interface ReceptionPeseeCreatePayload {
   datePesee: string;
   pesee: number;
+  poids_olives_kg?: number;
   variete?: string;
   varieteOlive?: string;
-  maturite?: string;
+  maturite_niveau_1_5?: string;
   origine?: string;
+  region?: string;
+  methode_recolte?: string;
+  type_sol?: string;
+  temps_depuis_recolte_heures?: number;
+  humidite_pourcent?: number;
+  acidite_olives_pourcent?: number;
+  taux_feuilles_pourcent?: number;
+  lavage_effectue?: string;
   dateRecolte?: string;
   dateReception?: string;
   fournisseurNom?: string;
   fournisseurCIN?: string;
-  dureeStockageAvantBroyage?: number;
+  duree_stockage_jours?: number;
   matierePremiereReference?: string;
   campagneReference?: string;
   huilerieId: number;
