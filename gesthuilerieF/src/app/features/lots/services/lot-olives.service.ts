@@ -160,7 +160,6 @@ export class LotOlivesService {
       return !!itemReference && lotRefsWithAvailableStock.has(itemReference);
     };
 
-    const availableDirectScopedLots = directScopedLots.filter(hasAvailableStock);
     const byStockScope = items.filter(hasAvailableStock);
 
     const scopedByStocksAndHuilerie = byStockScope.filter((item) =>
@@ -170,6 +169,10 @@ export class LotOlivesService {
     if (byStockScope.length > 0 && !this.missingLotHuilerieFallbackLogged) {
       this.missingLotHuilerieFallbackLogged = true;
       console.warn('[lot-olives-service] Temporary fallback: /lots response has no huilerieId, scoped by stock payload.');
+    }
+
+    if (directScopedLots.length > 0) {
+      return directScopedLots;
     }
 
     if (directScopedLots.length === 0 && byStockScope.length > 0) {
@@ -194,7 +197,7 @@ export class LotOlivesService {
       });
     }
 
-    return availableDirectScopedLots.length > 0 ? availableDirectScopedLots : byStockScope;
+    return byStockScope;
   }
 
   private extractLotIdFromReference(value: unknown): number | null {

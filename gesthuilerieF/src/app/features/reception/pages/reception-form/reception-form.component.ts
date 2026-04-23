@@ -220,6 +220,10 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         this.errorMessage = '';
 
         if (this.form.invalid) {
+            const invalidFields = Object.keys(this.form.controls)
+                .filter((key) => this.form.get(key)?.invalid);
+            console.warn('[reception-form] invalid fields on submit:', invalidFields);
+
             this.form.markAllAsTouched();
             this.toastService.error('Veuillez corriger les champs invalides avant de continuer.');
             return;
@@ -231,6 +235,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         const campagne = this.campagnes.find(c => c.reference === raw.campagneId);
 
         const payload: CreatePeseeInput = {
+            lotId: raw.lotMode === 'new' ? undefined : Number(raw.existingLotId ?? 0) || undefined,
             datePesee: raw.datePesee ?? new Date().toISOString(),
             pesee: Number(raw.poidsBrut),
             poidsBrut: Number(raw.poidsBrut),
@@ -522,7 +527,13 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
     }
 
     private selectDefaultLot(): void {
-        if (this.isNewLotMode() || this.availableLotsForReception.length === 0) {
+        if (this.isNewLotMode()) {
+            return;
+        }
+
+        if (this.availableLotsForReception.length === 0) {
+            this.form.patchValue({ lotMode: 'new', existingLotId: null }, { emitEvent: false });
+            this.applyLotModeValidation('new');
             return;
         }
         const availableLot = this.availableLotsForReception[0];

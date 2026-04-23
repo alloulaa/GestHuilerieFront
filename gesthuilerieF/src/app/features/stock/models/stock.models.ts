@@ -18,6 +18,7 @@ export interface Pesee {
 }
 
 export interface ReceptionPeseeCreatePayload {
+  lotId?: number;
   datePesee: string;
   pesee: number;
   poids_olives_kg?: number;

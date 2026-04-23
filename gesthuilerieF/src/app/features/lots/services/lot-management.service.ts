@@ -7,6 +7,7 @@ import { WeighingService } from '../../stock/services/weighing.service';
 import { TraceabilityService } from './traceability.service';
 
 export interface CreatePeseeInput {
+  lotId?: number;
   datePesee: string;
   pesee: number;
   poidsBrut?: number;
@@ -39,6 +40,7 @@ export interface CreatePeseeInput {
 export class LotManagementService {
   private readonly lotsSubject = new BehaviorSubject<LotOlives[]>([]);
   private readonly weighingsSubject = new BehaviorSubject<Pesee[]>([]);
+  private lastHuilerieNomFilter?: string;
 
   readonly lots$ = this.lotsSubject.asObservable();
   readonly weighings$ = this.weighingsSubject.asObservable();
@@ -50,9 +52,11 @@ export class LotManagementService {
   ) { }
 
   private refreshData(huilerieNom?: string): Observable<void> {
+    const effectiveHuilerieNom = huilerieNom !== undefined ? huilerieNom : this.lastHuilerieNomFilter;
+
     return forkJoin({
-      lots: this.lotOlivesService.getAll(huilerieNom),
-      weighings: this.weighingService.getAll(huilerieNom),
+      lots: this.lotOlivesService.getAll(effectiveHuilerieNom),
+      weighings: this.weighingService.getAll(effectiveHuilerieNom),
     }).pipe(
       switchMap(({ lots, weighings }) =>
         this.backfillLotsFromWeighings(lots, weighings).pipe(
@@ -63,6 +67,7 @@ export class LotManagementService {
         this.lotsSubject.next(lots);
         this.weighingsSubject.next(weighings);
         console.log('[lot-management-service] refreshData', {
+          huilerieNomFilter: effectiveHuilerieNom ?? null,
           lotsCount: lots.length,
           weighingsCount: weighings.length,
           lotIds: lots.map((lot) => lot.idLot),
@@ -111,6 +116,7 @@ export class LotManagementService {
   }
 
   loadInitialData(huilerieNom?: string): Observable<void> {
+    this.lastHuilerieNomFilter = huilerieNom;
     return this.refreshData(huilerieNom);
   }
 
@@ -138,6 +144,7 @@ export class LotManagementService {
 
   createPesee(input: CreatePeseeInput): Observable<Pesee> {
     const payload: ReceptionPeseeCreatePayload = {
+      lotId: input.lotId,
       datePesee: input.datePesee,
       pesee: Number(input.pesee ?? input.poidsBrut ?? 0),
       poids_olives_kg: Number(input.pesee ?? input.poidsBrut ?? 0),
@@ -176,6 +183,7 @@ export class LotManagementService {
 
   updatePesee(idPesee: number, input: CreatePeseeInput): Observable<Pesee> {
     const payload: ReceptionPeseeCreatePayload = {
+      lotId: input.lotId,
       datePesee: input.datePesee,
       pesee: Number(input.pesee ?? input.poidsBrut ?? 0),
       poids_olives_kg: Number(input.pesee ?? input.poidsBrut ?? 0),

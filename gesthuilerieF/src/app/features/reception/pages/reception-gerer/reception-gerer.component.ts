@@ -246,6 +246,10 @@ export class ReceptionGererComponent implements OnInit {
     console.log('[reception-gerer] form value:', this.form.getRawValue());
 
     if (this.form.invalid) {
+      const invalidFields = Object.keys(this.form.controls)
+        .filter((key) => this.form.get(key)?.invalid);
+      console.warn('[reception-gerer] invalid fields on submit:', invalidFields);
+
       Object.keys(this.form.controls).forEach((key) => {
         const control = this.form.get(key);
         if (control?.invalid) {
@@ -282,6 +286,7 @@ export class ReceptionGererComponent implements OnInit {
     );
 
     const payload: CreatePeseeInput = {
+      lotId: this.isNewLotMode() ? undefined : Number(raw.existingLotId ?? 0) || undefined,
       datePesee: raw.datePesee ?? new Date().toISOString(),
       pesee: poidsBrut || 0,
       poidsBrut: poidsBrut || 0,
@@ -704,7 +709,13 @@ export class ReceptionGererComponent implements OnInit {
   }
 
   private selectDefaultLot(): void {
-    if (this.isNewLotMode() || this.availableLotsForReception.length === 0) {
+    if (this.isNewLotMode()) {
+      return;
+    }
+
+    if (this.availableLotsForReception.length === 0) {
+      this.form.patchValue({ lotMode: 'new', existingLotId: null }, { emitEvent: false });
+      this.applyLotModeValidation('new');
       return;
     }
 
