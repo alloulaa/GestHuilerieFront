@@ -1,0 +1,93 @@
+<div class="chatbot-widget">
+  <button
+    class="chatbot-widget__fab"
+    [class.chatbot-widget__fab--pulse]="hasUnreadPulse"
+    type="button"
+    (click)="toggleWidget()"
+    aria-label="Open Huilerie Assistant"
+  >
+    <span class="material-symbols-outlined chatbot-widget__fab-icon">smart_toy</span>
+  </button>
+
+  <div
+    class="chatbot-widget__backdrop"
+    [class.chatbot-widget__backdrop--visible]="isPanelVisible && isFullScreenActive"
+    (click)="toggleFullScreen()"
+  ></div>
+
+  <section
+    #chatWindow
+    class="chatbot-widget__panel"
+    [class.chatbot-widget__panel--open]="isOpen"
+    [class.chatbot-widget__panel--closing]="isClosing"
+    [class.chatbot-widget__panel--mounted]="isPanelVisible"
+    [class.chatbot-widget__panel--fullscreen]="isFullScreenActive"
+    [ngStyle]="panelStyles"
+    role="dialog"
+    [attr.aria-modal]="isFullScreenActive"
+    aria-label="Huilerie Assistant"
+  >
+    <header class="chatbot-widget__header" (mousedown)="startDrag($event)" (touchstart)="startDrag($event)">
+      <h3>Huilerie Assistant</h3>
+      <div class="chatbot-widget__header-actions">
+        <button
+          class="chatbot-widget__icon-btn"
+          type="button"
+          (click)="toggleFullScreen()"
+          [attr.aria-label]="isFullScreenActive ? 'Minimize chat' : 'Expand chat'"
+          [disabled]="isMobile"
+        >
+          <span class="material-symbols-outlined">{{ isFullScreenActive ? 'close_fullscreen' : 'open_in_full' }}</span>
+        </button>
+        <button class="chatbot-widget__icon-btn chatbot-widget__icon-btn--danger" type="button" (click)="closeWidget()" aria-label="Close chat">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </header>
+
+    <div #messagesContainer class="chatbot-widget__messages">
+      <ng-container *ngFor="let message of messages; let i = index">
+        <article
+          class="chatbot-widget__message"
+          [class.chatbot-widget__message--user]="message.sender === 'user'"
+        >
+          <p>{{ message.content }}</p>
+          <time>{{ message.timestamp | date: 'HH:mm' }}</time>
+        </article>
+
+        <section class="chatbot-widget__suggestions" *ngIf="showSuggestions && i === 0">
+          <button
+            class="chatbot-widget__chip"
+            type="button"
+            *ngFor="let suggestion of quickSuggestions"
+            (click)="sendSuggestion(suggestion)"
+          >
+            <span>{{ suggestion }}</span>
+          </button>
+        </section>
+      </ng-container>
+
+      <article class="chatbot-widget__typing" *ngIf="isLoading" aria-live="polite" aria-label="Assistant is typing">
+        <span></span>
+        <span></span>
+        <span></span>
+      </article>
+    </div>
+
+    <form class="chatbot-widget__input-area" (ngSubmit)="sendMessage()">
+      <textarea
+        #chatInputArea
+        name="chatInput"
+        [(ngModel)]="draftMessage"
+        (input)="onTextareaInput(chatInputArea)"
+        [disabled]="isLoading"
+        placeholder="Posez votre question..."
+        rows="1"
+      ></textarea>
+      <button type="submit" [disabled]="!canSend" [attr.aria-busy]="isLoading">
+        <span class="material-symbols-outlined" *ngIf="!isLoading">send</span>
+        <span class="chatbot-widget__send-spinner" *ngIf="isLoading"></span>
+      </button>
+    </form>
+  </section>
+</div>
