@@ -46,7 +46,9 @@ export class MachinesListComponent implements OnInit {
 
   private loadMachines(): void {
     const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+    console.log('[machines-list] loadMachines called', { huilerieNom, isAdmin: this.isAdmin });
     this.machineService.getAll(huilerieNom).subscribe((data) => {
+      console.log('[machines-list] received machines from service', { count: data.length, machines: data });
       this.machines = data;
     });
   }

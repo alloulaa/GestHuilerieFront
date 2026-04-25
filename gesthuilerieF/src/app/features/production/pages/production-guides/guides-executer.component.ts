@@ -188,6 +188,7 @@ export class GuidesExecuterComponent implements OnInit {
     }
 
     this.executionForm.patchValue({ guideProductionId: numericGuideId });
+    this.loadMachinesForSelectedGuide();
     this.refreshFilteredDataForSelectedGuide();
   }
 
@@ -202,10 +203,9 @@ export class GuidesExecuterComponent implements OnInit {
 
     this.machineService.getAll(undefined, normalizedTypeMachine).subscribe({
       next: (items) => {
-        const normalizedSelectedType = normalizedTypeMachine.toLowerCase();
+        const normalizedSelectedType = this.normalizeMachineType(normalizedTypeMachine);
         this.machines = (items ?? []).filter((machine) => {
-          const currentType = String(machine?.typeMachine ?? '').trim().toLowerCase();
-          return currentType === normalizedSelectedType && this.isMachineActive(machine);
+          return this.normalizeMachineType(machine?.typeMachine) === normalizedSelectedType && this.isMachineActive(machine);
         });
         this.refreshFilteredDataForSelectedGuide();
       },
@@ -237,7 +237,7 @@ export class GuidesExecuterComponent implements OnInit {
     const guide = this.guides.find((item) => item.idGuideProduction === guideId);
     if (guide) {
       // Filtrage lots et machines par huilerie du guide
-      this.filteredLots = this.filterLotsByGuideHuilerie(guide.huilerieId);
+      this.filteredLots = this.filterLotsByGuideHuilerie(guide);
       this.refreshFilteredMachines(guide);
 
       // Réinitialiser le lot si non valide
@@ -248,19 +248,34 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private refreshFilteredMachines(guide?: GuideProduction): void {
-    const selectedType = String(this.executionForm.get('typeMachine')?.value ?? '').trim().toLowerCase();
-    const baseMachines = this.machines.filter((machine) => {
-      const machineType = String(machine?.typeMachine ?? '').trim().toLowerCase();
-      if (!selectedType || machineType !== selectedType) {
-        return false;
-      }
+    const selectedType = this.normalizeMachineType(this.executionForm.get('typeMachine')?.value);
+    if (!guide) {
+      this.filteredMachines = [];
+      this.executionForm.patchValue({ machineId: null });
+      return;
+    }
 
-      return this.isMachineActive(machine);
+    const guideMachines = this.machines.filter((machine) =>
+      this.isMachineActive(machine)
+      && this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, machine.huilerieId, machine.huilerieNom),
+    );
+    this.filteredMachines = selectedType
+      ? guideMachines.filter((machine) => this.normalizeMachineType(machine?.typeMachine) === selectedType)
+      : guideMachines;
+
+    console.debug('[guides-executer] refreshFilteredMachines', {
+      guideHuilerieId: guide.huilerieId,
+      guideHuilerieNom: guide.huilerieNom,
+      selectedType,
+      guideMachinesCount: guideMachines.length,
+      filteredMachinesCount: this.filteredMachines.length,
+      machineTypes: guideMachines.map((machine) => machine.typeMachine),
+      machineHuileries: guideMachines.map((machine) => ({
+        idMachine: machine.idMachine,
+        huilerieId: machine.huilerieId,
+        huilerieNom: machine.huilerieNom,
+      })),
     });
-
-    this.filteredMachines = guide
-      ? baseMachines.filter((machine) => machine.huilerieId === guide.huilerieId)
-      : baseMachines;
 
     if (this.filteredMachines.length === 1) {
       this.executionForm.patchValue({ machineId: this.filteredMachines[0].idMachine });
@@ -273,7 +288,56 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private isMachineActive(machine: Machine): boolean {
-    return String(machine?.etatMachine ?? '').trim().toUpperCase() === 'EN_SERVICE';
+    const normalizedStatus = String(machine?.etatMachine ?? '')
+      .trim()
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Z0-9]+/g, '_');
+    if (!normalizedStatus) {
+      return true;
+    }
+
+    return !(
+      normalizedStatus.includes('DESACT')
+      || normalizedStatus.includes('INACTIVE')
+      || normalizedStatus.includes('OFFLINE')
+      || normalizedStatus.includes('HORS_SERVICE')
+    );
+  }
+
+  private normalizeMachineType(value: string | null | undefined): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  private normalizeHuilerieName(value: string | null | undefined): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+  }
+
+  private isSameHuilerie(
+    leftId: number | null | undefined,
+    leftNom: string | null | undefined,
+    rightId: number | null | undefined,
+    rightNom: string | null | undefined,
+  ): boolean {
+    const normalizedLeftId = Number(leftId ?? 0);
+    const normalizedRightId = Number(rightId ?? 0);
+    if (normalizedLeftId > 0 && normalizedRightId > 0 && normalizedLeftId === normalizedRightId) {
+      return true;
+    }
+
+    const normalizedLeftNom = this.normalizeHuilerieName(leftNom);
+    const normalizedRightNom = this.normalizeHuilerieName(rightNom);
+    return normalizedLeftNom.length > 0 && normalizedRightNom.length > 0 && normalizedLeftNom === normalizedRightNom;
   }
 
   submitExecution(): void {
@@ -296,8 +360,14 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionError = '';
     this.executionMessage = '';
 
+    const executionReference = this.buildExecutionReference(
+      selectedLot,
+      Number(raw.guideProductionId ?? 0),
+      Number(raw.machineId ?? 0),
+    );
+
     const payload: ExecutionProductionCreate & Record<string, unknown> = {
-      reference: selectedLot.reference ?? `LOT-${selectedLot.idLot}`,
+      reference: executionReference,
       dateDebut: String(raw.dateDebut ?? this.today()),
       dateFinPrevue: String(raw.dateFinPrevue ?? this.tomorrow()),
       dateFinReelle: raw.dateFinReelle ? String(raw.dateFinReelle) : null,
@@ -440,11 +510,30 @@ export class GuidesExecuterComponent implements OnInit {
 
   private loadReferenceData(): void {
     this.guideProductionService.getAll().subscribe((items) => (this.guides = items));
+    this.machineService.getAll().subscribe((items) => {
+      this.machines = (items ?? []).filter((machine) => this.isMachineActive(machine));
+      this.refreshFilteredDataForSelectedGuide();
+    });
     this.lotOlivesService.getAll().subscribe((items) => {
       this.refreshAvailableLots(items);
       this.refreshFilteredLotsForSelectedGuide();
     });
     this.rawMaterialService.getAll().subscribe((items) => (this.matieresPremieres = items));
+  }
+
+  private loadMachinesForSelectedGuide(): void {
+    this.machineService.getAll().subscribe({
+      next: (items) => {
+        this.machines = (items ?? []).filter((machine) => this.isMachineActive(machine));
+        this.refreshFilteredDataForSelectedGuide();
+      },
+      error: () => {
+        this.machines = [];
+        this.filteredMachines = [];
+        this.executionForm.patchValue({ machineId: null });
+        this.toastService.error('Impossible de charger les machines pour le guide sélectionné.');
+      },
+    });
   }
 
   private loadExecutions(): void {
@@ -513,13 +602,10 @@ export class GuidesExecuterComponent implements OnInit {
     this.lots = (items ?? []).filter((lot) => !usedLotIds.has(Number(lot?.idLot ?? 0)));
   }
 
-  private filterLotsByGuideHuilerie(huilerieId: number | null | undefined): LotOlives[] {
-    const id = Number(huilerieId ?? 0);
-    if (!id) {
-      return [];
-    }
-
-    return this.lots.filter((lot) => Number(lot?.huilerieId ?? 0) === id);
+  private filterLotsByGuideHuilerie(guide: GuideProduction): LotOlives[] {
+    return this.lots.filter((lot) =>
+      this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, lot.huilerieId, lot.huilerieNom),
+    );
   }
 
   private refreshFilteredLotsForSelectedGuide(): void {
@@ -530,7 +616,7 @@ export class GuidesExecuterComponent implements OnInit {
     }
 
     const guide = this.guides.find((item) => item.idGuideProduction === guideId);
-    this.filteredLots = guide ? this.filterLotsByGuideHuilerie(guide.huilerieId) : [];
+    this.filteredLots = guide ? this.filterLotsByGuideHuilerie(guide) : [];
 
     const selectedLotId = Number(this.executionForm.get('lotId')?.value ?? 0);
     if (selectedLotId && !this.filteredLots.some((lot) => Number(lot?.idLot ?? 0) === selectedLotId)) {
@@ -679,6 +765,25 @@ export class GuidesExecuterComponent implements OnInit {
     const date = new Date();
     date.setDate(date.getDate() + 1);
     return date.toISOString().split('T')[0];
+  }
+
+  private buildExecutionReference(lot: LotOlives, guideId: number, machineId: number): string {
+    const lotRef = String(lot.reference ?? `LOT-${lot.idLot}`)
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const ms = String(now.getMilliseconds()).padStart(3, '0');
+
+    return `EXE-${lotRef || `LOT-${lot.idLot}`}-G${guideId || 0}-M${machineId || 0}-${yyyy}${mm}${dd}${hh}${min}${ss}${ms}`;
   }
 
   private readHttpError(error: unknown, fallbackMessage: string): string {

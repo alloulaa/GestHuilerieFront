@@ -44,11 +44,20 @@ export class MachineService {
       machines: this.http.get<MachineApiDto[]>(this.apiUrl, { params }),
       huileries: this.huilerieService.getAll(),
     }).pipe(
-      map(({ machines, huileries }) =>
-        this.filterByCurrentUserHuilerie(
-          machines.map((machine) => this.fromApi(machine, huileries)),
-        ),
-      ),
+      map(({ machines, huileries }) => {
+        const mapped = machines.map((machine) => this.fromApi(machine, huileries));
+        const filtered = this.filterByCurrentUserHuilerie(mapped);
+        const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
+        console.log('[machine-service] findAll', {
+          apiMachinesCount: machines.length,
+          mappedMachinesCount: mapped.length,
+          filteredMachinesCount: filtered.length,
+          currentHuilerieId,
+          apiMachineHuileries: machines.map(m => ({ id: m.idMachine, nom: m.huilerieNom })),
+          mappedMachineHuileries: mapped.map(m => ({ id: m.idMachine, huilerieId: m.huilerieId, nom: m.huilerieNom })),
+        });
+        return filtered;
+      }),
     );
   }
 
