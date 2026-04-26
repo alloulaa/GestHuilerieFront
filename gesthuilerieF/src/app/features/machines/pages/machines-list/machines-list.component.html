@@ -86,37 +86,37 @@
 <div class="about-backdrop" *ngIf="aboutModalOpen" (click)="closeAbout()">
   <div class="about-card" (click)="$event.stopPropagation()">
     <div class="about-header">
-      <h3>{{ selectedTypeInfo?.label }}</h3>
+      <div class="about-title-wrap">
+        <p class="about-kicker">Type de machine</p>
+        <h3>{{ selectedTypeInfo?.label }}</h3>
+      </div>
       <button class="about-close" type="button" (click)="closeAbout()" aria-label="Fermer">✕</button>
     </div>
     <div class="about-body" *ngIf="selectedTypeInfo">
-      <p class="about-desc">{{ selectedTypeInfo.description }}</p>
+      <div class="about-highlight">
+        <p class="about-desc">{{ selectedTypeInfo.description }}</p>
+      </div>
 
       <div class="about-meta">
-        <span class="meta-pill">Rendement: {{ selectedTypeInfo.rendement }}</span>
-        <span class="meta-pill">Qualité: {{ selectedTypeInfo.qualite }}</span>
         <span class="meta-pill">Type: {{ selectedTypeInfo.type }}</span>
         <span class="meta-pill" *ngIf="selectedTypeInfo.ajoutEau">Ajout d'eau: Oui</span>
         <span class="meta-pill" *ngIf="!selectedTypeInfo.ajoutEau">Ajout d'eau: Non</span>
       </div>
 
-      <div class="about-section">
-        <h4>Étapes prédéfinies</h4>
-        <ol class="about-steps">
-          <li *ngFor="let etape of selectedTypeInfo.etapes">{{ etape }}</li>
-        </ol>
-      </div>
+      <div class="about-grid">
+        <section class="about-section">
+          <h4>Étapes prédéfinies</h4>
+          <ol class="about-steps">
+            <li *ngFor="let etape of selectedTypeInfo.etapes">{{ formatEtape(etape) }}</li>
+          </ol>
+        </section>
 
-      <div class="about-section">
-        <h4>Caractéristiques</h4>
-        <ul class="about-list">
-          <li *ngFor="let c of selectedTypeInfo.caracteristiques">{{ c }}</li>
-        </ul>
-      </div>
-
-      <div class="about-section about-impact">
-        <h4>Impact sur la prédiction ML</h4>
-        <p>{{ selectedTypeInfo.impactPrediction }}</p>
+        <section class="about-section">
+          <h4>Caractéristiques</h4>
+          <ul class="about-list">
+            <li *ngFor="let c of selectedTypeInfo.caracteristiques">{{ c }}</li>
+          </ul>
+        </section>
       </div>
     </div>
   </div>

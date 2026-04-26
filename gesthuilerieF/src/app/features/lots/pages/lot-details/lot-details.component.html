@@ -11,18 +11,14 @@
   </nb-card-header>
   <nb-card-body *ngIf="lot as currentLot; else lotNotFound">
     <div class="lot-actions">
-      <button nbButton status="primary" size="small" type="button" *ngIf="!isEditMode" (click)="toggleEditMode()">
-        Modifier le lot
-      </button>
+
       <button nbButton status="basic" outline size="small" type="button" *ngIf="isEditMode" (click)="cancelEdit()">
         Annuler
       </button>
       <button nbButton status="success" size="small" type="button" *ngIf="isEditMode" (click)="saveLot()">
         Enregistrer
       </button>
-      <button nbButton status="danger" size="small" type="button" (click)="deleteLot()">
-        Supprimer le lot
-      </button>
+
     </div>
 
     <form class="edit-form" *ngIf="isEditMode" [formGroup]="form">

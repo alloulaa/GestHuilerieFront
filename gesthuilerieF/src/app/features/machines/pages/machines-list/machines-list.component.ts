@@ -101,4 +101,8 @@ export class MachinesListComponent implements OnInit {
     this.aboutModalOpen = false;
     this.selectedTypeInfo = null;
   }
+
+  formatEtape(etape: string): string {
+    return String(etape ?? '').replace(/^\s*\d+\.\s*/, '').trim();
+  }
 }
