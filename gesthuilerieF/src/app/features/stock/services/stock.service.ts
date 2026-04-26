@@ -68,11 +68,14 @@ export class StockService {
             huilerieId: Number(item.huilerieId ?? item.huilerie_id ?? 0),
             huilerieNom: String(item.huilerieNom ?? item.huilerie?.nom ?? '').trim() || undefined,
             typeStock: String(item.typeStock ?? item.type_stock ?? ''),
+            variete: String(item.variete ?? item.varieteOlive ?? '').trim() || undefined,
             referenceId: Number(item.referenceId ?? item.reference_id ?? item.lot_id ?? 0),
             lotReference: String(item.lotReference ?? item.referenceLot ?? item.reference_lot ?? item.lotOlivesReference ?? item.lotOlives?.reference ?? item.lot?.reference ?? '').trim() || undefined,
             lotReferences: Array.isArray(item.lotReferences)
                 ? item.lotReferences.map((value: unknown) => String(value ?? '').trim()).filter((value: string) => !!value)
-                : undefined,
+                : (String(item.lotReference ?? item.referenceLot ?? item.reference_lot ?? '').trim() || undefined)
+                    ? [String(item.lotReference ?? item.referenceLot ?? item.reference_lot ?? '').trim()]
+                    : undefined,
             matierePremiereId: item.matierePremiereId != null ? Number(item.matierePremiereId) : undefined,
             quantiteDisponible: Number(item.quantiteDisponible ?? item.quantite_disponible ?? 0),
         }));

@@ -21,7 +21,7 @@
                 <thead>
                     <tr>
                         <th>REFERENCE STOCK</th>
-                        <th>MATIERE PREMIERE</th>
+                        <th>VARIETE</th>
                         <th>QUANTITE DISPONIBLE</th>
                         <th>TYPE STOCK</th>
                         <th>REFERENCES LOTS</th>
@@ -33,7 +33,7 @@
                     </tr>
                     <tr *ngFor="let stock of stocks" class="row-hover">
                         <td>{{ stockReference(stock) }}</td>
-                        <td>{{ matiereReference(stock) }}</td>
+                        <td>{{ varieteLabel(stock) }}</td>
                         <td>{{ stock.quantiteDisponible }}</td>
                         <td>{{ stock.typeStock }}</td>
                         <td class="lot-references-cell">{{ lotReferencesLabel(stock) }}</td>

@@ -50,6 +50,7 @@ export interface Stock {
   huilerieId: number;
   huilerieNom?: string;
   typeStock: string;
+  variete?: string;
   referenceId: number;
   lotReference?: string;
   lotReferences?: string[];

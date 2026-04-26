@@ -44,48 +44,11 @@ export class StockOverviewComponent implements OnInit {
         const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
         this.stockService.getAll(huilerieNom).subscribe({
             next: data => {
-                this.stocks = this.groupByMatierePremiere(data);
+                this.stocks = data;
             },
             error: () => {
                 this.stocks = [];
             },
-        });
-    }
-
-    private groupByMatierePremiere(items: Stock[]): Stock[] {
-        const groups = new Map<string, Stock>();
-
-        for (const item of items) {
-            const matiereKey = item.matierePremiereId != null
-                ? `mp-${item.huilerieId}-${item.matierePremiereId}`
-                : `stock-${item.idStock}`;
-            const existing = groups.get(matiereKey);
-
-            if (!existing) {
-                groups.set(matiereKey, {
-                    ...item,
-                    quantiteDisponible: Number(item.quantiteDisponible ?? 0),
-                    lotReferences: this.collectLotReferences(item),
-                });
-                continue;
-            }
-
-            existing.quantiteDisponible = Number(existing.quantiteDisponible ?? 0) + Number(item.quantiteDisponible ?? 0);
-            existing.lotReferences = this.collectLotReferences(existing, item);
-
-            if (!existing.reference && item.reference) {
-                existing.reference = item.reference;
-            }
-
-            if (!existing.lotReference && item.lotReference) {
-                existing.lotReference = item.lotReference;
-            }
-        }
-
-        return Array.from(groups.values()).sort((left, right) => {
-            const leftKey = `${left.huilerieNom ?? ''}-${left.matierePremiereId ?? left.idStock}`;
-            const rightKey = `${right.huilerieNom ?? ''}-${right.matierePremiereId ?? right.idStock}`;
-            return leftKey.localeCompare(rightKey);
         });
     }
 
@@ -116,8 +79,8 @@ export class StockOverviewComponent implements OnInit {
         return stock.reference || (`ST-${stock.idStock}`);
     }
 
-    matiereReference(stock: Stock): string {
-        return stock.matierePremiereId != null ? `MP-${stock.matierePremiereId}` : '-';
+    varieteLabel(stock: Stock): string {
+        return String(stock.variete ?? '').trim().toUpperCase() || '-';
     }
 
     lotReferencesLabel(stock: Stock): string {
