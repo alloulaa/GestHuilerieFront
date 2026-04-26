@@ -12,7 +12,7 @@ import { LotOlives } from '../../../lots/models/lot.models';
 import { LotOlivesService } from '../../../lots/services/lot-olives.service';
 import { MatierePremiere } from '../../../matieres-premieres/models/raw-material.models';
 import { RawMaterialService } from '../../../matieres-premieres/services/raw-material.service';
-import { ExecutionProduction, ExecutionProductionCreate, GuideProduction } from '../../models/production.models';
+import { ExecutionProduction, ExecutionProductionCreate, GuideProduction, Prediction } from '../../models/production.models';
 import { ExecutionProductionService } from '../../services/execution-production.service';
 import { GuideProductionService } from '../../services/guide-production.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
@@ -183,12 +183,17 @@ export class GuidesExecuterComponent implements OnInit {
       this.executionForm.patchValue({ guideProductionId: null });
       this.executionValueRows = [];
       this.valeursReelles.clear();
+      this.filteredMachines = [];
+      this.executionForm.patchValue({ machineId: null });
       this.refreshFilteredDataForSelectedGuide();
       return;
     }
 
-    this.executionForm.patchValue({ guideProductionId: numericGuideId });
-    this.loadMachinesForSelectedGuide();
+    this.executionForm.patchValue({
+      guideProductionId: numericGuideId,
+      machineId: null,
+    });
+    this.filteredMachines = [];
     this.refreshFilteredDataForSelectedGuide();
   }
 
@@ -396,6 +401,20 @@ export class GuidesExecuterComponent implements OnInit {
             this.refreshFilteredLotsForSelectedGuide();
           });
           this.resetExecutionForm(false);
+
+          this.executionProductionService.predictOnStart(createdExecution.idExecutionProduction).subscribe({
+            next: (prediction) => {
+              this.attachPredictionToExecution(createdExecution.idExecutionProduction, prediction);
+              void this.showPredictionPopup(prediction);
+            },
+            error: (error) => {
+              const predictionError = this.readHttpError(
+                error,
+                'Exécution créée, mais la prédiction IA n\'a pas pu être calculée.',
+              );
+              this.toastService.error(predictionError);
+            },
+          });
         },
         error: (error) => {
           this.submittingExecution = false;
@@ -510,30 +529,13 @@ export class GuidesExecuterComponent implements OnInit {
 
   private loadReferenceData(): void {
     this.guideProductionService.getAll().subscribe((items) => (this.guides = items));
-    this.machineService.getAll().subscribe((items) => {
-      this.machines = (items ?? []).filter((machine) => this.isMachineActive(machine));
-      this.refreshFilteredDataForSelectedGuide();
-    });
+    this.machines = [];
+    this.filteredMachines = [];
     this.lotOlivesService.getAll().subscribe((items) => {
       this.refreshAvailableLots(items);
       this.refreshFilteredLotsForSelectedGuide();
     });
     this.rawMaterialService.getAll().subscribe((items) => (this.matieresPremieres = items));
-  }
-
-  private loadMachinesForSelectedGuide(): void {
-    this.machineService.getAll().subscribe({
-      next: (items) => {
-        this.machines = (items ?? []).filter((machine) => this.isMachineActive(machine));
-        this.refreshFilteredDataForSelectedGuide();
-      },
-      error: () => {
-        this.machines = [];
-        this.filteredMachines = [];
-        this.executionForm.patchValue({ machineId: null });
-        this.toastService.error('Impossible de charger les machines pour le guide sélectionné.');
-      },
-    });
   }
 
   private loadExecutions(): void {
@@ -755,6 +757,39 @@ export class GuidesExecuterComponent implements OnInit {
 
     this.valeursReelles.clear();
     this.executionValueRows = [];
+  }
+
+  private attachPredictionToExecution(executionId: number, prediction: Prediction): void {
+    this.executions = this.executions.map((execution) => {
+      if (execution.idExecutionProduction !== executionId) {
+        return execution;
+      }
+
+      const updatedPredictions = [prediction, ...(execution.predictions ?? [])];
+      return {
+        ...execution,
+        predictions: updatedPredictions,
+      };
+    });
+    this.saveExecutionCache(this.executions);
+  }
+
+  private async showPredictionPopup(prediction: Prediction): Promise<void> {
+    const lines = [
+      `Mode de prédiction: ${String(prediction.modePrediction ?? '-').toUpperCase()}`,
+      `Qualité prédite: ${String(prediction.qualitePredite ?? '-')}`,
+      `Probabilité de qualité: ${prediction.probabiliteQualite != null ? Number(prediction.probabiliteQualite).toFixed(4) : '-'}`,
+      `Rendement prédit (%): ${prediction.rendementPreditPourcent != null ? Number(prediction.rendementPreditPourcent).toFixed(2) : '-'}`,
+      `Quantité d'huile recalculée (L): ${prediction.quantiteHuileRecalculeeLitres != null ? Number(prediction.quantiteHuileRecalculeeLitres).toFixed(2) : '-'}`,
+    ];
+
+    await this.confirmDialogService.confirm({
+      title: 'Prédiction IA',
+      message: lines.join('\n'),
+      confirmText: 'Fermer',
+      cancelText: '',
+      intent: 'info',
+    });
   }
 
   private today(): string {

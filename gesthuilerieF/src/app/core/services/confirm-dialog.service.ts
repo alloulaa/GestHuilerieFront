@@ -6,7 +6,7 @@ export interface ConfirmDialogOptions {
     message: string;
     confirmText?: string;
     cancelText?: string;
-    intent?: 'danger' | 'primary';
+    intent?: 'danger' | 'primary' | 'info';
 }
 
 export interface ConfirmDialogState {
@@ -14,7 +14,7 @@ export interface ConfirmDialogState {
     message: string;
     confirmText: string;
     cancelText: string;
-    intent: 'danger' | 'primary';
+    intent: 'danger' | 'primary' | 'info';
 }
 
 @Injectable({ providedIn: 'root' })

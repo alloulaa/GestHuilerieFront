@@ -2,13 +2,10 @@ export interface MachineTypeInfo {
     key: string;
     label: string;
     description: string;
-    rendement: string;
-    qualite: string;
     ajoutEau: boolean;
     type: string;
     etapes: string[];
     caracteristiques: string[];
-    impactPrediction: string;
 }
 
 export const MACHINE_TYPE_DATA: Record<string, MachineTypeInfo> = {
@@ -16,8 +13,6 @@ export const MACHINE_TYPE_DATA: Record<string, MachineTypeInfo> = {
         key: '3_phase',
         label: 'Centrifugation 3 phases',
         description: 'Système continu industriel, le plus utilisé en Tunisie. Séparation en 3 flux : huile, eau végétale, grignons.',
-        rendement: 'Élevé (~20%)',
-        qualite: 'Moyenne à bonne',
         ajoutEau: true,
         type: 'Continu',
         etapes: [
@@ -37,15 +32,12 @@ export const MACHINE_TYPE_DATA: Record<string, MachineTypeInfo> = {
             'Rendement élevé',
             'Température contrôlée (< 27°C recommandé)',
         ],
-        impactPrediction:
-            'Le rendement est généralement le plus élevé (~20%). La qualité dépend fortement de la température de malaxage et de la durée de stockage. Le lavage à l\'eau réduit l\'acidité mais dilue les polyphénols.',
     },
     '2_phase': {
         key: '2_phase',
         label: 'Centrifugation 2 phases',
         description: 'Système moderne avancé, moins répandu en Tunisie mais présent. Pas d\'ajout d\'eau, meilleure qualité.',
-        rendement: 'Moyen',
-        qualite: 'Élevée',
+
         ajoutEau: false,
         type: 'Continu',
         etapes: [
@@ -64,15 +56,11 @@ export const MACHINE_TYPE_DATA: Record<string, MachineTypeInfo> = {
             'Plus de polyphénols conservés',
             'Meilleure qualité d\'huile',
         ],
-        impactPrediction:
-            'Rendement légèrement plus faible que 3 phases, mais qualité supérieure avec plus de polyphénols. Le fait de ne pas ajouter d\'eau préserve mieux les arômes.',
     },
     'presse': {
         key: 'presse',
         label: 'Presse hydraulique',
         description: 'Système traditionnel utilisé dans les petites huileries tunisiennes. Extraction discontinue, goût authentique.',
-        rendement: 'Faible',
-        qualite: 'Variable',
         ajoutEau: false,
         type: 'Discontinu',
         etapes: [
@@ -91,8 +79,7 @@ export const MACHINE_TYPE_DATA: Record<string, MachineTypeInfo> = {
             'Goût traditionnel',
             'Pression 200–400 bar',
         ],
-        impactPrediction:
-            'Rendement faible et qualité instable. Le broyage à la meule et le malaxage manuel introduisent plus de variabilité. La décantation naturelle est sensible à la température ambiante.',
+        
     },
 };
 
