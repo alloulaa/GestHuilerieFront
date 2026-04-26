@@ -75,12 +75,22 @@ export class AuthService {
   private extractToken(payload: any): string | null {
     return (
       payload?.token ??
+      payload?.jwt_token ??
+      payload?.access_token ??
       payload?.accessToken ??
       payload?.jwt ??
       payload?.data?.token ??
+      payload?.data?.jwt_token ??
+      payload?.data?.access_token ??
       payload?.data?.accessToken ??
       payload?.user?.token ??
+      payload?.user?.jwt_token ??
+      payload?.user?.access_token ??
       payload?.user?.accessToken ??
+      payload?.utilisateur?.token ??
+      payload?.utilisateur?.jwt_token ??
+      payload?.utilisateur?.access_token ??
+      payload?.utilisateur?.accessToken ??
       null
     );
   }
