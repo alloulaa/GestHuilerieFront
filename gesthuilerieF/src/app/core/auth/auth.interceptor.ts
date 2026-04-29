@@ -17,9 +17,13 @@ export class AuthInterceptor implements HttpInterceptor {
         const parsed = JSON.parse(currentUserRaw);
         fromCurrentUser =
           parsed?.token ??
+          parsed?.jwt_token ??
+          parsed?.access_token ??
           parsed?.accessToken ??
           parsed?.jwt ??
           parsed?.utilisateur?.token ??
+          parsed?.utilisateur?.jwt_token ??
+          parsed?.utilisateur?.access_token ??
           parsed?.utilisateur?.accessToken ??
           parsed?.utilisateur?.jwt ??
           null;
@@ -31,6 +35,8 @@ export class AuthInterceptor implements HttpInterceptor {
     const fromStorage =
       localStorage.getItem('huilerie_token') ??
       localStorage.getItem('token') ??
+      localStorage.getItem('jwt_token') ??
+      localStorage.getItem('access_token') ??
       localStorage.getItem('accessToken') ??
       localStorage.getItem('jwt');
 
@@ -61,6 +67,15 @@ export class AuthInterceptor implements HttpInterceptor {
     if (isPublicAuthRequest) {
       return next.handle(request);
     }
+    const existingAuthorization = request.headers.get('Authorization');
+    if (existingAuthorization && existingAuthorization.trim().length > 0) {
+      return next.handle(request).pipe(
+        catchError((error: HttpErrorResponse) => {
+          return throwError(() => error);
+        }),
+      );
+    }
+
     const token = this.resolveToken();
 
     if (token) {

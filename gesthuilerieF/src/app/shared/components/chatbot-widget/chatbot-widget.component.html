@@ -46,12 +46,83 @@
     </header>
 
     <div #messagesContainer class="chatbot-widget__messages">
-      <ng-container *ngFor="let message of messages; let i = index">
+      <ng-container *ngFor="let message of messages; let i = index; trackBy: trackByMessageId">
         <article
           class="chatbot-widget__message"
+          [class.chatbot-widget__message--chart-rank]="isSupplierRankingMessage(message)"
           [class.chatbot-widget__message--user]="message.sender === 'user'"
         >
           <p>{{ message.content }}</p>
+
+          <ng-container *ngIf="message.sender === 'bot' && isChoiceMessage(message)">
+            <div class="chatbot-widget__choices">
+              <button
+                class="chatbot-widget__choice-btn"
+                type="button"
+                *ngFor="let option of message.options"
+                (click)="sendChoice(option)"
+                [disabled]="isLoading"
+              >
+                {{ option === 'graphique' ? 'Graphique' : 'Texte' }}
+              </button>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="message.sender === 'bot' && isSupplierRankingMessage(message)">
+            <div class="chatbot-widget__supplier-ranking">
+              <div class="chatbot-widget__mode-toggle">
+                <button type="button" [class.is-active]="message.supplierViewMode === 'chart'" (click)="toggleSupplierView(message, 'chart')">Vue graphique</button>
+                <button type="button" [class.is-active]="message.supplierViewMode === 'text'" (click)="toggleSupplierView(message, 'text')">Vue texte</button>
+              </div>
+
+              <div class="chatbot-widget__supplier-chart" *ngIf="message.supplierViewMode === 'chart'">
+                <div class="chatbot-widget__chart">
+                  <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
+                </div>
+                <p class="chatbot-widget__chart-note">
+                  L’acidité et le rendement sont normalisés visuellement pour garder une lecture claire. Les valeurs hors plage sont signalées en rouge.
+                </p>
+              </div>
+
+              <div class="chatbot-widget__supplier-text" *ngIf="message.supplierViewMode === 'text'">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Fournisseur</th>
+                      <th>Kg livrés</th>
+                      <th>Lots</th>
+                      <th>Acidité %</th>
+                      <th>Rendement %</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of message.supplierRanking?.items; let index = index" [class.chatbot-widget__supplier-row--best]="index === 0">
+                      <td>{{ index + 1 }}</td>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.kg | number:'1.0-0' }}</td>
+                      <td>{{ item.lots }}</td>
+                      <td>{{ item.acidity | number:'1.0-2' }}</td>
+                      <td>{{ item.rendement | number:'1.0-2' }}</td>
+                      <td>
+                        <span *ngIf="index === 0" class="chatbot-widget__status-chip chatbot-widget__status-chip--best">Meilleur</span>
+                        <span *ngIf="item.acidityOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">Acidité hors plage</span>
+                        <span *ngIf="item.rendementOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">Rendement hors plage</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="message.sender === 'bot' && !isSupplierRankingMessage(message) && isChartMessage(message)">
+            <div class="chatbot-widget__chart">
+              <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
+            </div>
+          </ng-container>
+
           <time>{{ message.timestamp | date: 'HH:mm' }}</time>
         </article>
 
