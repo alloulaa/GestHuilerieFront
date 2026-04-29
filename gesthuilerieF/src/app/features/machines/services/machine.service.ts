@@ -11,6 +11,7 @@ type MachineApiDto = {
   idMachine: number;
   nomMachine: string;
   typeMachine: string;
+  categorieMachine?: string;
   etatMachine: string;
   capacite: number;
   huilerieNom: string;
@@ -20,6 +21,7 @@ type MachineApiPayload = {
   idMachine?: number;
   nomMachine: string;
   typeMachine: string;
+  categorieMachine?: string;
   etatMachine: string;
   capacite: number;
   huilerieNom: string;
@@ -125,6 +127,7 @@ export class MachineService {
         const merged: Omit<Machine, 'idMachine'> = {
           nomMachine: payload.nomMachine ?? current.nomMachine,
           typeMachine: payload.typeMachine ?? current.typeMachine,
+          categorieMachine: payload.categorieMachine ?? current.categorieMachine,
           etatMachine: payload.etatMachine ?? current.etatMachine,
           capacite: payload.capacite ?? current.capacite,
           huilerieId: payload.huilerieId ?? current.huilerieId,
@@ -175,6 +178,7 @@ export class MachineService {
       idMachine: machine.idMachine,
       nomMachine: machine.nomMachine,
       typeMachine: machine.typeMachine,
+      categorieMachine: machine.categorieMachine,
       etatMachine: machine.etatMachine,
       capacite: machine.capacite,
       huilerieId: huilerie?.idHuilerie ?? 0,
@@ -205,6 +209,7 @@ export class MachineService {
     return {
       nomMachine: payload.nomMachine,
       typeMachine: payload.typeMachine,
+      categorieMachine: payload.categorieMachine,
       etatMachine: payload.etatMachine,
       capacite: payload.capacite,
       huilerieNom: huilerie.nom,

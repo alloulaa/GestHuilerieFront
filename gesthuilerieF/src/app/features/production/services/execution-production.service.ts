@@ -4,7 +4,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
-import { ExecutionProduction, ExecutionProductionCreate, ExecutionProductionDTO, Prediction } from '../models/production.models';
+import { ExecutionPredictionStartDTO, ExecutionProduction, ExecutionProductionCreate, ExecutionProductionDTO, Prediction } from '../models/production.models';
 import { AuthService } from '../../../core/auth/auth.service';
 import { GuideProductionService } from './guide-production.service';
 import { MachineService } from '../../machines/services/machine.service';
@@ -54,8 +54,8 @@ export class ExecutionProductionService {
         return this.http.post<ExecutionProduction>(this.apiUrl, payload);
     }
 
-    predictOnStart(idExecutionProduction: number): Observable<Prediction> {
-        return this.http.post<Prediction>(`${this.apiUrl}/${idExecutionProduction}/predict-on-start`, {});
+    predictOnStart(idExecutionProduction: number, overrides: ExecutionPredictionStartDTO = {}): Observable<Prediction> {
+        return this.http.post<Prediction>(`${this.apiUrl}/${idExecutionProduction}/predict-on-start`, overrides);
     }
 
     update(idExecutionProduction: number, payload: Partial<ExecutionProductionCreate>): Observable<ExecutionProduction> {

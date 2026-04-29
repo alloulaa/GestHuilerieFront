@@ -29,7 +29,21 @@
             </nb-option>
           </nb-select>
         </label>
+
+        <label class="field">
+          <span>Type de machine *</span>
+          <nb-select fullWidth formControlName="typeMachine" placeholder="Sélectionner"
+            (selectedChange)="onTypeMachineSelectionChange($event)">
+            <nb-option *ngFor="let option of typeMachineOptions" [value]="option">
+              {{ option }}
+            </nb-option>
+          </nb-select>
+        </label>
       </div>
+
+      <p class="panel-hint">
+        Les étapes de production sont générées automatiquement selon le type de machine choisi.
+      </p>
 
       <div formArrayName="etapes" class="steps-stack">
         <div class="step-card" *ngFor="let etape of etapes.controls; let etapeIndex = index"
@@ -61,6 +75,20 @@
               <span>Description *</span>
               <textarea nbInput fullWidth rows="2" formControlName="description"
                 placeholder="Contrôle initial"></textarea>
+            </label>
+
+            <!-- Machine assignment for this step -->
+            <label class="field field-wide">
+              <span>Machine assignée</span>
+              <nb-select fullWidth formControlName="machineId" placeholder="Sélectionner la machine (optionnel)">
+                <nb-option [value]="null">-- Aucune sélection --</nb-option>
+                <nb-option *ngFor="let m of getMachinesForStepByIndex(etapeIndex)" [value]="m.idMachine">
+                  {{ m.nomMachine }} <span *ngIf="m.huilerieNom">({{ m.huilerieNom }})</span> - {{ m.typeMachine }}
+                </nb-option>
+              </nb-select>
+              <small *ngIf="getMachinesForStepByIndex(etapeIndex)?.length === 0" class="hint">
+                Aucune machine disponible pour cette étape
+              </small>
             </label>
           </div>
 

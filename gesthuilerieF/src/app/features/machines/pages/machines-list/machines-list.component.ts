@@ -93,8 +93,35 @@ export class MachinesListComponent implements OnInit {
   }
 
   openAbout(typeMachine: string): void {
-    this.selectedTypeInfo = MACHINE_TYPE_DATA[typeMachine] ?? null;
+    const key = this.normalizeTypeKey(typeMachine);
+    this.selectedTypeInfo = MACHINE_TYPE_DATA[key] ?? {
+      key: typeMachine,
+      label: typeMachine,
+      description: 'Aucune information détaillée disponible pour ce type de machine.',
+      caracteristiques: [],
+      categorie: 'Autre',
+    } as MachineTypeInfo;
     this.aboutModalOpen = true;
+  }
+
+  private normalizeTypeKey(type: string): string {
+    if (!type) {
+      return type;
+    }
+    const lower = type.toLowerCase();
+    const map: Record<string, string> = {
+      '3_phase': 'centrifugation_3_phases',
+      '3-phase': 'centrifugation_3_phases',
+      '3 phase': 'centrifugation_3_phases',
+      '2_phase': 'centrifugation_2_phases',
+      '2-phase': 'centrifugation_2_phases',
+      '2 phase': 'centrifugation_2_phases',
+      'presse': 'presse_hydraulique',
+      'presse_hydraulique': 'presse_hydraulique',
+      'centrifugation_3_phases': 'centrifugation_3_phases',
+      'centrifugation_2_phases': 'centrifugation_2_phases',
+    };
+    return map[lower] ?? type;
   }
 
   closeAbout(): void {

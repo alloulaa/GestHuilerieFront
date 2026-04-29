@@ -37,6 +37,16 @@
                 <option *ngFor="let h of huileries" [value]="h.idHuilerie">{{ h.nom }}</option>
               </select>
             </div>
+
+            <div class="form-group">
+              <label>Type de machine *</label>
+              <select class="form-select" formControlName="typeMachine"
+                [class.ng-invalid]="isGuideFieldInvalid('typeMachine')"
+                (change)="onTypeMachineSelectionChange($any($event.target).value)">
+                <option value="">-- Sélectionner --</option>
+                <option *ngFor="let option of typeMachineOptions" [value]="option">{{ option }}</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group">
@@ -44,6 +54,9 @@
             <textarea class="form-textarea" formControlName="description" placeholder="Description du guide"
               [class.ng-invalid]="isGuideFieldInvalid('description')"></textarea>
           </div>
+
+          <p class="section-subtitle-title">Les étapes du guide sont générées automatiquement selon le type de machine.
+          </p>
 
           <!-- ETAPES SECTION -->
           <div class="etapes-section" formArrayName="etapes">
@@ -80,6 +93,20 @@
                 <label>Description *</label>
                 <textarea class="form-textarea" formControlName="description"
                   placeholder="Description de l'étape"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Machine assignée</label>
+                <select class="form-select" formControlName="machineId">
+                  <option [value]="null">-- Aucune sélection --</option>
+                  <option *ngFor="let m of getMachinesForStepByIndex(i)" [value]="m.idMachine">
+                    {{ m.nomMachine }} <span *ngIf="m.huilerieNom">({{ m.huilerieNom }})</span> - {{ m.typeMachine }}
+                  </option>
+                </select>
+                <small *ngIf="getMachinesForStepByIndex(i)?.length === 0" class="hint"
+                  style="color: #666; display: block; margin-top: 4px;">
+                  Aucune machine disponible pour cette étape
+                </small>
               </div>
 
               <!-- PARAMETRES SUB-ARRAY -->

@@ -3,8 +3,9 @@ import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbIconModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Huilerie } from '../../../machines/models/enterprise.models';
+import { Huilerie, Machine } from '../../../machines/models/enterprise.models';
 import { HuilerieService } from '../../../machines/services/huilerie.service';
+import { MachineService } from '../../../machines/services/machine.service';
 import { EtapeProduction, ExecutionProduction, GuideProduction, ParametreEtape } from '../../models/production.models';
 import { GuideProductionService } from '../../services/guide-production.service';
 import { ExecutionProductionService } from '../../services/execution-production.service';
@@ -12,6 +13,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { TYPE_MACHINE_OPTIONS, buildGuideStepTemplates } from '../../../../shared/constants/domain-options';
 
 @Component({
   selector: 'app-guides-gerer',
@@ -32,6 +34,11 @@ export class GuidesGererComponent implements OnInit {
   huileries: Huilerie[] = [];
   guides: GuideProduction[] = [];
   executions: ExecutionProduction[] = [];
+  allMachines: Machine[] = [];
+  readonly typeMachineOptions = TYPE_MACHINE_OPTIONS;
+
+  // Lazy-load cache: codeEtape -> filtered machines
+  private machinesCacheByStep = new Map<string, Machine[]>();
 
   guideEditingId: number | null = null;
   executionEditingId: number | null = null;
@@ -65,6 +72,24 @@ export class GuidesGererComponent implements OnInit {
       description: 'Pression d extraction',
       valeur: '2.5',
     },
+    {
+      code: 'presence_ajout_eau',
+      unite: '',
+      description: '1 = ajout d eau actif, 0 = pas d ajout',
+      valeur: '1',
+    },
+    {
+      code: 'presence_separateur',
+      unite: '',
+      description: '0 ou 1 selon configuration',
+      valeur: '0',
+    },
+    {
+      code: 'presence_presse',
+      unite: '',
+      description: '1 = pressage actif',
+      valeur: '1',
+    },
   ];
   readonly customParametreCode = 'autre';
 
@@ -76,6 +101,7 @@ export class GuidesGererComponent implements OnInit {
     private guideProductionService: GuideProductionService,
     private executionProductionService: ExecutionProductionService,
     private huilerieService: HuilerieService,
+    private machineService: MachineService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
     private permissionService: PermissionService,
@@ -86,9 +112,8 @@ export class GuidesGererComponent implements OnInit {
       description: ['', [Validators.required]],
       dateCreation: [this.today(), [Validators.required]],
       huilerieId: [0, [Validators.required, Validators.min(1)]],
+      typeMachine: ['', [Validators.required]],
       etapes: this.fb.array([
-        this.createEtapeGroup(1),
-
       ]),
     });
 
@@ -122,6 +147,11 @@ export class GuidesGererComponent implements OnInit {
       if (this.huileries.length > 0) {
         this.guideForm.patchValue({ huilerieId: this.huileries[0]?.idHuilerie ?? 0 });
       }
+    });
+    this.machineService.getAll().subscribe((items) => {
+      this.allMachines = items;
+      console.log(`[guides-gerer] Loaded ${items.length} machines globally`);
+      this.machinesCacheByStep.clear();
     });
     this.loadGuides();
     this.loadExecutions();
@@ -188,8 +218,21 @@ export class GuidesGererComponent implements OnInit {
       nom: ['', [Validators.required]],
       ordre: [ordre, [Validators.required]],
       description: ['', [Validators.required]],
+      codeEtape: [''],
       parametres: this.fb.array([this.createParametreGroup()]),
     });
+  }
+
+  onTypeMachineSelectionChange(typeMachine: string | null): void {
+    const normalizedTypeMachine = String(typeMachine ?? '').trim();
+    this.guideForm.patchValue({ typeMachine: normalizedTypeMachine });
+
+    if (!normalizedTypeMachine) {
+      this.etapes.clear();
+      return;
+    }
+
+    this.applyGuideTemplate(normalizedTypeMachine);
   }
 
   createParametreGroup() {
@@ -261,6 +304,107 @@ export class GuidesGererComponent implements OnInit {
     return String(selectedCode ?? '') === this.customParametreCode;
   }
 
+  /**
+   * Map step code to machine category
+   * Returns category name or null if no machine is needed
+   */
+  private getStepMachineCategory(codeEtape: string | null): string | null {
+    if (!codeEtape) return null;
+
+    const codeMap: Record<string, string | null> = {
+      'broyage': 'broyage',
+      'broyage_meule': 'broyage',
+      'malaxage': 'malaxage',
+      'decanteur_3_phases_separateur': 'separation',
+      'decanteur_2_phases_separateur': 'separation',
+      'extraction_decantation': 'extraction',
+      'separation_verticale': 'separation',
+      'stockage': 'stockage',
+      'reception': null,
+      'nettoyage': 'nettoyage',
+      'nettoyage_lavage': 'nettoyage',
+      'lavage': 'nettoyage',
+      'ajout_eau': 'ajout_eau',
+    };
+
+    return codeMap[codeEtape] ?? null;
+  }
+
+  /**
+   * Get machines for a specific step
+   */
+  getMachinesForStep(codeEtape: string | null): Machine[] {
+    const category = this.getStepMachineCategory(codeEtape);
+    if (!category) {
+      return [];
+    }
+
+    const expectedTypesByCategory: Record<string, string[]> = {
+      broyage: ['marteaux', 'disques', 'meules'],
+      malaxage: ['horizontal', 'vertical', 'malaxeur double cuve (optionnel)', 'malaxeur double cuve'],
+      extraction: ['centrifugation_2_phases', 'centrifugation_3_phases', 'presse_hydraulique', '2_phase', '3_phase', 'presse'],
+      separation: ['decanteur_2_phases', 'decanteur_3_phases', 'separateur_vertical'],
+      nettoyage: ['soufflerie', 'laveuse_eau', 'laveuse a eau', 'separateur_feuilles', 'separateur de feuilles'],
+      ajout_eau: ['systeme_injection_eau', 'systeme injection eau', 'injection_eau', 'injection eau'],
+      stockage: ['cuve_inox', 'cuve_fibre'],
+    };
+
+    const expectedTypes = expectedTypesByCategory[category] ?? [];
+    const selectedHuilerieId = Number(this.guideForm.get('huilerieId')?.value ?? 0) || null;
+
+    const normalize = (value: unknown): string => String(value ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
+
+    return this.allMachines.filter((m) => {
+      if (selectedHuilerieId && Number(m.huilerieId) !== selectedHuilerieId) {
+        return false;
+      }
+      if (normalize(m.categorieMachine) === normalize(category)) return true;
+      const tm = normalize(m.typeMachine);
+      for (const expected of expectedTypes) {
+        if (tm.includes(normalize(expected))) return true;
+      }
+      return false;
+    });
+  }
+
+  /**
+   * Get machines for a step by its index in the FormArray (safe for templates)
+   * Implements lazy-loading with caching per step code
+   */
+  getMachinesForStepByIndex(index: number): Machine[] {
+    try {
+      const etapeControl = this.etapes.at(index);
+      if (!etapeControl) {
+        console.warn(`[guides-gerer] No etape found at index ${index}`);
+        return [];
+      }
+
+      const codeVal = etapeControl.get('codeEtape')?.value;
+      const code = codeVal == null ? null : String(codeVal);
+
+      // Check cache first
+      if (code && this.machinesCacheByStep.has(code)) {
+        const cached = this.machinesCacheByStep.get(code) || [];
+        return cached;
+      }
+
+      // Compute and cache result
+      const result = this.getMachinesForStep(code);
+      if (code) {
+        this.machinesCacheByStep.set(code, result);
+      }
+
+      return result || [];
+    } catch (e) {
+      console.error(`[guides-gerer] Error in getMachinesForStepByIndex(${index}):`, e);
+      return [];
+    }
+  }
+
   getParametres(etapeIndex: number): FormArray {
     return this.etapes.at(etapeIndex).get('parametres') as FormArray;
   }
@@ -277,11 +421,14 @@ export class GuidesGererComponent implements OnInit {
       description: String(raw.description ?? '').trim(),
       dateCreation: String(raw.dateCreation ?? this.today()),
       huilerieId: Number(raw.huilerieId),
+      typeMachine: String(raw.typeMachine ?? '').trim(),
       etapes: (raw.etapes ?? []).map((e: any) => ({
         ...(e.idEtapeProduction ? { idEtapeProduction: Number(e.idEtapeProduction) } : {}),
         nom: String(e.nom ?? '').trim(),
         ordre: Number(e.ordre),
         description: String(e.description ?? '').trim(),
+        codeEtape: String(e.codeEtape ?? '').trim(),
+        machineId: e.machineId ? Number(e.machineId) : undefined,
         parametres: (e.parametres ?? []).map((p: any) => ({
           ...(p.idParametreEtape ? { idParametreEtape: Number(p.idParametreEtape) } : {}),
           codeParametre: String(p.codeParametre ?? '').trim(),
@@ -345,13 +492,18 @@ export class GuidesGererComponent implements OnInit {
       etapesArray.removeAt(0);
     }
 
-    const sourceEtapes = Array.isArray(guide.etapes) ? guide.etapes : [];
-    if (sourceEtapes.length === 0) {
-      etapesArray.push(this.createEtapeGroup(1));
+    const selectedTypeMachine = String(guide.typeMachine ?? '').trim();
+    if (selectedTypeMachine) {
+      this.applyGuideTemplate(selectedTypeMachine);
     } else {
-      sourceEtapes.forEach((etape, index) => {
-        etapesArray.push(this.createEtapeGroupFromGuide(etape, index + 1));
-      });
+      const sourceEtapes = Array.isArray(guide.etapes) ? guide.etapes : [];
+      if (sourceEtapes.length === 0) {
+        etapesArray.push(this.createEtapeGroup(1));
+      } else {
+        sourceEtapes.forEach((etape, index) => {
+          etapesArray.push(this.createEtapeGroupFromGuide(etape, index + 1));
+        });
+      }
     }
 
     this.guideEditingId = guide.idGuideProduction;
@@ -360,6 +512,63 @@ export class GuidesGererComponent implements OnInit {
       description: guide.description,
       dateCreation: guide.dateCreation.slice(0, 10),
       huilerieId: guide.huilerieId,
+      typeMachine: selectedTypeMachine,
+    });
+  }
+
+  private applyGuideTemplate(typeMachine: string): void {
+    const templates = buildGuideStepTemplates(typeMachine);
+
+    // 🔍 LOG DE DEBUG pour vérifier les étapes chargées
+    console.log(`[Guide Template - Gerer] Type Machine: ${typeMachine}`);
+    console.log(`[Guide Template - Gerer] Étapes chargées:`, templates.map(t => ({
+      ordre: t.ordre,
+      nom: t.nom,
+      parametres: t.parametres.map(p => p.codeParametre)
+    })));
+
+    const etapesArray = this.guideForm.get('etapes') as FormArray;
+
+    while (etapesArray.length > 0) {
+      etapesArray.removeAt(0);
+    }
+
+    templates.forEach((template) => {
+      etapesArray.push(this.createEtapeGroupFromTemplate(template.nom, template.ordre, template.description, template.codeEtape, template.parametres));
+    });
+  }
+
+  private createEtapeGroupFromTemplate(
+    nom: string,
+    ordre: number,
+    description: string,
+    codeEtape: string,
+    parametres: Array<{ codeParametre: string; nom: string; uniteMesure: string; description: string; valeur: string }>,
+  ) {
+    return this.fb.group({
+      idEtapeProduction: [null as number | null],
+      nom: [nom, [Validators.required]],
+      ordre: [ordre, [Validators.required]],
+      description: [description, [Validators.required]],
+      codeEtape: [codeEtape],
+      machineId: [null],
+      parametres: this.fb.array(
+        parametres.length > 0
+          ? parametres.map((param) => this.createParametreGroupFromTemplate(param))
+          : [],
+      ),
+    });
+  }
+
+  private createParametreGroupFromTemplate(parametre: { codeParametre: string; nom: string; uniteMesure: string; description: string; valeur: string }) {
+    return this.fb.group({
+      idParametreEtape: [null as number | null],
+      codeParametre: [parametre.codeParametre, [Validators.required]],
+      nom: [parametre.nom],
+      nomPersonnalise: [''],
+      uniteMesure: [parametre.uniteMesure, [Validators.required]],
+      valeur: [parametre.valeur, [Validators.required]],
+      description: [parametre.description, [Validators.required]],
     });
   }
 
@@ -373,6 +582,7 @@ export class GuidesGererComponent implements OnInit {
       nom: [String(etape.nom ?? '').trim(), [Validators.required]],
       ordre: [Number(etape.ordre ?? ordreFallback), [Validators.required]],
       description: [String(etape.description ?? '').trim(), [Validators.required]],
+      machineId: [etape.machineId ?? null],
       parametres: this.fb.array(parametres),
     });
   }
@@ -450,12 +660,13 @@ export class GuidesGererComponent implements OnInit {
       description: '',
       dateCreation: this.today(),
       huilerieId: this.huileries[0]?.idHuilerie ?? 0,
+      typeMachine: '',
     });
     const etapesArray = this.guideForm.get('etapes') as FormArray;
     while (etapesArray.length > 0) {
       etapesArray.removeAt(0);
     }
-    etapesArray.push(this.createEtapeGroup(1));
+
 
   }
 

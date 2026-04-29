@@ -82,8 +82,8 @@ export class GuidesExecuterComponent implements OnInit {
       observations: [''],
       controleTemperature: [false, [Validators.required]],
       guideProductionId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
-      typeMachine: this.fb.control<string | null>(null, { validators: [Validators.required] }),
-      machineId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
+      typeMachine: this.fb.control<string | null>(null),
+      machineId: this.fb.control<number | null>(null),
       lotId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
       valeursReelles: this.fb.array([]),
     });
@@ -355,9 +355,16 @@ export class GuidesExecuterComponent implements OnInit {
     const raw = this.executionForm.getRawValue();
     const selectedLotId = Number(raw.lotId ?? 0);
     const selectedLot = this.lots.find((lot) => lot.idLot === selectedLotId);
+    const selectedGuideId = Number(raw.guideProductionId ?? 0);
+    const selectedMachineId = this.resolveMachineIdForExecution(selectedGuideId, raw.machineId);
 
     if (!selectedLot) {
       this.executionError = 'Le lot sélectionné est invalide.';
+      return;
+    }
+
+    if (!selectedMachineId) {
+      this.executionError = 'Aucune machine exploitable trouvée pour ce guide. Vérifiez les machines configurées sur le guide.';
       return;
     }
 
@@ -368,10 +375,10 @@ export class GuidesExecuterComponent implements OnInit {
     const executionReference = this.buildExecutionReference(
       selectedLot,
       Number(raw.guideProductionId ?? 0),
-      Number(raw.machineId ?? 0),
+      selectedMachineId,
     );
 
-    const payload: ExecutionProductionCreate & Record<string, unknown> = {
+    const payload: ExecutionProductionCreate = {
       reference: executionReference,
       dateDebut: String(raw.dateDebut ?? this.today()),
       dateFinPrevue: String(raw.dateFinPrevue ?? this.tomorrow()),
@@ -381,13 +388,10 @@ export class GuidesExecuterComponent implements OnInit {
       observations: String(raw.observations ?? '').trim(),
       controleTemperature: raw.controleTemperature === true,
       guideProductionId: Number(raw.guideProductionId),
-      guideId: Number(raw.guideProductionId),
-      idGuideProduction: Number(raw.guideProductionId),
-      machineId: Number(raw.machineId),
-      idMachine: Number(raw.machineId),
+      machineId: selectedMachineId,
       lotId: Number(raw.lotId),
     };
-    this.executionProductionService.create(payload as any)
+    this.executionProductionService.create(payload)
       .subscribe({
         next: (createdExecution) => {
           this.submittingExecution = false;
@@ -422,6 +426,41 @@ export class GuidesExecuterComponent implements OnInit {
           this.toastService.error(this.executionError);
         },
       });
+  }
+
+  private resolveMachineIdForExecution(guideId: number, formMachineId: unknown): number {
+    const explicitMachineId = Number(formMachineId ?? 0);
+    if (explicitMachineId > 0) {
+      return explicitMachineId;
+    }
+
+    const guide = this.guides.find((item) => item.idGuideProduction === guideId);
+    if (!guide) {
+      return 0;
+    }
+
+    const stepMachineIds = [...(guide.etapes ?? [])]
+      .sort((a, b) => Number(a?.ordre ?? 0) - Number(b?.ordre ?? 0))
+      .map((step) => Number(step.machineId ?? 0))
+      .filter((id) => id > 0);
+    if (stepMachineIds.length > 0) {
+      // La machine est déjà fixée au niveau du guide: on fait confiance à la configuration du guide.
+      return stepMachineIds[0];
+    }
+
+    if (this.filteredMachines.length > 0) {
+      return Number(this.filteredMachines[0].idMachine ?? 0);
+    }
+
+    const sameHuilerieMachine = this.machines.find((machine) =>
+      this.isMachineActive(machine)
+      && this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, machine.huilerieId, machine.huilerieNom),
+    );
+    if (sameHuilerieMachine) {
+      return Number(sameHuilerieMachine.idMachine ?? 0);
+    }
+
+    return 0;
   }
 
   selectExecution(execution: ExecutionProduction): void {

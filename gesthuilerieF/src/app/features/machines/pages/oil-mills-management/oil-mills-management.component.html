@@ -17,11 +17,25 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">Catégorie machine *</label>
+        <nb-select fullWidth formControlName="categorieMachine"
+          [status]="isMachineFieldInvalid('categorieMachine') ? 'danger' : 'basic'">
+          <nb-option *ngFor="let option of machineCategoryOptions" [value]="option">{{ option }}</nb-option>
+        </nb-select>
+      </div>
+
+      <div class="form-group" *ngIf="!requiresCustomTypeMachine">
         <label class="form-label">Type machine *</label>
         <nb-select fullWidth formControlName="typeMachine"
           [status]="isMachineFieldInvalid('typeMachine') ? 'danger' : 'basic'">
-          <nb-option *ngFor="let option of typeMachineOptions" [value]="option">{{ option }}</nb-option>
+          <nb-option *ngFor="let option of currentTypeMachineOptions" [value]="option">{{ option }}</nb-option>
         </nb-select>
+      </div>
+
+      <div class="form-group" *ngIf="requiresCustomTypeMachine">
+        <label class="form-label">Type machine (autre) *</label>
+        <input nbInput fullWidth formControlName="typeMachineCustom" placeholder="Precisez le type"
+          [status]="isMachineFieldInvalid('typeMachineCustom') ? 'danger' : 'basic'" />
       </div>
 
       <div class="form-group">
@@ -78,6 +92,7 @@
           <tr>
             <th>Machine</th>
             <th>Type</th>
+            <th>Catégorie</th>
             <th>Etat</th>
             <th>Capacite</th>
             <th>Huilerie</th>
@@ -88,6 +103,7 @@
           <tr *ngFor="let m of machines; trackBy: trackByMachine">
             <td>{{ m.nomMachine }}</td>
             <td>{{ m.typeMachine }}</td>
+            <td>{{ m.categorieMachine || '-' }}</td>
             <td>{{ getMachineStatusLabel(m.etatMachine) }}</td>
             <td>{{ m.capacite }} kg/j</td>
             <td>{{ getHuilerieName(m.huilerieId) }}</td>

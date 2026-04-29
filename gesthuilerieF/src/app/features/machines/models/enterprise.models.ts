@@ -22,6 +22,7 @@ export interface Machine {
   idMachine: number;
   nomMachine: string;
   typeMachine: string;
+  categorieMachine?: string;
   etatMachine: string;
   capacite: number;
   huilerieId: number;

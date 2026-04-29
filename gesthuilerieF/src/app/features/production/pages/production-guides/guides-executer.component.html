@@ -56,31 +56,6 @@
           </div>
         </label>
 
-        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('typeMachine')">
-          <span>Type machine *</span>
-          <nb-select fullWidth formControlName="typeMachine" placeholder="Sélectionner"
-            (selectedChange)="onTypeMachineSelectionChange($event)">
-            <nb-option *ngFor="let option of typeMachineOptions" [value]="option">
-              {{ option }}
-            </nb-option>
-          </nb-select>
-        </label>
-
-        <label class="field" [class.field-invalid]="isExecutionFieldInvalid('machineId')">
-          <span>Machine *</span>
-          <input type="hidden" formControlName="machineId" />
-          <div class="machine-choice-list" *ngIf="filteredMachines.length > 0; else noMachineForSelectedType">
-            <button type="button" class="machine-choice" *ngFor="let machine of filteredMachines"
-              [class.machine-choice--active]="isSelectedMachine(machine.idMachine)"
-              (click)="onMachineSelectionChange(machine.idMachine)">
-              {{ machine.nomMachine }}
-            </button>
-          </div>
-          <ng-template #noMachineForSelectedType>
-            <p class="empty-state">Aucune machine disponible pour le type sélectionné.</p>
-          </ng-template>
-        </label>
-
         <label class="field" [class.field-invalid]="isExecutionFieldInvalid('lotId')">
           <span>Lot d'olives *</span>
           <nb-select fullWidth formControlName="lotId" placeholder="Sélectionner">

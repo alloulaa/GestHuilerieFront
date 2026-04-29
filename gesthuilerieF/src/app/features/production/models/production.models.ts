@@ -6,6 +6,7 @@ export interface GuideProduction {
     dateCreation: string;
     huilerieId: number;
     huilerieNom?: string;
+    typeMachine: string;
     etapes: EtapeProduction[];
 }
 
@@ -14,6 +15,8 @@ export interface EtapeProduction {
     nom: string;
     ordre: number;
     description: string;
+    codeEtape?: string;
+    machineId?: number;
     parametres: ParametreEtape[];
 }
 
@@ -32,10 +35,13 @@ export interface GuideProductionCreateDTO {
     description: string;
     dateCreation: string;
     huilerieId: number;
+    typeMachine: string;
     etapes: Array<{
         nom: string;
         ordre: number;
         description: string;
+        codeEtape?: string;
+        machineId?: number;
         parametres: Array<{
             nom: string;
             codeParametre?: string;
@@ -55,6 +61,20 @@ export interface Prediction {
     quantiteHuileRecalculeeLitres?: number;
     executionProductionId?: number;
     dateCreation?: string;
+}
+
+export interface ExecutionPredictionStartDTO {
+    region?: string;
+    methodeRecolte?: string;
+    typeSol?: string;
+    controleTemperature?: boolean;
+    temperatureMalaxageC?: number;
+    dureeMalaxageMin?: number;
+    vitesseDecanteurTrMin?: number;
+    humiditePourcent?: number;
+    aciditeOlivesPourcent?: number;
+    tauxFeuillesPourcent?: number;
+    pressionExtractionBar?: number;
 }
 
 export interface ExecutionProduction {

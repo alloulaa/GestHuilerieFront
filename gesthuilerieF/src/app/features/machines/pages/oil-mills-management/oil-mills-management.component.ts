@@ -11,7 +11,7 @@ import { catchError } from 'rxjs/operators';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
-import { TYPE_MACHINE_OPTIONS } from '../../../../shared/constants/domain-options';
+import { MACHINE_CATEGORY_OPTIONS, MACHINE_SUBTYPE_OPTIONS } from '../../../../shared/constants/machine-category-options';
 import { MACHINE_TYPE_DATA, MachineTypeInfo } from '../../../../shared/constants/machine-type-data';
 
 @Component({
@@ -38,7 +38,8 @@ export class OilMillsManagementComponent implements OnInit {
 
   editingMachineId: number | null = null;
 
-  readonly typeMachineOptions = TYPE_MACHINE_OPTIONS;
+  readonly machineCategoryOptions = MACHINE_CATEGORY_OPTIONS;
+  readonly machineSubtypeOptions = MACHINE_SUBTYPE_OPTIONS;
   readonly machineTypeData = MACHINE_TYPE_DATA;
 
   readonly machineForm;
@@ -46,6 +47,15 @@ export class OilMillsManagementComponent implements OnInit {
   get selectedTypeInfo(): MachineTypeInfo | null {
     const type = this.machineForm.get('typeMachine')?.value;
     return type ? MACHINE_TYPE_DATA[type] ?? null : null;
+  }
+
+  get currentTypeMachineOptions(): string[] {
+    const category = String(this.machineForm.get('categorieMachine')?.value ?? '').trim().toLowerCase();
+    return this.machineSubtypeOptions[category] ?? [];
+  }
+
+  get requiresCustomTypeMachine(): boolean {
+    return String(this.machineForm.get('categorieMachine')?.value ?? '').trim().toLowerCase() === 'autre';
   }
 
   constructor(
@@ -58,10 +68,39 @@ export class OilMillsManagementComponent implements OnInit {
   ) {
     this.machineForm = this.formBuilder.group({
       nomMachine: ['', [Validators.required]],
-      typeMachine: this.formBuilder.control<string | null>(this.typeMachineOptions[0], [Validators.required]),
+      categorieMachine: this.formBuilder.control<string | null>(this.machineCategoryOptions[0], [Validators.required]),
+      typeMachine: this.formBuilder.control<string | null>((this.machineSubtypeOptions[this.machineCategoryOptions[0]] ?? [])[0] ?? null),
+      typeMachineCustom: [''],
       etatMachine: ['EN_SERVICE', [Validators.required]],
       capacite: [0, [Validators.required, Validators.min(1)]],
       huilerieId: [0, [Validators.required, Validators.min(1)]],
+    });
+
+    this.machineForm.get('categorieMachine')?.valueChanges.subscribe((rawCategory) => {
+      const category = String(rawCategory ?? '').trim().toLowerCase();
+      const typeMachineControl = this.machineForm.get('typeMachine');
+      const customTypeMachineControl = this.machineForm.get('typeMachineCustom');
+
+      if (!typeMachineControl || !customTypeMachineControl) {
+        return;
+      }
+
+      if (category === 'autre') {
+        typeMachineControl.clearValidators();
+        typeMachineControl.setValue(null);
+        customTypeMachineControl.setValidators([Validators.required]);
+        customTypeMachineControl.updateValueAndValidity({ emitEvent: false });
+        typeMachineControl.updateValueAndValidity({ emitEvent: false });
+        return;
+      }
+
+      const options = this.machineSubtypeOptions[category] ?? [];
+      typeMachineControl.setValidators([Validators.required]);
+      typeMachineControl.setValue(options[0] ?? null);
+      customTypeMachineControl.clearValidators();
+      customTypeMachineControl.setValue('');
+      customTypeMachineControl.updateValueAndValidity({ emitEvent: false });
+      typeMachineControl.updateValueAndValidity({ emitEvent: false });
     });
   }
   ngOnInit(): void {
@@ -131,11 +170,21 @@ export class OilMillsManagementComponent implements OnInit {
     this.editingMachineId = item.idMachine;
     this.machineForm.patchValue({
       nomMachine: item.nomMachine,
+      categorieMachine: item.categorieMachine ?? this.machineCategoryOptions[0],
       typeMachine: item.typeMachine,
+      typeMachineCustom: '',
       etatMachine: item.etatMachine,
       capacite: item.capacite,
       huilerieId: item.huilerieId,
     });
+
+    const category = String(item.categorieMachine ?? '').trim().toLowerCase();
+    if (category === 'autre') {
+      this.machineForm.patchValue({
+        typeMachine: null,
+        typeMachineCustom: item.typeMachine ?? '',
+      });
+    }
   }
 
   async askToggleMachineActivation(item: Machine): Promise<void> {
@@ -178,7 +227,9 @@ export class OilMillsManagementComponent implements OnInit {
     this.editingMachineId = null;
     this.machineForm.reset({
       nomMachine: '',
-      typeMachine: this.typeMachineOptions[0],
+      categorieMachine: this.machineCategoryOptions[0],
+      typeMachine: (this.machineSubtypeOptions[this.machineCategoryOptions[0]] ?? [])[0] ?? null,
+      typeMachineCustom: '',
       etatMachine: 'EN_SERVICE',
       capacite: 0,
       huilerieId: this.allHuileries[0]?.idHuilerie ?? 0,
@@ -226,7 +277,10 @@ export class OilMillsManagementComponent implements OnInit {
     const raw = this.machineForm.getRawValue();
     return {
       nomMachine: (raw.nomMachine ?? '').trim(),
-      typeMachine: (raw.typeMachine ?? '').trim(),
+      categorieMachine: (raw.categorieMachine ?? '').trim(),
+      typeMachine: this.requiresCustomTypeMachine
+        ? (raw.typeMachineCustom ?? '').trim()
+        : (raw.typeMachine ?? '').trim(),
       etatMachine: raw.etatMachine ?? 'EN_SERVICE',
       capacite: Number(raw.capacite),
       huilerieId: Number(raw.huilerieId),
@@ -236,6 +290,11 @@ export class OilMillsManagementComponent implements OnInit {
   private getHttpErrorMessage(error: HttpErrorResponse, fallbackMessage: string): string {
     if (error.status === 0) {
       return 'Connexion backend impossible. Verifiez que le backend tourne sur localhost:8000.';
+    }
+
+    const validationDetails = this.extractBackendErrors(error);
+    if (validationDetails) {
+      return `${fallbackMessage} ${validationDetails}`;
     }
 
     if (typeof error.error === 'string' && error.error.trim().length > 0) {
@@ -251,5 +310,18 @@ export class OilMillsManagementComponent implements OnInit {
     }
 
     return `${fallbackMessage} Code HTTP: ${error.status}.`;
+  }
+
+  private extractBackendErrors(error: HttpErrorResponse): string {
+    const details = error.error?.details;
+    if (Array.isArray(details) && details.length > 0) {
+      return details.join(' | ');
+    }
+
+    if (Array.isArray(error.error?.errors) && error.error.errors.length > 0) {
+      return error.error.errors.join(' | ');
+    }
+
+    return '';
   }
 }
