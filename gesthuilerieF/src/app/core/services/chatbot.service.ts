@@ -155,7 +155,9 @@ export class ChatbotService {
       message: resolvedMessage,
       options,
       chart_type: chartType,
-      data: normalizedChartData ?? response?.data ?? null,
+      // Keep raw backend payload first to preserve supplier fields
+      // such as acidite/rendement/nb_lots used by chatbot widget ranking view.
+      data: response?.data ?? normalizedChartData ?? null,
       intent: typeof response?.intent === 'string' ? response.intent : null,
       confidence: typeof response?.confidence === 'number' ? response.confidence : null,
       applied_scope: typeof response?.applied_scope === 'string' ? response.applied_scope : null,

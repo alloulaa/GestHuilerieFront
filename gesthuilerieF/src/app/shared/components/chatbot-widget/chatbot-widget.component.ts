@@ -50,6 +50,7 @@ interface ChatMessage {
   chartData: ChatbotChartPayload | null;
   supplierRanking: SupplierRankingPayload | null;
   supplierViewMode: SupplierViewMode;
+  supplierChartMetric: 'kg' | 'rendement' | 'acidite';
   debug: ChatDebugInfo | null;
 }
 
@@ -93,6 +94,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       chartData: null,
       supplierRanking: null,
       supplierViewMode: 'chart',
+      supplierChartMetric: 'kg',
       debug: null,
     },
   ];
@@ -316,6 +318,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       chartData: null,
       supplierRanking: null,
       supplierViewMode: 'chart',
+      supplierChartMetric: 'kg',
       debug: null,
     });
     this.hasSentUserMessage = true;
@@ -383,6 +386,15 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.destroyAllCharts();
+  }
+
+  getSupplierMetric(message: ChatMessage): 'kg' | 'rendement' | 'acidite' {
+    return message.supplierChartMetric;
+  }
+
+  setSupplierMetric(message: ChatMessage, metric: 'kg' | 'rendement' | 'acidite'): void {
+    message.supplierChartMetric = metric;
+    setTimeout(() => this.renderCharts());
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -563,7 +575,15 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private createBotMessage(response: ChatbotResponse): ChatMessage {
-    const supplierRanking = this.normalizeSupplierRanking(response.data);
+    const supplierRanking =
+      this.normalizeSupplierRanking(response.data)
+      ?? this.normalizeSupplierRankingFromChartPayload(response.data, response.intent);
+
+    // Debug logs to inspect incoming data when a supplier ranking is returned
+    // eslint-disable-next-line no-console
+    console.log('[Chatbot Widget] debug response.data for supplier:', response.data);
+    // eslint-disable-next-line no-console
+    console.log('[Chatbot Widget] debug supplierRanking derived:', supplierRanking);
     const chartData = supplierRanking
       ? this.buildSupplierRankingChartPayload(supplierRanking.items)
       : this.normalizeChartData(response.data);
@@ -580,6 +600,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       chartData: messageType === 'chart' ? chartData : null,
       supplierRanking: messageType === 'chart' ? supplierRanking : null,
       supplierViewMode: 'chart',
+      supplierChartMetric: 'kg',
       debug:
         response.intent || response.confidence !== null || response.applied_scope
           ? {
@@ -652,6 +673,67 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     };
   }
 
+  private normalizeSupplierRankingFromChartPayload(data: unknown, intent: string | null | undefined): SupplierRankingPayload | null {
+    if (!data || typeof data !== 'object') return null;
+    if (!('labels' in data) || !('datasets' in data)) return null;
+
+    const payload = data as { labels?: unknown[]; datasets?: Array<{ label?: string; data?: unknown[] }> };
+    const labels = Array.isArray(payload.labels) ? payload.labels.map((l, i) => String(l ?? `Fournisseur ${i + 1}`)) : [];
+    const datasets = Array.isArray(payload.datasets) ? payload.datasets : [];
+    if (!labels.length || !datasets.length) return null;
+
+    const normalizedIntent = this.normalizeSearchText(intent ?? '');
+    const findDataset = (keys: string[]): number[] | null => {
+      const dataset = datasets.find((ds) => {
+        const label = this.normalizeSearchText(String(ds?.label ?? ''));
+        return keys.some((key) => label.includes(key));
+      });
+      if (!dataset || !Array.isArray(dataset.data)) return null;
+      return dataset.data.map((v) => this.normalizeNumber(v));
+    };
+
+    const kgValues = findDataset(['kg', 'quantite', 'quantite livree', 'quantite totale']);
+    const rendementValues = findDataset(['rendement', 'yield']);
+    const acidityValues = findDataset(['acidite', 'acidity']);
+    const lotValues = findDataset(['lot', 'lots', 'nb lots']);
+
+    const looksLikeSupplierPayload = !!kgValues || (!!rendementValues && !!acidityValues);
+    const isSupplierIntent = normalizedIntent.includes('fournisseur');
+    if (!looksLikeSupplierPayload && !isSupplierIntent) return null;
+
+    const items = labels.map((name, index) => {
+      const kg = kgValues?.[index] ?? 0;
+      const acidity = acidityValues?.[index] ?? 0;
+      const rendement = rendementValues?.[index] ?? 0;
+      const lots = Math.max(0, Math.round(lotValues?.[index] ?? 0));
+
+      return {
+        name,
+        kg,
+        acidity,
+        rendement,
+        lots,
+        acidityOutOfRange: acidity < SUPPLIER_ACIDITY_RANGE.min || acidity > SUPPLIER_ACIDITY_RANGE.max,
+        rendementOutOfRange: rendement < SUPPLIER_RENDEMENT_RANGE.min || rendement > SUPPLIER_RENDEMENT_RANGE.max,
+      } as SupplierRankingItem;
+    }).sort((a, b) => b.kg - a.kg);
+
+    if (!items.length) return null;
+
+    return {
+      items,
+      bestSupplierName: items[0]?.name ?? null,
+      weakSupplierNames: items.filter((i) => i.acidityOutOfRange || i.rendementOutOfRange).map((i) => i.name),
+    };
+  }
+
+  private normalizeSearchText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
   private extractSupplierRankingRecords(data: unknown): unknown[] {
     if (Array.isArray(data)) return data;
 
@@ -674,10 +756,38 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       r['name'] ?? r['supplierName'] ?? r['fournisseur_nom'] ?? r['supplier'] ?? r['label'] ?? `Fournisseur ${index + 1}`
     ).trim();
 
-    const kg = this.normalizeNumber(r['kg'] ?? r['quantity'] ?? r['quantite'] ?? r['totalKg'] ?? r['total_kg'] ?? r['quantite_totale_kg'] ?? r['value']);
-    const acidity = this.normalizeNumber(r['acidity'] ?? r['acidite'] ?? r['acidite_moyenne'] ?? r['averageAcidity'] ?? r['acidity_percent']);
-    const rendement = this.normalizeNumber(r['rendement'] ?? r['yield'] ?? r['rendement_moyen'] ?? r['averageYield'] ?? r['avgRendement'] ?? r['rendement_percent']);
-    const lots = Math.max(0, Math.round(this.normalizeNumber(r['lots'] ?? r['lotCount'] ?? r['nb_lots'] ?? r['count'])));
+    const kg = this.normalizeNumber(
+      r['kg']
+      ?? r['quantity']
+      ?? r['quantite']
+      ?? r['quantiteTotale']
+      ?? r['quantiteTotaleKg']
+      ?? r['totalKg']
+      ?? r['total_kg']
+      ?? r['quantite_totale_kg']
+      ?? r['value']
+    );
+    const acidity = this.normalizeNumber(
+      r['acidity']
+      ?? r['acidite']
+      ?? r['acidite_moyenne']
+      ?? r['aciditeMoyenne']
+      ?? r['averageAcidity']
+      ?? r['acidity_percent']
+    );
+    const rendement = this.normalizeNumber(
+      r['rendement']
+      ?? r['yield']
+      ?? r['rendement_moyen']
+      ?? r['rendementMoyen']
+      ?? r['averageYield']
+      ?? r['avgRendement']
+      ?? r['rendement_percent']
+    );
+    const lots = Math.max(
+      0,
+      Math.round(this.normalizeNumber(r['lots'] ?? r['lotCount'] ?? r['nb_lots'] ?? r['nbLots'] ?? r['count']))
+    );
 
     if (!name) return null;
 
@@ -894,53 +1004,53 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     const sr = message.supplierRanking;
     const items = sr?.items ?? [];
     const labels = items.map((i) => i.name);
-    const bestName = sr?.bestSupplierName;
+    const metric = message.supplierChartMetric;
 
-    const kgBg = items.map((_, idx) => idx === 0 ? 'rgba(111,141,58,0.9)' : 'rgba(111,141,58,0.45)');
-    const kgBorder = items.map((_, idx) => idx === 0 ? '#35561a' : '#6f8d3a');
-    const acidityColors = items.map((i) => i.acidityOutOfRange ? '#d9534f' : '#d8c65a');
-    const rendementColors = items.map((i) => i.rendementOutOfRange ? '#d9534f' : '#7e9fcb');
+    let dataset: ChartDataset<'bar', number[]>;
+    let yAxisLabel: string;
+    let yAxisFormat: (v: number) => string;
+
+    if (metric === 'kg') {
+      dataset = {
+        label: 'Quantité livrée (kg)',
+        data: items.map((i) => i.kg),
+        backgroundColor: 'rgba(111,141,58,0.6)',
+        borderColor: '#6f8d3a',
+        borderWidth: 1,
+        yAxisID: 'y',
+      };
+      yAxisLabel = 'Quantité (kg)';
+      yAxisFormat = (v) => Number(v).toLocaleString('fr-FR');
+    } else if (metric === 'rendement') {
+      dataset = {
+        label: 'Rendement (%)',
+        data: items.map((i) => i.rendement),
+        backgroundColor: 'rgba(126,159,203,0.6)',
+        borderColor: '#7e9fcb',
+        borderWidth: 1,
+        yAxisID: 'y',
+      };
+      yAxisLabel = 'Rendement (%)';
+      yAxisFormat = (v) => `${Number(v).toLocaleString('fr-FR')}%`;
+    } else {
+      // acidite
+      dataset = {
+        label: 'Acidité (%)',
+        data: items.map((i) => i.acidity),
+        backgroundColor: 'rgba(216,198,90,0.6)',
+        borderColor: '#d8c65a',
+        borderWidth: 1,
+        yAxisID: 'y',
+      };
+      yAxisLabel = 'Acidité (%)';
+      yAxisFormat = (v) => `${Number(v).toLocaleString('fr-FR')}%`;
+    }
 
     return {
       type: 'bar',
       data: {
         labels,
-        datasets: [
-          {
-            label: 'Quantité totale (kg)',
-            data: items.map((i) => i.kg),
-            backgroundColor: kgBg,
-            borderColor: kgBorder,
-            borderWidth: 1,
-            yAxisID: 'y',
-          },
-          {
-            label: 'Acidité moyenne (%)',
-            data: items.map((i) => this.normalizeToVisualPercent(i.acidity, SUPPLIER_ACIDITY_RANGE.min, SUPPLIER_ACIDITY_RANGE.max)),
-            type: 'line',
-            borderColor: '#d8c65a',
-            backgroundColor: 'rgba(216,198,90,0.08)',
-            pointBackgroundColor: acidityColors,
-            pointBorderColor: acidityColors,
-            pointRadius: 4,
-            tension: 0.32,
-            yAxisID: 'y1',
-            fill: false,
-          } as any,
-          {
-            label: 'Rendement moyen (%)',
-            data: items.map((i) => this.normalizeToVisualPercent(i.rendement, SUPPLIER_RENDEMENT_RANGE.min, SUPPLIER_RENDEMENT_RANGE.max)),
-            type: 'line',
-            borderColor: '#7e9fcb',
-            backgroundColor: 'rgba(126,159,203,0.08)',
-            pointBackgroundColor: rendementColors,
-            pointBorderColor: rendementColors,
-            pointRadius: 4,
-            tension: 0.32,
-            yAxisID: 'y1',
-            fill: false,
-          } as any,
-        ],
+        datasets: [dataset],
       },
       options: {
         responsive: true,
@@ -953,44 +1063,39 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
               label: (ctx) => {
                 const item = items[ctx.dataIndex];
                 if (!item) return '';
-                if (ctx.dataset.label === 'Quantité totale (kg)') return `Kg livrés: ${item.kg.toLocaleString('fr-FR')} kg`;
-                if (ctx.dataset.label === 'Acidité moyenne (%)') return `Acidité: ${item.acidity.toLocaleString('fr-FR')}%${item.acidityOutOfRange ? ' ⚠️' : ''}`;
-                if (ctx.dataset.label === 'Rendement moyen (%)') return `Rendement: ${item.rendement.toLocaleString('fr-FR')}%${item.rendementOutOfRange ? ' ⚠️' : ''}`;
+                if (metric === 'kg') return `Quantité: ${item.kg.toLocaleString('fr-FR')} kg`;
+                if (metric === 'rendement') return `Rendement: ${item.rendement.toLocaleString('fr-FR')}%`;
+                if (metric === 'acidite') return `Acidité: ${item.acidity.toLocaleString('fr-FR')}%`;
                 return `${ctx.dataset.label}: ${String(ctx.raw)}`;
               },
               afterBody: (ctx) => {
                 const item = items[ctx[0]?.dataIndex ?? 0];
                 if (!item) return [];
-                return [
-                  `Lots: ${item.lots}`,
-                  bestName && item.name === bestName ? '⭐ Meilleur fournisseur (kg)' : null,
-                  item.acidityOutOfRange ? `Acidité hors plage (${SUPPLIER_ACIDITY_RANGE.min}%–${SUPPLIER_ACIDITY_RANGE.max}%)` : null,
-                  item.rendementOutOfRange ? `Rendement hors plage (${SUPPLIER_RENDEMENT_RANGE.min}%–${SUPPLIER_RENDEMENT_RANGE.max}%)` : null,
-                ].filter((n): n is string => !!n);
+                const result: string[] = [`Lots: ${item.lots}`];
+                if (metric === 'kg' && item.name === sr?.bestSupplierName) {
+                  result.push('⭐ Meilleur fournisseur');
+                }
+                if (item.acidityOutOfRange && metric === 'acidite') {
+                  result.push(`Hors plage (${SUPPLIER_ACIDITY_RANGE.min}%–${SUPPLIER_ACIDITY_RANGE.max}%)`);
+                }
+                if (item.rendementOutOfRange && metric === 'rendement') {
+                  result.push(`Hors plage (${SUPPLIER_RENDEMENT_RANGE.min}%–${SUPPLIER_RENDEMENT_RANGE.max}%)`);
+                }
+                return result;
               },
             },
-          },
-          subtitle: {
-            display: true,
-            text: 'Acidité et rendement normalisés visuellement. Valeurs hors plage marquées en rouge.',
           },
         },
         scales: {
           x: { ticks: { color: '#6f7d90' }, grid: { color: 'rgba(127,142,163,0.12)' } },
           y: {
             beginAtZero: true,
-            ticks: { color: '#6f7d90', callback: (v) => Number(v).toLocaleString('fr-FR') },
-            title: { display: true, text: 'Quantité totale (kg)' },
+            ticks: { color: '#6f7d90', callback: (tickValue: string | number) => yAxisFormat(Number(tickValue)) },
+            title: { display: true, text: yAxisLabel },
             grid: { color: 'rgba(127,142,163,0.18)' },
           },
-          y1: {
-            position: 'right',
-            min: 0,
-            max: 100,
-            ticks: { color: '#6f7d90', callback: (v) => `${Number(v).toLocaleString('fr-FR')}%` },
-            title: { display: true, text: 'Indice normalisé (%)' },
-            grid: { drawOnChartArea: false },
-          },
+          // Ensure right axis is completely removed/hidden for supplier charts
+          y1: { display: false },
         },
         animation: { duration: 700, easing: 'easeOutQuart' },
       },
@@ -1061,6 +1166,25 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private normalizeNumber(value: unknown): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return 0;
+
+      // Accept common API formats such as "1 522 kg", "0,12 %", "1.522,4".
+      const cleaned = trimmed
+        .replace(/\s+/g, '')
+        .replace(/%|kg/gi, '')
+        .replace(',', '.');
+
+      const numericToken = cleaned.match(/-?\d+(?:\.\d+)?/);
+      const n = numericToken ? Number(numericToken[0]) : Number(cleaned);
+      return Number.isFinite(n) ? n : 0;
+    }
+
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
   }

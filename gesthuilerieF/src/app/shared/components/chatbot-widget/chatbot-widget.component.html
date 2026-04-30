@@ -76,12 +76,20 @@
               </div>
 
               <div class="chatbot-widget__supplier-chart" *ngIf="message.supplierViewMode === 'chart'">
+                <div class="chatbot-widget__metric-toggle">
+                  <button type="button" [class.is-active]="getSupplierMetric(message) === 'kg'" (click)="setSupplierMetric(message, 'kg')">
+                    Quantité livrée (kg)
+                  </button>
+                  <button type="button" [class.is-active]="getSupplierMetric(message) === 'rendement'" (click)="setSupplierMetric(message, 'rendement')">
+                    Rendement (%)
+                  </button>
+                  <button type="button" [class.is-active]="getSupplierMetric(message) === 'acidite'" (click)="setSupplierMetric(message, 'acidite')">
+                    Acidité (%)
+                  </button>
+                </div>
                 <div class="chatbot-widget__chart">
                   <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
                 </div>
-                <p class="chatbot-widget__chart-note">
-                  L’acidité et le rendement sont normalisés visuellement pour garder une lecture claire. Les valeurs hors plage sont signalées en rouge.
-                </p>
               </div>
 
               <div class="chatbot-widget__supplier-text" *ngIf="message.supplierViewMode === 'text'">

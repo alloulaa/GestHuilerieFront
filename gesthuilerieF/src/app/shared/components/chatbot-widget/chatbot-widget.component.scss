@@ -430,6 +430,31 @@
   color: var(--chatbot-send-text);
 }
 
+.chatbot-widget__metric-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid color-mix(in srgb, var(--chatbot-border) 70%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--chatbot-bg) 80%, var(--chatbot-bot-bubble));
+  margin-bottom: 8px;
+}
+
+.chatbot-widget__metric-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--chatbot-muted-text);
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chatbot-widget__metric-toggle button.is-active {
+  background: var(--chatbot-send-bg);
+  color: var(--chatbot-send-text);
+}
+
 .chatbot-widget__supplier-text {
   overflow-x: auto;
   border-radius: 14px;
