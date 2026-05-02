@@ -1,25 +1,33 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { Chart, ChartConfiguration, ChartDataset, ChartType, registerables } from 'chart.js';
+import { Chart, ChartConfiguration, ChartDataset, ChartType, registerables, TooltipItem } from 'chart.js';
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
-import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService } from '../../../core/services/chatbot.service';
+import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService, RankingIntent, FournisseurItem, MachineItem, LotItem, AnalysisItem } from '../../../core/services/chatbot.service';
 
 Chart.register(...registerables);
 
 const CHART_COLORS = ['#6f8d3a', '#9bb85a', '#d8c65a', '#7e9fcb', '#f3a15f', '#c96c6c'];
+const RANKING_INTENTS: RankingIntent[] = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo'];
 
 const SUPPLIER_ACIDITY_RANGE = { min: 0.2, max: 1.5 };
 const SUPPLIER_RENDEMENT_RANGE = { min: 10, max: 30 };
+const ANALYSIS_ACIDITY_RANGE = { min: 0.2, max: 0.8 };
+const ANALYSIS_PEROXIDE_RANGE = { min: 5, max: 20 };
+const ANALYSIS_K270_RANGE = { min: 0.2, max: 0.3 };
 
 interface ChatDebugInfo {
   intent: string | null;
   confidence: number | null;
   appliedScope: string | null;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unified Ranking Interfaces
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface SupplierRankingItem {
   name: string;
@@ -37,7 +45,48 @@ interface SupplierRankingPayload {
   weakSupplierNames: string[];
 }
 
-type SupplierViewMode = 'chart' | 'text';
+interface MachineRankingItem {
+  name: string;
+  nbExecutions: number;
+  rendementMoyen: number;
+  totalProduit: number;
+}
+
+interface MachineRankingPayload {
+  items: MachineRankingItem[];
+}
+
+interface LotRankingItem {
+  name: string;
+  reference: string;
+  variete: string;
+  fournisseur_nom: string;
+  quantite_initiale: number;
+  qualite_huile: string;
+}
+
+interface LotRankingPayload {
+  items: LotRankingItem[];
+}
+
+interface AnalysisRankingItem {
+  name: string;
+  lot_ref: string;
+  date_analyse: string;
+  acidite_huile_pourcent: number;
+  indice_peroxyde_meq_o2_kg: number;
+  k270: number;
+  acidityOutOfRange: boolean;
+  peroxideOutOfRange: boolean;
+  k270OutOfRange: boolean;
+}
+
+interface AnalysisRankingPayload {
+  items: AnalysisRankingItem[];
+}
+
+type RankingPayload = SupplierRankingPayload | MachineRankingPayload | LotRankingPayload | AnalysisRankingPayload | null;
+type RankingViewMode = 'chart' | 'text';
 
 interface ChatMessage {
   id: number;
@@ -48,9 +97,10 @@ interface ChatMessage {
   options: string[];
   chartType: ChatbotChartType | null;
   chartData: ChatbotChartPayload | null;
-  supplierRanking: SupplierRankingPayload | null;
-  supplierViewMode: SupplierViewMode;
-  supplierChartMetric: 'kg' | 'rendement' | 'acidite';
+  rankingData: RankingPayload;
+  rankingIntent: RankingIntent | null;
+  rankingViewMode: RankingViewMode;
+  rankingMetric?: string;
   debug: ChatDebugInfo | null;
 }
 
@@ -92,9 +142,9 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       options: [],
       chartType: null,
       chartData: null,
-      supplierRanking: null,
-      supplierViewMode: 'chart',
-      supplierChartMetric: 'kg',
+      rankingData: null,
+      rankingIntent: null,
+      rankingViewMode: 'chart',
       debug: null,
     },
   ];
@@ -300,10 +350,73 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   sendChoice(option: string): void {
     if (this.isLoading) return;
-    this.sendMessage(option);
+    
+    // Map French option labels to selection values
+    const selection = option.toLowerCase() === 'graphique' ? 'graphique' : 'texte';
+    
+    // Find the last CHOICE message with pending ranking data (skip non-choice messages)
+    const choiceMessage = [...this.messages].reverse().find(m => {
+      const hasData = (m as any)._pendingRankingData;
+      const hasIntent = (m as any)._pendingRankingIntent;
+      return m.sender === 'bot' && m.type === 'choice' && hasData && hasIntent;
+    });
+    
+    const pendingRankingData = choiceMessage ? (choiceMessage as any)._pendingRankingData : null;
+    const pendingRankingIntent = choiceMessage ? (choiceMessage as any)._pendingRankingIntent : null;
+
+    console.log('[sendChoice] selection:', selection, 'choice message found:', !!choiceMessage, 'pendingData exists:', !!pendingRankingData, 'pendingIntent:', pendingRankingIntent);
+
+    // If we have pending ranking data, don't call backend - create response directly
+    if (pendingRankingData && pendingRankingIntent) {
+      const userMessage: ChatMessage = {
+        id: this.nextMessageId(),
+        sender: 'user',
+        content: selection === 'graphique' ? 'Graphique' : 'Texte',
+        timestamp: new Date(),
+        type: 'text',
+        options: [],
+        chartType: null,
+        chartData: null,
+        rankingData: null,
+        rankingIntent: null,
+        rankingViewMode: 'chart',
+        debug: null,
+      };
+      this.messages.push(userMessage);
+
+      // Build chart data if displaying chart mode
+      let chartData: ChatbotChartPayload | null = null;
+      if (selection === 'graphique') {
+        chartData = this.buildRankingChartPayload(pendingRankingData, pendingRankingIntent);
+      }
+
+      // Create a bot response message with the ranking data
+      const botResponse: ChatMessage = {
+        id: this.nextMessageId(),
+        sender: 'bot',
+        content: `Voici les résultats en mode ${selection === 'graphique' ? 'graphique' : 'texte'}...`,
+        timestamp: new Date(),
+        type: selection === 'graphique' ? 'chart' : 'text',  // ← Match type to selection
+        options: [],
+        chartType: selection === 'graphique' ? 'bar' : null,
+        chartData: chartData,
+        rankingData: pendingRankingData,
+        rankingIntent: pendingRankingIntent,
+        rankingViewMode: selection === 'graphique' ? 'chart' : 'text',
+        rankingMetric: undefined,
+        debug: null,
+      };
+      this.messages.push(botResponse);
+      this.scrollToBottom();
+      setTimeout(() => this.renderCharts());
+      return;
+    }
+
+    // Otherwise, send to backend normally
+    this.sendMessage(option, selection as 'texte' | 'graphique');
   }
 
-  sendMessage(messageOverride?: string): void {
+  sendMessage(messageOverride?: string, selection?: 'texte' | 'graphique'): void {
     const message = (messageOverride ?? this.draftMessage).trim();
     if (!message || this.isLoading) return;
 
@@ -316,9 +429,9 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       options: [],
       chartType: null,
       chartData: null,
-      supplierRanking: null,
-      supplierViewMode: 'chart',
-      supplierChartMetric: 'kg',
+      rankingData: null,
+      rankingIntent: null,
+      rankingViewMode: 'chart',
       debug: null,
     });
     this.hasSentUserMessage = true;
@@ -327,10 +440,10 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     this.isLoading = true;
     this.scrollToBottom();
 
-    console.log('[Chatbot Widget] Sending message:', message);
+    console.log('[Chatbot Widget] Sending message:', message, 'selection:', selection);
 
     this.chatbotService
-      .sendMessage(message)
+      .sendMessage(message, selection)
       .pipe(
         finalize(() => {
           this.isLoading = false;
@@ -339,7 +452,30 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       )
       .subscribe((response: ChatbotResponse) => {
         console.log('[Chatbot Widget] Response received:', response);
-        this.messages.push(this.createBotMessage(response));
+        const botMessage = this.createBotMessage(response);
+        
+        // Skip if message creation returned null (e.g., empty duplicate response)
+        if (!botMessage) {
+          console.log('[Chatbot Widget] Skipping null message');
+          return;
+        }
+        
+        // Deduplication: skip if we already have a message with same type, content, and rankingIntent
+        // (ignore rankingData since backend might send it differently in duplicate responses)
+        const isDuplicate = this.messages.some(msg => 
+          msg.sender === 'bot' && 
+          msg.type === botMessage.type &&
+          msg.content === botMessage.content &&
+          msg.rankingIntent === botMessage.rankingIntent &&
+          msg.rankingIntent !== null  // Only dedupe ranking messages
+        );
+        
+        if (isDuplicate) {
+          console.log('[Chatbot Widget] Skipping duplicate message:', botMessage.type, botMessage.content.substring(0, 30));
+          return;
+        }
+        
+        this.messages.push(botMessage);
 
         if (!this.isOpen) {
           this.hasUnreadPulse = true;
@@ -361,11 +497,12 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   isChartMessage(message: ChatMessage): boolean {
-    return message.sender === 'bot' && message.type === 'chart' && (this.hasChartData(message) || !!message.supplierRanking);
+    return message.sender === 'bot' && message.type === 'chart' && (this.hasChartData(message) || !!message.rankingData);
   }
 
-  isSupplierRankingMessage(message: ChatMessage): boolean {
-    return message.sender === 'bot' && message.type === 'chart' && !!message.supplierRanking;
+  isRankingMessage(message: ChatMessage): boolean {
+    // Show ranking view only when bot returned ranking data and NOT during choice prompt
+    return message.sender === 'bot' && message.type !== 'choice' && !!message.rankingData && !!message.rankingIntent;
   }
 
   isChoiceMessage(message: ChatMessage): boolean {
@@ -378,8 +515,8 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     textarea.style.height = `${nextHeight}px`;
   }
 
-  toggleSupplierView(message: ChatMessage, viewMode: SupplierViewMode): void {
-    message.supplierViewMode = viewMode;
+  toggleRankingView(message: ChatMessage, viewMode: RankingViewMode): void {
+    message.rankingViewMode = viewMode;
 
     if (viewMode === 'chart') {
       setTimeout(() => this.renderCharts());
@@ -388,13 +525,48 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     this.destroyAllCharts();
   }
 
-  getSupplierMetric(message: ChatMessage): 'kg' | 'rendement' | 'acidite' {
-    return message.supplierChartMetric;
+  getRankingMetric(message: ChatMessage): string {
+    return message.rankingMetric ?? 'kg';
   }
 
-  setSupplierMetric(message: ChatMessage, metric: 'kg' | 'rendement' | 'acidite'): void {
-    message.supplierChartMetric = metric;
+  setRankingMetric(message: ChatMessage, metric: string): void {
+    message.rankingMetric = metric;
+    // Rebuild chart data with new metric for ranking types that support it
+    if (message.rankingData && message.rankingIntent && ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo'].includes(message.rankingIntent)) {
+      message.chartData = this.buildRankingChartPayload(message.rankingData, message.rankingIntent, metric);
+    }
     setTimeout(() => this.renderCharts());
+  }
+
+  getRankingItems(message: ChatMessage): unknown[] {
+    if (!message.rankingData || !('items' in message.rankingData)) {
+      return [];
+    }
+    return message.rankingData.items as unknown[];
+  }
+
+  getFournisseurItems(message: ChatMessage): SupplierRankingItem[] {
+    return this.getRankingItems(message) as SupplierRankingItem[];
+  }
+
+  getMachineItems(message: ChatMessage): MachineRankingItem[] {
+    return this.getRankingItems(message) as MachineRankingItem[];
+  }
+
+  getLotItems(message: ChatMessage): LotRankingItem[] {
+    return this.getRankingItems(message) as LotRankingItem[];
+  }
+
+  getAnalysisItems(message: ChatMessage): AnalysisRankingItem[] {
+    return this.getRankingItems(message) as AnalysisRankingItem[];
+  }
+
+  getDisplayedItems<T>(items: T[], limit: number = 8): T[] {
+    return items.slice(0, limit);
+  }
+
+  getHiddenItemsCount(items: unknown[], limit: number = 8): number {
+    return Math.max(0, (items?.length ?? 0) - limit);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -574,33 +746,83 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   // Private — message creation
   // ─────────────────────────────────────────────────────────────────────────────
 
-  private createBotMessage(response: ChatbotResponse): ChatMessage {
-    const supplierRanking =
-      this.normalizeSupplierRanking(response.data)
-      ?? this.normalizeSupplierRankingFromChartPayload(response.data, response.intent);
+  private createBotMessage(response: ChatbotResponse): ChatMessage | null {
+    let intent = (response.intent ?? null) as RankingIntent | string | null;
+    
+    // Smart detection: if intent is "unknown"/"inconnu" AND we have data, try to detect from content
+    if ((!intent || String(intent).toLowerCase() === 'inconnu' || String(intent).toLowerCase() === 'unknown') 
+        && response.data) {
+      const textContent = (response.message || response.response || '').toLowerCase();
+      
+      // Detect ranking type from text patterns
+      if (textContent.includes('lot') && (textContent.includes('**lo') || textContent.includes('référence'))) {
+        intent = 'lot_liste';
+      } else if (textContent.includes('fournisseur') || textContent.includes('supplier')) {
+        intent = 'fournisseur';
+      } else if (textContent.includes('machine') || textContent.includes('execution')) {
+        intent = 'machines_utilisees';
+      } else if (textContent.includes('analyse') || textContent.includes('acidité') || textContent.includes('peroxyde')) {
+        intent = 'analyse_labo';
+      }
+    } else if ((!intent || String(intent).toLowerCase() === 'inconnu') && !response.data) {
+      // If backend sent "unknown" intent AND no data, this is probably a duplicate empty response - skip it
+      console.log('[Chatbot Widget] Skipping empty response with no data');
+      return null;
+    }
+    
+    const isRankingIntent = RANKING_INTENTS.includes(intent as RankingIntent);
+    
+    let rankingData: RankingPayload = null;
+    let chartData: ChatbotChartPayload | null = null;
 
-    // Debug logs to inspect incoming data when a supplier ranking is returned
-    // eslint-disable-next-line no-console
-    console.log('[Chatbot Widget] debug response.data for supplier:', response.data);
-    // eslint-disable-next-line no-console
-    console.log('[Chatbot Widget] debug supplierRanking derived:', supplierRanking);
-    const chartData = supplierRanking
-      ? this.buildSupplierRankingChartPayload(supplierRanking.items)
-      : this.normalizeChartData(response.data);
-    const messageType = response.type ?? 'text';
+    // Try to normalize ranking data based on intent
+    if (isRankingIntent && response.type !== 'choice') {
+      rankingData = this.normalizeRankingData(response.data, intent as RankingIntent);
+      if (rankingData) {
+        chartData = this.buildRankingChartPayload(rankingData, intent as RankingIntent);
+      }
+    }
 
-    return {
+    // Fallback to generic chart data if no ranking data
+    if (!chartData) {
+      chartData = response.type === 'chart' ? this.normalizeChartData(response.data) : null;
+    }
+
+    // Smart flow: If backend sends ranking data with type='text'/'chart' directly,
+    // convert to choice message first (ignore the actual type)
+    let messageType = response.type ?? 'text';
+    let rankedItemsToDisplay: RankingPayload | null = null;
+    
+    // Only create a choice message if we have actual ranking data
+    if (isRankingIntent && rankingData && messageType !== 'choice') {
+      // Store ranking data to display after choice
+      rankedItemsToDisplay = rankingData;
+      // Convert to choice message
+      messageType = 'choice';
+    } else if (messageType === 'choice' && !rankingData && isRankingIntent) {
+      // If backend sent "choice" but no ranking data, change to text
+      // (this is probably a duplicate response without the actual data)
+      messageType = 'text';
+    }
+
+    const shouldAttachRanking = messageType !== 'choice' && (isRankingIntent && !!rankingData);
+    const viewMode: RankingViewMode = response.selected_option === 'texte' ? 'text' : 'chart';
+
+    console.log('[Chatbot Widget] createBotMessage - intent:', intent, 'isRanking:', isRankingIntent, 'rankingData:', rankingData, 'messageType:', messageType);
+
+    const botMessage: ChatMessage = {
       id: this.nextMessageId(),
       sender: 'bot',
       content: response.message || response.response || 'Réponse reçue.',
       timestamp: new Date(),
       type: messageType,
-      options: messageType === 'choice' ? this.normalizeOptions(response.options) : [],
+      options: messageType === 'choice' ? ['texte', 'graphique'] : [],
       chartType: messageType === 'chart' ? response.chart_type : null,
       chartData: messageType === 'chart' ? chartData : null,
-      supplierRanking: messageType === 'chart' ? supplierRanking : null,
-      supplierViewMode: 'chart',
-      supplierChartMetric: 'kg',
+      rankingData: shouldAttachRanking ? rankingData : null,
+      rankingIntent: shouldAttachRanking ? (intent as RankingIntent) : null,
+      rankingViewMode: viewMode,
+      rankingMetric: 'kg',
       debug:
         response.intent || response.confidence !== null || response.applied_scope
           ? {
@@ -610,6 +832,14 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
             }
           : null,
     };
+
+    // If we're showing a choice message but have ranking data, store it for later display
+    if (messageType === 'choice' && rankedItemsToDisplay) {
+      (botMessage as any)._pendingRankingData = rankedItemsToDisplay;
+      (botMessage as any)._pendingRankingIntent = intent as RankingIntent;
+    }
+
+    return botMessage;
   }
 
   private normalizeOptions(options: string[]): string[] {
@@ -622,8 +852,291 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Private — chart data normalization
+  // Private — unified ranking normalization
   // ─────────────────────────────────────────────────────────────────────────────
+
+  private normalizeRankingData(data: unknown, intent: RankingIntent | null): RankingPayload {
+    if (!data) return null;
+
+    switch (intent) {
+      case 'fournisseur':
+        return this.normalizeFournisseurData(data);
+      case 'machines_utilisees':
+        return this.normalizeMachinesData(data);
+      case 'lot_liste':
+        return this.normalizeLotsData(data);
+      case 'analyse_labo':
+        return this.normalizeAnalysesData(data);
+      default:
+        return null;
+    }
+  }
+
+  private normalizeFournisseurData(data: unknown): SupplierRankingPayload | null {
+    const suppliers = this.extractArrayData(data, ['suppliers', 'fournisseurs', 'items', 'data']);
+    if (!suppliers.length) return null;
+
+    const items = suppliers
+      .map((s, i) => this.normalizeFournisseurItem(s, i))
+      .filter((item): item is SupplierRankingItem => item !== null)
+      .sort((a, b) => b.kg - a.kg);
+
+    if (!items.length) return null;
+
+    return {
+      items,
+      bestSupplierName: items[0]?.name ?? null,
+      weakSupplierNames: items.filter((i) => i.acidityOutOfRange || i.rendementOutOfRange).map((i) => i.name),
+    };
+  }
+
+  private normalizeFournisseurItem(item: unknown, index: number): SupplierRankingItem | null {
+    if (!item || typeof item !== 'object') return null;
+
+    const r = item as Record<string, unknown>;
+    const name = String(r['name'] ?? r['fournisseur_nom'] ?? r['supplier'] ?? `Fournisseur ${index + 1}`).trim();
+    const kg = this.normalizeNumber(r['kg'] ?? r['quantity'] ?? r['quantite_totale_kg'] ?? 0);
+    const acidity = this.normalizeNumber(r['acidity'] ?? r['acidite'] ?? r['acidite_moyenne'] ?? 0);
+    const rendement = this.normalizeNumber(r['rendement'] ?? r['rendement_moyen'] ?? 0);
+    const lots = Math.max(0, Math.round(this.normalizeNumber(r['lots'] ?? r['nb_lots'] ?? 0)));
+
+    if (!name) return null;
+
+    return {
+      name,
+      kg,
+      acidity,
+      rendement,
+      lots,
+      acidityOutOfRange: acidity < SUPPLIER_ACIDITY_RANGE.min || acidity > SUPPLIER_ACIDITY_RANGE.max,
+      rendementOutOfRange: rendement < SUPPLIER_RENDEMENT_RANGE.min || rendement > SUPPLIER_RENDEMENT_RANGE.max,
+    };
+  }
+
+  private normalizeMachinesData(data: unknown): MachineRankingPayload | null {
+    const machines = this.extractArrayData(data, ['machines', 'machinesUtilisees', 'items', 'data']);
+    if (!machines.length) return null;
+
+    const items = machines
+      .map((m, i) => this.normalizeMachineItem(m, i))
+      .filter((item): item is MachineRankingItem => item !== null)
+      .sort((a, b) => b.nbExecutions - a.nbExecutions);
+
+    if (!items.length) return null;
+
+    return { items };
+  }
+
+  private normalizeMachineItem(item: unknown, index: number): MachineRankingItem | null {
+    if (!item || typeof item !== 'object') return null;
+
+    const r = item as Record<string, unknown>;
+    const name = String(r['name'] ?? r['nomMachine'] ?? r['machine'] ?? `Machine ${index + 1}`).trim();
+    const nbExecutions = Math.max(0, Math.round(this.normalizeNumber(r['nbExecutions'] ?? r['executions'] ?? 0)));
+    const rendementMoyen = this.normalizeNumber(r['rendementMoyen'] ?? r['rendement'] ?? 0);
+    const totalProduit = this.normalizeNumber(r['totalProduit'] ?? r['production'] ?? 0);
+
+    if (!name) return null;
+
+    return {
+      name,
+      nbExecutions,
+      rendementMoyen,
+      totalProduit,
+    };
+  }
+
+  private normalizeLotsData(data: unknown): LotRankingPayload | null {
+    const lots = this.extractArrayData(data, ['lots', 'items', 'data']);
+    if (!lots.length) return null;
+
+    const items = lots
+      .map((l, i) => this.normalizeLotItem(l, i))
+      .filter((item): item is LotRankingItem => item !== null);
+
+    if (!items.length) return null;
+
+    return { items };
+  }
+
+  private normalizeLotItem(item: unknown, index: number): LotRankingItem | null {
+    if (!item || typeof item !== 'object') return null;
+
+    const r = item as Record<string, unknown>;
+    const name = String(r['name'] ?? r['reference'] ?? `Lot ${index + 1}`).trim();
+    const reference = String(r['reference'] ?? r['ref'] ?? name).trim();
+    const variete = String(r['variete'] ?? r['variety'] ?? '').trim();
+    const fournisseur_nom = String(r['fournisseur_nom'] ?? r['supplier'] ?? '').trim();
+    const quantite_initiale = this.normalizeNumber(r['quantite_initiale'] ?? r['quantity'] ?? 0);
+    const qualite_huile = String(r['qualite_huile'] ?? r['quality'] ?? '').trim();
+
+    if (!reference) return null;
+
+    return {
+      name,
+      reference,
+      variete,
+      fournisseur_nom,
+      quantite_initiale,
+      qualite_huile,
+    };
+  }
+
+  private normalizeAnalysesData(data: unknown): AnalysisRankingPayload | null {
+    const analyses = this.extractArrayData(data, ['analyses', 'items', 'data']);
+    if (!analyses.length) return null;
+
+    const items = analyses
+      .map((a, i) => this.normalizeAnalysisItem(a, i))
+      .filter((item): item is AnalysisRankingItem => item !== null);
+
+    if (!items.length) return null;
+
+    return { items };
+  }
+
+  private normalizeAnalysisItem(item: unknown, index: number): AnalysisRankingItem | null {
+    if (!item || typeof item !== 'object') return null;
+
+    const r = item as Record<string, unknown>;
+    const lot_ref = String(r['lot_ref'] ?? r['reference'] ?? `Lot ${index + 1}`).trim();
+    const name = lot_ref;
+    const date_analyse = String(r['date_analyse'] ?? r['date'] ?? '').trim();
+    const acidite_huile_pourcent = this.normalizeNumber(r['acidite_huile_pourcent'] ?? r['acidity'] ?? 0);
+    const indice_peroxyde_meq_o2_kg = this.normalizeNumber(r['indice_peroxyde_meq_o2_kg'] ?? r['peroxide'] ?? 0);
+    const k270 = this.normalizeNumber(r['k270'] ?? 0);
+
+    if (!lot_ref) return null;
+
+    return {
+      name,
+      lot_ref,
+      date_analyse,
+      acidite_huile_pourcent,
+      indice_peroxyde_meq_o2_kg,
+      k270,
+      acidityOutOfRange: acidite_huile_pourcent < ANALYSIS_ACIDITY_RANGE.min || acidite_huile_pourcent > ANALYSIS_ACIDITY_RANGE.max,
+      peroxideOutOfRange: indice_peroxyde_meq_o2_kg < ANALYSIS_PEROXIDE_RANGE.min || indice_peroxyde_meq_o2_kg > ANALYSIS_PEROXIDE_RANGE.max,
+      k270OutOfRange: k270 < ANALYSIS_K270_RANGE.min || k270 > ANALYSIS_K270_RANGE.max,
+    };
+  }
+
+  private extractArrayData(data: unknown, keys: string[]): unknown[] {
+    if (Array.isArray(data)) return data;
+    if (!data || typeof data !== 'object') return [];
+
+    const record = data as Record<string, unknown>;
+    for (const key of keys) {
+      const candidate = record[key];
+      if (Array.isArray(candidate)) return candidate;
+    }
+
+    return [];
+  }
+
+  private buildRankingChartPayload(ranking: RankingPayload, intent: RankingIntent | null, metric?: string): ChatbotChartPayload | null {
+    if (!ranking) return null;
+
+    if ('items' in ranking && ranking.items && (ranking.items as any[]).length > 0) {
+      const items = (ranking.items as any[]);
+
+      if (intent === 'fournisseur' && (items[0] as any).kg !== undefined) {
+        const suppliers = items as SupplierRankingItem[];
+        
+        let datasets: ChatbotChartPayload['datasets'] = [];
+        if (!metric) {
+          // Show all metrics by default
+          datasets = [
+            { label: 'Quantité (kg)', data: suppliers.map((s) => s.kg), type: 'bar' },
+            { label: 'Rendement (%)', data: suppliers.map((s) => s.rendement), type: 'bar' },
+            { label: 'Acidité (%)', data: suppliers.map((s) => s.acidity), type: 'bar' },
+          ];
+        } else {
+          // Show only selected metric
+          if (metric === 'kg') {
+            datasets = [{ label: 'Quantité (kg)', data: suppliers.map((s) => s.kg), type: 'bar' }];
+          } else if (metric === 'rendement') {
+            datasets = [{ label: 'Rendement (%)', data: suppliers.map((s) => s.rendement), type: 'bar' }];
+          } else if (metric === 'acidite') {
+            datasets = [{ label: 'Acidité (%)', data: suppliers.map((s) => s.acidity), type: 'bar' }];
+          }
+        }
+        
+        return {
+          labels: suppliers.map((s) => s.name),
+          datasets,
+        };
+      }
+
+      if (intent === 'machines_utilisees' && (items[0] as any).nbExecutions !== undefined) {
+        const machines = items as MachineRankingItem[];
+        
+        let datasets: ChatbotChartPayload['datasets'] = [];
+        if (!metric) {
+          // Show all metrics by default
+          datasets = [
+            { label: 'Exécutions', data: machines.map((m) => m.nbExecutions), type: 'bar' },
+            { label: 'Rendement moyen (%)', data: machines.map((m) => m.rendementMoyen), type: 'bar' },
+            { label: 'Production (L)', data: machines.map((m) => m.totalProduit), type: 'bar' },
+          ];
+        } else {
+          // Show only selected metric
+          if (metric === 'executions') {
+            datasets = [{ label: 'Exécutions', data: machines.map((m) => m.nbExecutions), type: 'bar' }];
+          } else if (metric === 'rendement') {
+            datasets = [{ label: 'Rendement moyen (%)', data: machines.map((m) => m.rendementMoyen), type: 'bar' }];
+          } else if (metric === 'production') {
+            datasets = [{ label: 'Production (L)', data: machines.map((m) => m.totalProduit), type: 'bar' }];
+          }
+        }
+        
+        return {
+          labels: machines.map((m) => m.name),
+          datasets,
+        };
+      }
+
+      if (intent === 'lot_liste' && (items[0] as any).quantite_initiale !== undefined) {
+        const lots = items as LotRankingItem[];
+        return {
+          labels: lots.map((l) => l.reference),
+          datasets: [
+            { label: 'Quantité (kg)', data: lots.map((l) => l.quantite_initiale), type: 'bar' },
+          ],
+        };
+      }
+
+      if (intent === 'analyse_labo' && (items[0] as any).acidite_huile_pourcent !== undefined) {
+        const analyses = items as AnalysisRankingItem[];
+        
+        let datasets: ChatbotChartPayload['datasets'] = [];
+        if (!metric) {
+          // Show all metrics by default
+          datasets = [
+            { label: 'Acidité (%)', data: analyses.map((a) => a.acidite_huile_pourcent), type: 'bar' },
+            { label: 'Peroxyde (meq O2/kg)', data: analyses.map((a) => a.indice_peroxyde_meq_o2_kg), type: 'bar' },
+            { label: 'K270', data: analyses.map((a) => a.k270), type: 'bar' },
+          ];
+        } else {
+          // Show only selected metric
+          if (metric === 'acidite') {
+            datasets = [{ label: 'Acidité (%)', data: analyses.map((a) => a.acidite_huile_pourcent), type: 'bar' }];
+          } else if (metric === 'peroxyde') {
+            datasets = [{ label: 'Peroxyde (meq O2/kg)', data: analyses.map((a) => a.indice_peroxyde_meq_o2_kg), type: 'bar' }];
+          } else if (metric === 'k270') {
+            datasets = [{ label: 'K270', data: analyses.map((a) => a.k270), type: 'bar' }];
+          }
+        }
+        
+        return {
+          labels: analyses.map((a) => a.lot_ref),
+          datasets,
+        };
+      }
+    }
+
+    return null;
+  }
 
   private normalizeChartData(data: unknown): ChatbotChartPayload | null {
     if (!data) return null;
@@ -845,7 +1358,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   private renderCharts(): void {
     const chartMessages = this.messages.filter(
-      (m) => this.isChartMessage(m) && m.supplierViewMode === 'chart'
+      (m) => this.isChartMessage(m) && m.rankingViewMode === 'chart'
     );
     const canvases = this.chartCanvasRefs ? this.chartCanvasRefs.toArray().map((r) => r.nativeElement) : [];
 
@@ -860,8 +1373,8 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       try {
         canvas.style.display = 'block';
         canvas.style.width = '100%';
-        // give supplier-ranking charts more vertical space
-        if (message.supplierRanking) {
+        // give ranking charts more vertical space
+        if (message.rankingData) {
           canvas.style.height = '420px';
         } else {
           canvas.style.height = '320px';
@@ -947,8 +1460,9 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   private buildChartConfiguration(message: ChatMessage): ChartConfiguration {
     const chartType: ChartType = message.chartType ?? 'bar';
 
-    if (message.supplierRanking) {
-      return this.buildSupplierRankingChartConfiguration(message);
+    // Handle unified ranking data
+    if (message.rankingData && message.rankingIntent) {
+      return this.buildUnifiedRankingChartConfiguration(message);
     }
 
     const payload = message.chartData;
@@ -985,121 +1499,138 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       const color = CHART_COLORS[i % CHART_COLORS.length];
       const maxVal = datasetMaxes[i] ?? 0;
       const yAxisID = overallMax > 0 && maxVal < overallMax / 10 ? 'y1' : 'y';
+      const dsType = (ds as { type?: string }).type;
+      const isBarDataset = (chartType === 'bar' && !dsType) || dsType === 'bar';
       return {
         label: ds.label,
         data: ds.data,
+        type: dsType as any,
         borderColor: color,
-        backgroundColor: chartType === 'line' ? color : this.withAlpha(color, 0.28),
+        backgroundColor: dsType === 'line' || (chartType === 'line' && !dsType) ? color : this.withAlpha(color, 0.28),
         borderWidth: 2,
         fill: false,
-        tension: chartType === 'line' ? 0.35 : 0,
+        tension: dsType === 'line' || (chartType === 'line' && !dsType) ? 0.35 : 0,
         yAxisID,
+        maxBarThickness: isBarDataset ? 42 : undefined,
       } as ChartDataset<'bar' | 'line', number[]>;
     });
 
     return { type: chartType, data: { labels, datasets }, options: this.getChartOptions(chartType) };
   }
 
-  private buildSupplierRankingChartConfiguration(message: ChatMessage): ChartConfiguration {
-    const sr = message.supplierRanking;
-    const items = sr?.items ?? [];
-    const labels = items.map((i) => i.name);
-    const metric = message.supplierChartMetric;
+  private buildUnifiedRankingChartConfiguration(message: ChatMessage): ChartConfiguration {
+    const { rankingData, rankingIntent, rankingMetric } = message;
+    const payload = message.chartData;
 
-    let dataset: ChartDataset<'bar', number[]>;
-    let yAxisLabel: string;
-    let yAxisFormat: (v: number) => string;
-
-    if (metric === 'kg') {
-      dataset = {
-        label: 'Quantité livrée (kg)',
-        data: items.map((i) => i.kg),
-        backgroundColor: 'rgba(111,141,58,0.6)',
-        borderColor: '#6f8d3a',
-        borderWidth: 1,
-        yAxisID: 'y',
-      };
-      yAxisLabel = 'Quantité (kg)';
-      yAxisFormat = (v) => Number(v).toLocaleString('fr-FR');
-    } else if (metric === 'rendement') {
-      dataset = {
-        label: 'Rendement (%)',
-        data: items.map((i) => i.rendement),
-        backgroundColor: 'rgba(126,159,203,0.6)',
-        borderColor: '#7e9fcb',
-        borderWidth: 1,
-        yAxisID: 'y',
-      };
-      yAxisLabel = 'Rendement (%)';
-      yAxisFormat = (v) => `${Number(v).toLocaleString('fr-FR')}%`;
-    } else {
-      // acidite
-      dataset = {
-        label: 'Acidité (%)',
-        data: items.map((i) => i.acidity),
-        backgroundColor: 'rgba(216,198,90,0.6)',
-        borderColor: '#d8c65a',
-        borderWidth: 1,
-        yAxisID: 'y',
-      };
-      yAxisLabel = 'Acidité (%)';
-      yAxisFormat = (v) => `${Number(v).toLocaleString('fr-FR')}%`;
+    if (!payload) {
+      return { type: 'bar', data: { labels: [], datasets: [] }, options: this.getChartOptions('bar') };
     }
+
+    const labels = payload.labels;
+    const datasetMaxes = payload.datasets.map((ds) =>
+      ds.data?.length ? Math.max(...ds.data.map((v) => Number(v) || 0)) : 0
+    );
+    const overallMax = Math.max(...datasetMaxes, 0);
+    const hasSingleDataset = payload.datasets.length === 1;
+
+    const datasets: ChartDataset<'bar' | 'line', number[]>[] = payload.datasets.map((ds, i) => {
+      const color = CHART_COLORS[i % CHART_COLORS.length];
+      const maxVal = datasetMaxes[i] ?? 0;
+      // Only use y1 axis if we have multiple datasets
+      const yAxisID = !hasSingleDataset && overallMax > 0 && maxVal < overallMax / 10 ? 'y1' : 'y';
+      const dsType = (ds as { type?: string }).type || 'bar';
+      const isBar = dsType === 'bar';
+
+      return {
+        label: ds.label,
+        data: ds.data,
+        type: dsType as any,
+        borderColor: color,
+        backgroundColor: isBar ? this.withAlpha(color, 0.6) : color,
+        borderWidth: isBar ? 1 : 2,
+        fill: false,
+        tension: !isBar ? 0.35 : 0,
+        yAxisID,
+        maxBarThickness: isBar ? 42 : undefined,
+      } as ChartDataset<'bar' | 'line', number[]>;
+    });
 
     return {
       type: 'bar',
-      data: {
-        labels,
-        datasets: [dataset],
-      },
+      data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        indexAxis: 'x',
         plugins: {
           legend: { display: true, position: 'top' },
           tooltip: {
             callbacks: {
-              title: (ctx) => ctx[0]?.label ? `Fournisseur: ${ctx[0].label}` : 'Fournisseur',
-              label: (ctx) => {
-                const item = items[ctx.dataIndex];
-                if (!item) return '';
-                if (metric === 'kg') return `Quantité: ${item.kg.toLocaleString('fr-FR')} kg`;
-                if (metric === 'rendement') return `Rendement: ${item.rendement.toLocaleString('fr-FR')}%`;
-                if (metric === 'acidite') return `Acidité: ${item.acidity.toLocaleString('fr-FR')}%`;
-                return `${ctx.dataset.label}: ${String(ctx.raw)}`;
-              },
-              afterBody: (ctx) => {
-                const item = items[ctx[0]?.dataIndex ?? 0];
-                if (!item) return [];
-                const result: string[] = [`Lots: ${item.lots}`];
-                if (metric === 'kg' && item.name === sr?.bestSupplierName) {
-                  result.push('⭐ Meilleur fournisseur');
-                }
-                if (item.acidityOutOfRange && metric === 'acidite') {
-                  result.push(`Hors plage (${SUPPLIER_ACIDITY_RANGE.min}%–${SUPPLIER_ACIDITY_RANGE.max}%)`);
-                }
-                if (item.rendementOutOfRange && metric === 'rendement') {
-                  result.push(`Hors plage (${SUPPLIER_RENDEMENT_RANGE.min}%–${SUPPLIER_RENDEMENT_RANGE.max}%)`);
-                }
-                return result;
-              },
+              title: (ctx: TooltipItem<any>[]) => ctx[0]?.label ?? 'Item',
+              afterBody: () => this.getTooltipContext(rankingData, rankingIntent),
             },
           },
         },
         scales: {
-          x: { ticks: { color: '#6f7d90' }, grid: { color: 'rgba(127,142,163,0.12)' } },
           y: {
             beginAtZero: true,
-            ticks: { color: '#6f7d90', callback: (tickValue: string | number) => yAxisFormat(Number(tickValue)) },
-            title: { display: true, text: yAxisLabel },
-            grid: { color: 'rgba(127,142,163,0.18)' },
+            type: 'linear',
           },
-          // Ensure right axis is completely removed/hidden for supplier charts
-          y1: { display: false },
+          ...(hasSingleDataset ? {} : {
+            y1: {
+              type: 'linear',
+              position: 'right',
+              beginAtZero: true,
+            },
+          }),
         },
-        animation: { duration: 700, easing: 'easeOutQuart' },
-      },
+      } as any,
     };
+  }
+
+  private getTooltipContext(rankingData: RankingPayload, intent: RankingIntent | null): string[] {
+    if (!rankingData || !('items' in rankingData) || !rankingData.items) return [];
+
+    const items = rankingData.items as any[];
+    if (!items.length) return [];
+
+    if (intent === 'fournisseur') {
+      const item = items[0];
+      return [
+        `Lots: ${item.lots}`,
+        `Acidité: ${item.acidity.toLocaleString('fr-FR')}%`,
+        `Rendement: ${item.rendement.toLocaleString('fr-FR')}%`,
+      ];
+    }
+
+    if (intent === 'machines_utilisees') {
+      const item = items[0];
+      return [
+        `Exécutions: ${item.nbExecutions}`,
+        `Rendement: ${item.rendementMoyen.toLocaleString('fr-FR')}%`,
+        `Production: ${item.totalProduit.toLocaleString('fr-FR')} L`,
+      ];
+    }
+
+    if (intent === 'lot_liste') {
+      const item = items[0];
+      return [
+        `Variété: ${item.variete}`,
+        `Fournisseur: ${item.fournisseur_nom}`,
+        `Qualité: ${item.qualite_huile}`,
+      ];
+    }
+
+    if (intent === 'analyse_labo') {
+      const item = items[0];
+      return [
+        `Date: ${item.date_analyse}`,
+        `Peroxyde: ${item.indice_peroxyde_meq_o2_kg.toLocaleString('fr-FR')}`,
+        `K270: ${item.k270.toLocaleString('fr-FR')}`,
+      ];
+    }
+
+    return [];
   }
 
   private getChartOptions(chartType: ChartType, compactSecondaryAxis = false): ChartConfiguration['options'] {
