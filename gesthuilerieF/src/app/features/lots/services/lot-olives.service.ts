@@ -94,6 +94,7 @@ export class LotOlivesService {
   private normalizeLot(item: any): LotOlives {
     return {
       ...item,
+      reference: String(item?.reference ?? item?.referenceLot ?? item?.reference_lot ?? item?.lotReference ?? item?.lot?.reference ?? '').trim() || undefined,
       varieteOlive: item?.varieteOlive ?? item?.variete ?? '',
       maturite: item?.maturite ?? item?.maturite_niveau_1_5 ?? '',
       methodeRecolte: item?.methodeRecolte ?? item?.methode_recolte,
@@ -187,14 +188,18 @@ export class LotOlivesService {
       return scopedByStocksAndHuilerie.length > 0 ? scopedByStocksAndHuilerie : byStockScope;
     }
 
-    if (byStockScope.length === 0) {
-      console.warn('[lot-olives-service] fallback produced 0 lots', {
-        lotIdsFromStocks: Array.from(lotIdsWithAvailableStock),
-        lotIdsFromStockRefs: Array.from(lotIdsFromAvailableStockRefs),
-        lotRefsFromStocks: Array.from(lotRefsWithAvailableStock),
-        lotIdsFromApi: items.map((item) => Number(item?.idLot ?? 0)).filter((id) => id > 0),
-        lotRefsFromApi: items.map((item) => this.normalizeReference(item?.reference ?? null)).filter((value) => !!value),
+    // If no scoped lots were found (neither by explicit huilerieId nor by stock),
+    // fall back to returning the normalized lots list so the UI can display
+    // available lots. This addresses cases where the backend /lots payload
+    // does not include `huilerieId` and stock payload does not provide
+    // scoping information.
+    if (directScopedLots.length === 0 && byStockScope.length === 0) {
+      console.warn('[lot-olives-service] No scoped lots found; falling back to returning all normalized lots for UI.', {
+        currentUserHuilerieId: currentHuilerieId,
+        lotsCount: items.length,
+        stocksCount: stocks.length,
       });
+      return items;
     }
 
     return byStockScope;

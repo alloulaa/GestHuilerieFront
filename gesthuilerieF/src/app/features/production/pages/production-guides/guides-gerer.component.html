@@ -103,8 +103,7 @@
                     {{ m.nomMachine }} <span *ngIf="m.huilerieNom">({{ m.huilerieNom }})</span> - {{ m.typeMachine }}
                   </option>
                 </select>
-                <small *ngIf="getMachinesForStepByIndex(i)?.length === 0" class="hint"
-                  style="color: #666; display: block; margin-top: 4px;">
+                <small *ngIf="getMachinesForStepByIndex(i).length === 0" class="hint">
                   Aucune machine disponible pour cette étape
                 </small>
               </div>
@@ -136,6 +135,24 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Intervalles de saisie des paramètres -->
+          <div class="interval-help-panel">
+            <div class="interval-help-panel__header">
+              <span>Intervalles de saisie des paramètres</span>
+              <small>Les valeurs hors intervalle deviennent rouges et sont signalées immédiatement.</small>
+            </div>
+            <div class="interval-help-panel__chips">
+              <span class="interval-chip" *ngFor="let rule of guideParameterHelp">
+                <strong>{{ rule.label }}</strong>
+                <em>{{ rule.min }} à {{ rule.max }}{{ rule.unite ? ' ' + rule.unite : '' }}</em>
+              </span>
+            </div>
+            <!-- Debug: show counts -->
+            <small class="interval-help-panel__description">
+              {{guideParameterHelp.length||0}} guide params
+            </small>
           </div>
 
           <!-- Form Actions -->

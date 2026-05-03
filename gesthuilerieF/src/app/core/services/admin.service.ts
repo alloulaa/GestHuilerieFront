@@ -305,6 +305,7 @@ export class AdminService {
 
   private mergeUsersByIdentity(legacyUsers: any[], typedUsers: any[]): any[] {
     const merged = new Map<string, any>();
+    const pickDefined = (primary: any, fallback: any) => (primary ?? fallback);
 
     const createKey = (user: any): string => {
       const id = Number(
@@ -346,9 +347,18 @@ export class AdminService {
       merged.set(key, {
         ...existing,
         ...user,
+        profilId: pickDefined(user?.profilId, existing?.profilId),
+        huilerieId: pickDefined(user?.huilerieId, existing?.huilerieId),
+        entrepriseId: pickDefined(user?.entrepriseId, existing?.entrepriseId),
+        idProfil: pickDefined(user?.idProfil, existing?.idProfil),
+        idHuilerie: pickDefined(user?.idHuilerie, existing?.idHuilerie),
+        idEntreprise: pickDefined(user?.idEntreprise, existing?.idEntreprise),
+        profilNom: pickDefined(user?.profilNom, existing?.profilNom),
+        huilerieNom: pickDefined(user?.huilerieNom, existing?.huilerieNom),
         profil: {
           ...(existing?.profil ?? {}),
           ...(user?.profil ?? {}),
+          idProfil: pickDefined(user?.profil?.idProfil, existing?.profil?.idProfil),
           nom: shouldKeepExistingProfilNom ? existingProfilNom : (typedProfilNom || existingProfilNom),
         },
       });

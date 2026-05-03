@@ -148,4 +148,8 @@ export class StockManagementService {
         }),
       ),);
   }
+
+  getCurrentMovements(): StockMovement[] {
+    return this.movementsSubject.value;
+  }
 }

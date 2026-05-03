@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -62,6 +62,12 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
     readonly methodeRecolteOptions = METHODE_RECOLTE_OPTIONS;
     readonly typeSolOptions = TYPE_SOL_OPTIONS;
     readonly lavageEffectueOptions = ['Oui', 'Non'];
+    readonly receptionIntervalRules = [
+        { controlName: 'maturite', label: 'Maturité', min: 1, max: 5, unit: '' },
+        { controlName: 'humiditePourcent', label: 'Humidité', min: 10, max: 30, unit: '%' },
+        { controlName: 'aciditeOlivesPourcent', label: 'Acidité olives', min: 0.1, max: 2.5, unit: '%' },
+        { controlName: 'tauxFeuillesPourcent', label: 'Feuilles', min: 0, max: 5, unit: '%' },
+    ] as const;
 
     readonly form;
 
@@ -132,6 +138,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         this.loadCampagnesForHuilerie(Number(this.form.get('huilerieId')?.value) || 0);
 
         this.applyLotModeValidation('existing');
+        this.applyReceptionIntervalValidators('existing');
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -167,6 +174,43 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
     private getHuilerieNomById(huilerieId: number): string | undefined {
         const huilerie = this.huileries.find(h => h.idHuilerie === huilerieId);
         return huilerie?.nom;
+    }
+
+    isReceptionIntervalInvalid(controlName: string): boolean {
+        const control = this.form.get(controlName);
+        return !!control && control.invalid && (control.dirty || control.touched);
+    }
+
+    getReceptionIntervalError(controlName: string): string | null {
+        const control = this.form.get(controlName);
+        if (!control || !control.errors || !(control.dirty || control.touched)) {
+            return null;
+        }
+
+        if (control.errors['range']) {
+            const rule = this.receptionIntervalRules.find((item) => item.controlName === controlName);
+            if (rule) {
+                return `${rule.label} doit être comprise entre ${rule.min} et ${rule.max}${rule.unit}`.trim();
+            }
+        }
+
+        return null;
+    }
+
+    private createRangeValidator(min: number, max: number): ValidatorFn {
+        return (control: AbstractControl): ValidationErrors | null => {
+            const rawValue = control.value;
+            if (rawValue === null || rawValue === undefined || rawValue === '') {
+                return null;
+            }
+
+            const value = Number(rawValue);
+            if (Number.isNaN(value) || value < min || value > max) {
+                return { range: { min, max, actual: rawValue } };
+            }
+
+            return null;
+        };
     }
 
     ngOnInit(): void {
@@ -406,6 +450,29 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             });
         }
         existingLotControl?.updateValueAndValidity({ emitEvent: false });
+
+        this.applyReceptionIntervalValidators(mode);
+    }
+
+    private applyReceptionIntervalValidators(mode: 'existing' | 'new'): void {
+        const validatorsByControl: Record<string, ValidatorFn[]> = {
+            maturite: mode === 'new'
+                ? [Validators.required, this.createRangeValidator(1, 5)]
+                : [this.createRangeValidator(1, 5)],
+            humiditePourcent: [this.createRangeValidator(10, 30)],
+            aciditeOlivesPourcent: [this.createRangeValidator(0.1, 2.5)],
+            tauxFeuillesPourcent: [this.createRangeValidator(0, 5)],
+        };
+
+        Object.entries(validatorsByControl).forEach(([controlName, validators]) => {
+            const control = this.form.get(controlName);
+            if (!control) {
+                return;
+            }
+
+            control.setValidators(validators);
+            control.updateValueAndValidity({ emitEvent: false });
+        });
     }
 
     private patchLotIdentityFromSelection(lotId: number): void {

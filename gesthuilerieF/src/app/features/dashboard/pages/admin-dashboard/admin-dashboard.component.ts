@@ -4,20 +4,26 @@ import { NgFor } from '@angular/common';
 import { NgxEchartsModule } from 'ngx-echarts';
 
 @Component({
-    selector: 'app-admin-dashboard',
-    templateUrl: './admin-dashboard.component.html',
-    styleUrls: ['./admin-dashboard.component.scss'],
-    standalone: true,
-    imports: [
-        NbCardModule,
-        NbIconModule,
-        NgFor,
-        NgxEchartsModule,
-        NbProgressBarModule,
-        NbListModule,
-    ],
+  selector: 'app-admin-dashboard',
+  templateUrl: './admin-dashboard.component.html',
+  styleUrls: ['./admin-dashboard.component.scss'],
+  standalone: true,
+  imports: [
+    NbCardModule,
+    NbIconModule,
+    NgFor,
+    NgxEchartsModule,
+    NbProgressBarModule,
+    NbListModule,
+  ],
 })
 export class AdminDashboardComponent {
+  private readonly qualityLabelMap: Record<string, string> = {
+    Excellente: 'Extra Vierge',
+    Bonne: 'Vierge',
+    Moyenne: 'Lampante',
+  };
+
   kpis = [
     { label: 'Rendement moyen global', value: '19.8%', trend: '+1.4%', icon: 'trending-up-outline' },
     { label: 'Qualité lots conformes', value: '94%', trend: '+2.1%', icon: 'award-outline' },
@@ -26,9 +32,9 @@ export class AdminDashboardComponent {
   ];
 
   huileries = [
-    { name: 'Huilerie Atlas', prod: '128 t', rendement: '20.2%', qualite: 'A' },
-    { name: 'Huilerie Rif', prod: '96 t', rendement: '18.9%', qualite: 'A-' },
-    { name: 'Huilerie Saiss', prod: '84 t', rendement: '19.1%', qualite: 'B+' },
+    { name: 'Huilerie Atlas', prod: '128 t', rendement: '20.2%', qualite: 'Extra Vierge' },
+    { name: 'Huilerie Rif', prod: '96 t', rendement: '18.9%', qualite: 'Vierge' },
+    { name: 'Huilerie Saiss', prod: '84 t', rendement: '19.1%', qualite: 'Lampante' },
   ];
 
   machineHealth = [
@@ -84,11 +90,16 @@ export class AdminDashboardComponent {
         label: { show: true, formatter: '{b}: {d}%' },
         color: ['#7e9440', '#a9bc75', '#5f6f34'],
         data: [
-          { value: 54, name: 'Qualité A' },
-          { value: 31, name: 'Qualité A-' },
-          { value: 15, name: 'Qualité B+' },
+          { value: 54, name: 'Extra Vierge' },
+          { value: 31, name: 'Vierge' },
+          { value: 15, name: 'Lampante' },
         ],
       },
     ],
   };
+
+  normalizeQualityLabel(value: string | null | undefined): string {
+    const normalized = String(value ?? '').trim();
+    return this.qualityLabelMap[normalized] ?? normalized;
+  }
 }

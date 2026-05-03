@@ -310,6 +310,17 @@ tbody tr:hover {
   border-color: #cf9a95;
 }
 
+.btn-icon:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon:disabled:hover {
+  background: inherit;
+  border-color: inherit;
+}
+
 .action-icon {
   width: 16px;
   height: 16px;

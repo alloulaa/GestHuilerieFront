@@ -35,6 +35,7 @@ export class TraceabilityService {
   private normalizeEtape(value: string): TraceabilityEvent['etape'] {
     const upper = String(value).toUpperCase();
     if (upper.includes('LOT')) return 'LOT_OLIVES';
+    if (upper.includes('PREDICTION')) return 'PREDICTION';
     if (upper.includes('PESEE') || upper.includes('ARRIVAGE')) return 'PESEE';
     if (upper.includes('PRODUIT')) return 'PRODUIT_FINAL';
     if (upper.includes('PRODUCTION')) return 'PRODUCTION';

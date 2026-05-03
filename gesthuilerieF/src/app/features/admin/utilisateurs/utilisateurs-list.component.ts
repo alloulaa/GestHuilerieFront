@@ -7,6 +7,7 @@ import { forkJoin } from 'rxjs';
 
 import { AdminService } from '../../../core/services/admin.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { PermissionService } from '../../../core/services/permission.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { HuilerieService } from '../../machines/services/huilerie.service';
@@ -39,6 +40,7 @@ export class UtilisateursListComponent implements OnInit {
     private fb: FormBuilder,
     private huilerieService: HuilerieService,
     private authService: AuthService,
+    private permissionService: PermissionService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
   ) { }
@@ -71,6 +73,12 @@ export class UtilisateursListComponent implements OnInit {
 
   get totalPages(): number {
     return Math.ceil(this.filteredUtilisateurs.length / this.pageSize) || 1;
+  }
+
+  get canDeleteUsers(): boolean {
+    return this.permissionService.isAdmin()
+      || this.permissionService.canDelete('UTILISATEURS')
+      || this.permissionService.canDelete('COMPTES_PROFILS');
   }
 
   ngOnInit(): void {
@@ -127,23 +135,41 @@ export class UtilisateursListComponent implements OnInit {
   }
 
   onEdit(user: any): void {
-    const userId = this.getUserId(user);
+    // support payloads where the actual user is nested under a `user` property
+    const payloadUser = user?.user ?? user;
+    const userId = this.getUserId(payloadUser);
     if (userId === null) {
       this.toastService.error('Édition impossible: identifiant utilisateur introuvable.');
       return;
     }
 
-    this.editingUser = user;
-    const entrepriseId = this.getUserEntrepriseId(user) ?? this.currentEntrepriseId;
+    this.editingUser = payloadUser;
+    const entrepriseId = this.getUserEntrepriseId(payloadUser) ?? this.currentEntrepriseId;
+    const profilId = this.resolveUserProfilId(payloadUser);
+    const huilerieId = this.resolveUserHuilerieId(payloadUser);
+
+    // Debugging: log values to help diagnose missing selections (show original wrapper and normalized user)
+    // eslint-disable-next-line no-console
+    console.log('onEdit user data', { original: user, user: payloadUser, entrepriseId, profilId, huilerieId, availableHuileries: this.availableHuileries, profils: this.profils });
+
+    // Ensure numeric values for select matching
+    const parsedProfilId = profilId != null ? Number(profilId) : null;
+    const parsedHuilerieId = huilerieId != null ? Number(huilerieId) : null;
+
     this.userForm.patchValue({
-      nom: user.nom,
-      prenom: user.prenom,
-      email: user.email,
-      telephone: user.telephone,
-      profilId: user.profil?.idProfil ?? user.profilId ?? user.idProfil ?? null,
-      entrepriseId,
-      huilerieId: user.huilerie?.idHuilerie ?? user.huilerie?.id ?? user.huilerieId ?? user.idHuilerie ?? null,
+      nom: payloadUser.nom,
+      prenom: payloadUser.prenom,
+      email: payloadUser.email,
+      telephone: payloadUser.telephone,
+      profilId: parsedProfilId,
+      entrepriseId: entrepriseId != null ? Number(entrepriseId) : entrepriseId,
+      huilerieId: parsedHuilerieId,
     });
+
+    // force update so UI bindings reflect new values
+    this.userForm.get('profilId')?.updateValueAndValidity({ emitEvent: false });
+    this.userForm.get('huilerieId')?.updateValueAndValidity({ emitEvent: false });
+
     this.syncHuilerieRules();
     this.showForm = true;
   }
@@ -237,6 +263,11 @@ export class UtilisateursListComponent implements OnInit {
   }
 
   async onDelete(user: any): Promise<void> {
+    if (!this.canDeleteUsers) {
+      this.toastService.error('Vous n\'avez pas la permission de supprimer des utilisateurs.');
+      return;
+    }
+
     const id = this.getUserId(user);
     if (id === null) {
       this.toastService.error('Suppression impossible: identifiant utilisateur introuvable.');
@@ -260,8 +291,8 @@ export class UtilisateursListComponent implements OnInit {
         this.loadData();
         this.toastService.success('Utilisateur supprimé avec succès.');
       },
-      error: () => {
-        this.toastService.error('Erreur lors de la suppression utilisateur.');
+      error: (error) => {
+        this.toastService.error(this.getDeleteUtilisateurErrorMessage(error));
       },
     });
   }
@@ -280,12 +311,30 @@ export class UtilisateursListComponent implements OnInit {
   }
 
   getUserProfilName(user: any): string {
-    const directName = String(user?.profil?.nom ?? user?.profil?.name ?? user?.profilNom ?? user?.nomProfil ?? '').trim();
+    const profilId = this.resolveUserProfilId(user);
+    if (profilId !== null) {
+      const profil = this.profils.find((item) => this.getProfilId(item) === profilId);
+      const label = this.getProfilLabel(profil);
+      if (label && label !== '-') {
+        return label;
+      }
+    }
+
+    const directName = String(
+      user?.profil?.nom
+      ?? user?.profil?.name
+      ?? user?.profilNom
+      ?? user?.nomProfil
+      ?? user?.utilisateur?.profil?.nom
+      ?? user?.utilisateur?.profilNom
+      ?? user?.employe?.profil?.nom
+      ?? user?.administrateur?.profil?.nom
+      ?? '',
+    ).trim();
     if (directName) {
       return directName;
     }
 
-    const profilId = this.getUserProfilId(user);
     if (profilId === null) {
       return '-';
     }
@@ -304,7 +353,17 @@ export class UtilisateursListComponent implements OnInit {
   }
 
   getUserHuilerieName(user: any): string {
-    const directName = String(user?.huilerie?.nom ?? user?.huilerie?.name ?? user?.huilerieNom ?? user?.nomHuilerie ?? '').trim();
+    const directName = String(
+      user?.huilerie?.nom
+      ?? user?.huilerie?.name
+      ?? user?.huilerieNom
+      ?? user?.nomHuilerie
+      ?? user?.utilisateur?.huilerie?.nom
+      ?? user?.utilisateur?.huilerieNom
+      ?? user?.employe?.huilerie?.nom
+      ?? user?.administrateur?.huilerie?.nom
+      ?? '',
+    ).trim();
     return directName.toLowerCase();
   }
 
@@ -386,8 +445,107 @@ export class UtilisateursListComponent implements OnInit {
   }
 
   private getUserProfilId(user: any): number | null {
-    const id = Number(user?.profil?.idProfil ?? user?.profil?.id ?? user?.profilId ?? user?.idProfil ?? 0);
+    const id = Number(
+      user?.profil?.idProfil
+      ?? user?.profil?.id
+      ?? user?.profilId
+      ?? user?.idProfil
+      ?? user?.utilisateur?.profil?.idProfil
+      ?? user?.utilisateur?.profil?.id
+      ?? user?.utilisateur?.profilId
+      ?? user?.employe?.profil?.idProfil
+      ?? user?.employe?.profil?.id
+      ?? user?.employe?.profilId
+      ?? user?.administrateur?.profil?.idProfil
+      ?? user?.administrateur?.profil?.id
+      ?? user?.administrateur?.profilId
+      ?? 0,
+    );
     return id > 0 ? id : null;
+  }
+
+  private resolveUserProfilId(user: any): number | null {
+    // First check direct property from backend (UtilisateurAdminDTO)
+    if (user?.profilId != null && user.profilId > 0) {
+      return user.profilId;
+    }
+
+    // Fallback to other possible locations
+    const directProfilId = this.getUserProfilId(user);
+    if (directProfilId !== null) {
+      return directProfilId;
+    }
+
+    // Last resort: search by name
+    const directProfilName = String(
+      typeof user?.profil === 'string' ? user?.profil : ''
+    ).trim().toLowerCase() || String(
+      user?.profil?.nom
+      ?? user?.profilNom
+      ?? user?.nomProfil
+      ?? user?.utilisateur?.profil?.nom
+      ?? user?.utilisateur?.profilNom
+      ?? user?.employe?.profil?.nom
+      ?? user?.administrateur?.profil?.nom
+      ?? '',
+    ).trim().toLowerCase();
+
+    if (!directProfilName) {
+      return null;
+    }
+
+    const matchedProfil = this.profils.find((profil) => this.getProfilLabel(profil).trim().toLowerCase() === directProfilName);
+    return matchedProfil ? this.getProfilId(matchedProfil) : null;
+  }
+
+  private resolveUserHuilerieId(user: any): number | null {
+    // First check direct property from backend (UtilisateurAdminDTO)
+    if (user?.huilerieId != null && user.huilerieId > 0) {
+      return user.huilerieId;
+    }
+
+    // Fallback to other possible locations
+    const id = Number(
+      user?.huilerie?.idHuilerie
+      ?? user?.huilerie?.id
+      ?? user?.idHuilerie
+      ?? user?.utilisateur?.huilerie?.idHuilerie
+      ?? user?.utilisateur?.huilerie?.id
+      ?? user?.utilisateur?.huilerieId
+      ?? user?.employe?.huilerie?.idHuilerie
+      ?? user?.employe?.huilerie?.id
+      ?? user?.employe?.huilerieId
+      ?? user?.administrateur?.huilerie?.idHuilerie
+      ?? user?.administrateur?.huilerie?.id
+      ?? user?.administrateur?.huilerieId
+      ?? 0,
+    );
+
+    if (id > 0) {
+      return id;
+    }
+
+    // Last resort: resolve by huilerie name from DTO/display fields
+    const directHuilerieName = String(
+      user?.huilerie?.nom
+      ?? user?.huilerie?.name
+      ?? user?.huilerieNom
+      ?? user?.nomHuilerie
+      ?? user?.utilisateur?.huilerie?.nom
+      ?? user?.utilisateur?.huilerieNom
+      ?? user?.employe?.huilerie?.nom
+      ?? user?.administrateur?.huilerie?.nom
+      ?? '',
+    ).trim().toLowerCase();
+
+    if (!directHuilerieName) {
+      return null;
+    }
+
+    const matchedHuilerie = this.availableHuileries.find((h) => String(h?.nom ?? h?.name ?? '').trim().toLowerCase() === directHuilerieName)
+      ?? this.huileries.find((h) => String(h?.nom ?? h?.name ?? '').trim().toLowerCase() === directHuilerieName);
+    const matchedHuilerieId = Number(matchedHuilerie?.idHuilerie ?? matchedHuilerie?.id ?? 0);
+    return matchedHuilerieId > 0 ? matchedHuilerieId : null;
   }
 
   private getUserFullName(user: any): string {
@@ -408,5 +566,33 @@ export class UtilisateursListComponent implements OnInit {
 
     const id = Number(candidates.find((value) => Number(value) > 0) ?? 0);
     return id > 0 ? id : null;
+  }
+
+  private getDeleteUtilisateurErrorMessage(error: any): string {
+    const backendMessage = String(error?.error?.message ?? error?.error?.error ?? error?.message ?? '').toLowerCase();
+
+    const permissionDenied =
+      error?.status === 403
+      || backendMessage.includes('forbidden')
+      || backendMessage.includes('permission')
+      || backendMessage.includes('autorisation');
+
+    if (permissionDenied) {
+      return 'Suppression refusée: vous n\'avez pas les droits nécessaires.';
+    }
+
+    const hasDependencyConflict =
+      error?.status === 409
+      || backendMessage.includes('constraint')
+      || backendMessage.includes('foreign key')
+      || backendMessage.includes('relation')
+      || backendMessage.includes('lié')
+      || backendMessage.includes('utilisateur');
+
+    if (hasDependencyConflict) {
+      return 'Impossible de supprimer cet utilisateur: il est encore lié à des données ou à un compte métier.';
+    }
+
+    return 'Erreur lors de la suppression utilisateur.';
   }
 }

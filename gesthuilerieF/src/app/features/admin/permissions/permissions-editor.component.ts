@@ -133,10 +133,12 @@ export class PermissionsEditorComponent implements OnInit {
   }
 
   onSave(): void {
+    if (!this.hasPendingChanges) {
+      this.toastService.info('Aucune modification à enregistrer.');
+      return;
+    }
 
     this.isSaving = true;
-
-
 
     const payload = {
       profilId: this.profilId,
@@ -149,15 +151,14 @@ export class PermissionsEditorComponent implements OnInit {
         canExecuted: r.canExecuted
       }))
     };
-
     this.adminService.bulkSavePermissions(payload).subscribe({
       next: () => {
         this.permissionRows.forEach(r => (r.dirty = false));
-        this.showMessage('success', 'Permissions enregistrees');
+        this.toastService.success('Permissions enregistrées');
         this.isSaving = false;
       },
       error: () => {
-        this.showMessage('error', 'Erreur lors de la sauvegarde');
+        this.toastService.error('Erreur lors de la sauvegarde');
         this.isSaving = false;
       }
     });

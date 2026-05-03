@@ -86,7 +86,7 @@
                   {{ m.nomMachine }} <span *ngIf="m.huilerieNom">({{ m.huilerieNom }})</span> - {{ m.typeMachine }}
                 </nb-option>
               </nb-select>
-              <small *ngIf="getMachinesForStepByIndex(etapeIndex)?.length === 0" class="hint">
+              <small *ngIf="getMachinesForStepByIndex(etapeIndex).length === 0" class="hint">
                 Aucune machine disponible pour cette étape
               </small>
             </label>
@@ -120,9 +120,14 @@
 
                 <label class="field">
                   <span>Valeur *</span>
-                  <input nbInput fullWidth formControlName="valeur" placeholder="25" />
+                  <input nbInput fullWidth type="number" formControlName="valeur" placeholder="25"
+                    [class.field-invalid]="isParametreValueInvalid(etapeIndex, parametreIndex)" />
                 </label>
 
+                <div class="field field-wide error-hint"
+                  *ngIf="getParametreValueError(etapeIndex, parametreIndex) as valueError">
+                  <small class="error-text">{{ valueError }}</small>
+                </div>
                 <label class="field field-wide">
                   <span>Description *</span>
                   <input nbInput fullWidth formControlName="description" placeholder="Température de réception" />
@@ -152,7 +157,24 @@
       <div class="feedback success" *ngIf="guideMessage">{{ guideMessage }}</div>
       <div class="feedback error" *ngIf="guideError">{{ guideError }}</div>
 
-      <div class="actions-row">
+      <div class="footer-row">
+        <div class="interval-help-panel">
+          <div class="interval-help-panel__header">
+            <span>Intervalles de saisie des paramètres</span>
+            <small>Les valeurs hors intervalle deviennent rouges et sont signalées immédiatement.</small>
+          </div>
+          <div class="interval-help-panel__chips">
+            <span class="interval-chip" *ngFor="let rule of guideParameterHelp">
+              <strong>{{ rule.label }}</strong>
+              <em>{{ rule.min }} à {{ rule.max }}{{ rule.unite ? ' ' + rule.unite : '' }}</em>
+            </span>
+          </div>
+          <!-- Debug: show counts -->
+          <small class="interval-help-panel__description">
+            {{guideParameterHelp.length||0}} guide params
+          </small>
+        </div>
+
         <button nbButton status="primary" type="submit" [disabled]="submittingGuide">
           {{ submittingGuide ? 'Création...' : 'Créer le guide' }}
         </button>

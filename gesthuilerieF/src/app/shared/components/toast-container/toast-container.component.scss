@@ -5,6 +5,7 @@
   --success-color: var(--toast-success, #1f7a3a);
   --error-color: var(--toast-error, #b43a30);
   --info-color: var(--toast-info, #2f6bb2);
+  --warning-color: var(--toast-warning, #d97706);
   --surface: var(--toast-surface, #fffcf6);
   --text: var(--toast-text, #28361b);
 
@@ -16,6 +17,7 @@
   --success-color: var(--toast-success-dark, #7fe49f);
   --error-color: var(--toast-error-dark, #ff8f84);
   --info-color: var(--toast-info-dark, #89b7ff);
+  --warning-color: var(--toast-warning-dark, #fbbf24);
   --surface: var(--toast-surface-dark, #2d3a1f);
   --text: var(--toast-text-dark, #edf5dd);
 }
@@ -67,6 +69,11 @@
   color: var(--text);
 }
 
+.toast-warning {
+  border-left: 4px solid var(--warning-color);
+  color: var(--text);
+}
+
 .toast-icon {
   display: flex;
   align-items: center;
@@ -97,6 +104,11 @@
 .toast-info .toast-icon {
   color: var(--info-color);
 }
+
+.toast-warning .toast-icon {
+  color: var(--warning-color);
+}
+
 
 .toast-message {
   flex: 1;

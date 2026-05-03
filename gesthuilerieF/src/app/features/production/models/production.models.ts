@@ -98,6 +98,8 @@ export interface ExecutionProduction {
     produitFinalReference?: string | null;
     produitFinalCode?: string;
     produitFinalNomProduit?: string;
+    produitFinalQualite?: string;
+    produitFinalQuantiteProduite?: number;
     valeursReelles?: ValeurReelleParametre[];
     predictions?: Prediction[];
     huilerieId?: number;
@@ -126,6 +128,6 @@ export interface ValeurReelleParametre {
     idValeurReelleParametre?: number;
     parametreEtapeId: number;
     parametreEtapeNom?: string;
-    valeurEstime?: string;
-    valeurReelle: string;
+    valeurEstime?: number;
+    valeurReelle: number;
 }

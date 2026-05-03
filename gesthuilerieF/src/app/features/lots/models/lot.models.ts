@@ -39,9 +39,16 @@ export interface AnalyseLaboratoire {
 }
 export interface TraceabilityEvent {
   date: string;
-  etape: 'LOT_OLIVES' | 'PESEE' | 'PRODUCTION' | 'PRODUIT_FINAL' | 'STOCK';
+  etape: 'LOT_OLIVES' | 'PESEE' | 'PRODUCTION' | 'PRODUIT_FINAL' | 'STOCK' | 'PREDICTION';
   description: string;
   reference: string;
+  // Structured prediction fields (optional)
+  predictionId?: number;
+  predictionMode?: string;
+  qualitePredite?: string;
+  probabiliteQualite?: number;
+  rendementPreditPourcent?: number;
+  quantiteHuileRecalculeeLitres?: number;
 }
 
 export interface LotTraceability {
