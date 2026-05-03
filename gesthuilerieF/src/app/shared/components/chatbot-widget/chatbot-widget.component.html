@@ -52,80 +52,72 @@
           [class.chatbot-widget__message--ranking]="isRankingMessage(message)"
           [class.chatbot-widget__message--user]="message.sender === 'user'"
         >
-          <p *ngIf="!(isRankingMessage(message) && message.rankingViewMode === 'text') && !(message.sender === 'bot' && isChoiceMessage(message) && message.rankingIntent)">{{ message.content }}</p>
 
-          <!-- Choice Prompt for Rankings -->
-          <ng-container *ngIf="message.sender === 'bot' && isChoiceMessage(message) && message.rankingIntent">
-            <p class="chatbot-widget__choice-prompt">Souhaitez-vous voir les résultats sous forme de texte ou de graphique ?</p>
+          <!-- ══════════════════════════════════════════════════════════
+               CHOICE PROMPT  — uniform for ALL ranking intents
+               ══════════════════════════════════════════════════════════ -->
+          <ng-container *ngIf="message.sender === 'bot' && isChoiceMessage(message)">
+            <p class="chatbot-widget__choice-prompt">
+              Souhaitez-vous voir les résultats sous forme de texte ou de graphique&nbsp;?
+            </p>
             <div class="chatbot-widget__choices">
               <button
-                class="chatbot-widget__choice-btn"
+                class="chatbot-widget__choice-btn chatbot-widget__choice-btn--graphique"
                 type="button"
-                *ngFor="let option of message.options"
-                (click)="sendChoice(option)"
+                (click)="sendChoice('graphique')"
                 [disabled]="isLoading"
               >
-                {{ option === 'graphique' ? 'Graphique' : 'Texte' }}
+                <span class="material-symbols-outlined">bar_chart</span>
+                Graphique
               </button>
-            </div>
-          </ng-container>
-
-          <!-- Choice Prompt for Other Types -->
-          <ng-container *ngIf="message.sender === 'bot' && isChoiceMessage(message) && !message.rankingIntent">
-            <p>{{ message.content }}</p>
-            <div class="chatbot-widget__choices">
               <button
-                class="chatbot-widget__choice-btn"
+                class="chatbot-widget__choice-btn chatbot-widget__choice-btn--texte"
                 type="button"
-                *ngFor="let option of message.options"
-                (click)="sendChoice(option)"
+                (click)="sendChoice('texte')"
                 [disabled]="isLoading"
               >
-                {{ option === 'graphique' ? 'Graphique' : 'Texte' }}
+                <span class="material-symbols-outlined">table_rows</span>
+                Texte
               </button>
             </div>
+            <time>{{ message.timestamp | date: 'HH:mm' }}</time>
           </ng-container>
 
-          <!-- Unified Ranking View -->
+          <!-- ══════════════════════════════════════════════════════════
+               RANKING RESULT  — text table OR chart with metric tabs
+               ══════════════════════════════════════════════════════════ -->
           <ng-container *ngIf="message.sender === 'bot' && isRankingMessage(message)">
-            <div class="chatbot-widget__ranking" [attr.data-intent]="message.rankingIntent">
-              <!-- Fournisseur (Suppliers) -->
-              <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
-                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
-                  <div class="chatbot-widget__metric-toggle">
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'kg'" (click)="setRankingMetric(message, 'kg')">
-                      Quantité (kg)
-                    </button>
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'rendement'" (click)="setRankingMetric(message, 'rendement')">
-                      Rendement (%)
-                    </button>
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'acidite'" (click)="setRankingMetric(message, 'acidite')">
-                      Acidité (%)
-                    </button>
-                  </div>
-                  <div class="chatbot-widget__chart">
-                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
-                  </div>
-                </div>
 
-                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Fournisseur</th>
-                        <th>Kg</th>
-                        <th>Lots</th>
-                        <th>Acidité %</th>
-                        <th>Rendement %</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
-                        <tr *ngFor="let item of getFournisseurItems(message); let idx = index" [class.is-best]="idx === 0">
+            <!-- Result header -->
+            <p class="chatbot-widget__ranking-header">
+              {{ message.content }}
+            </p>
+
+            <div class="chatbot-widget__ranking" [attr.data-intent]="message.rankingIntent">
+
+              <!-- ── TEXT TABLE VIEW ─────────────────────────────── -->
+              <ng-container *ngIf="message.rankingViewMode === 'text'">
+
+                <!-- Fournisseur table -->
+                <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
+                  <div class="chatbot-widget__ranking-text">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Fournisseur</th>
+                          <th>KG</th>
+                          <th>Lots</th>
+                          <th>Acidité %</th>
+                          <th>Rendement %</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let item of getFournisseurItems(message); let idx = index"
+                            [class.is-best]="idx === 0">
                           <td>{{ idx + 1 }}</td>
-                          <td>{{ item.name }}</td>
+                          <td><strong>{{ item.name }}</strong></td>
                           <td>{{ item.kg | number:'1.0-0' }}</td>
                           <td>{{ item.lots }}</td>
                           <td [class.is-alert]="item.acidityOutOfRange">{{ item.acidity | number:'1.0-2' }}</td>
@@ -136,135 +128,85 @@
                             <span *ngIf="item.rendementOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 Rendement</span>
                           </td>
                         </tr>
-                      </ng-container>
-                    </tbody>
-                  </table>
-                </div>
-              </ng-container>
-
-              <!-- Machines Utilisées (Used Machines) -->
-              <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
-                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
-                  <div class="chatbot-widget__metric-toggle">
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'executions'" (click)="setRankingMetric(message, 'executions')">
-                      Exécutions
-                    </button>
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'rendement'" (click)="setRankingMetric(message, 'rendement')">
-                      Rendement moyen (%)
-                    </button>
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'production'" (click)="setRankingMetric(message, 'production')">
-                      Production (L)
-                    </button>
+                      </tbody>
+                    </table>
                   </div>
-                  <div class="chatbot-widget__chart">
-                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
-                  </div>
-                </div>
+                </ng-container>
 
-                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Machine</th>
-                        <th>Exécutions</th>
-                        <th>Rendement moyen (%)</th>
-                        <th>Production (L)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
-                        <tr *ngFor="let item of getMachineItems(message); let idx = index" [class.is-best]="idx === 0">
-                          <td>{{ idx + 1 }}</td>
-                          <td>{{ item.name }}</td>
-                          <td>{{ item.nbExecutions }}</td>
-                          <td>{{ item.rendementMoyen | number:'1.0-1' }}%</td>
-                          <td>{{ item.totalProduit | number:'1.0-1' }} L</td>
+                <!-- Machines table -->
+                <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
+                  <div class="chatbot-widget__ranking-text">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Machine</th>
+                          <th>Exécutions</th>
+                          <th>Rendement moy. (%)</th>
+                          <th>Production (L)</th>
                         </tr>
-                      </ng-container>
-                    </tbody>
-                  </table>
-                </div>
-              </ng-container>
-
-              <!-- Lots Liste (Batch List) -->
-              <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
-                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
-                  <div class="chatbot-widget__metric-toggle">
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'quantite'" (click)="setRankingMetric(message, 'quantite')">
-                      Quantité (kg)
-                    </button>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let item of getMachineItems(message); let idx = index"
+                            [class.is-best]="idx === 0">
+                          <td>{{ idx + 1 }}</td>
+                          <td><strong>{{ item.name }}</strong></td>
+                          <td>{{ item.nbExecutions }}</td>
+                          <td>{{ item.rendementMoyen | number:'1.0-1' }}</td>
+                          <td>{{ item.totalProduit | number:'1.0-1' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                  <div class="chatbot-widget__chart">
-                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
-                  </div>
-                </div>
+                </ng-container>
 
-                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Référence</th>
-                        <th>Variété</th>
-                        <th>Fournisseur</th>
-                        <th>Quantité (kg)</th>
-                        <th>Qualité</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
+                <!-- Lots table -->
+                <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
+                  <div class="chatbot-widget__ranking-text">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Référence</th>
+                          <th>Variété</th>
+                          <th>Fournisseur</th>
+                          <th>Quantité (kg)</th>
+                          <th>Qualité</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         <tr *ngFor="let item of getLotItems(message); let idx = index">
                           <td>{{ idx + 1 }}</td>
-                          <td>{{ item.reference }}</td>
+                          <td><strong>{{ item.reference }}</strong></td>
                           <td>{{ item.variete }}</td>
                           <td>{{ item.fournisseur_nom }}</td>
                           <td>{{ item.quantite_initiale | number:'1.0-0' }}</td>
                           <td>{{ item.qualite_huile }}</td>
                         </tr>
-                      </ng-container>
-                    </tbody>
-                  </table>
-                </div>
-              </ng-container>
-
-              <!-- Analyses Labo (Lab Analyses) -->
-              <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
-                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
-                  <div class="chatbot-widget__metric-toggle">
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'acidite'" (click)="setRankingMetric(message, 'acidite')">
-                      Acidité (%)
-                    </button>
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'peroxyde'" (click)="setRankingMetric(message, 'peroxyde')">
-                      Peroxyde (meq)
-                    </button>
-                    <button type="button" [class.is-active]="getRankingMetric(message) === 'k270'" (click)="setRankingMetric(message, 'k270')">
-                      K270
-                    </button>
+                      </tbody>
+                    </table>
                   </div>
-                  <div class="chatbot-widget__chart">
-                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
-                  </div>
-                </div>
+                </ng-container>
 
-                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Lot Ref</th>
-                        <th>Date Analyse</th>
-                        <th>Acidité (%)</th>
-                        <th>Peroxyde (meq O2/kg)</th>
-                        <th>K270</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
+                <!-- Analyses table -->
+                <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
+                  <div class="chatbot-widget__ranking-text">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Lot Ref</th>
+                          <th>Date</th>
+                          <th>Acidité (%)</th>
+                          <th>Peroxyde (meq)</th>
+                          <th>K270</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         <tr *ngFor="let item of getAnalysisItems(message); let idx = index">
                           <td>{{ idx + 1 }}</td>
-                          <td>{{ item.lot_ref }}</td>
+                          <td><strong>{{ item.lot_ref }}</strong></td>
                           <td>{{ item.date_analyse }}</td>
                           <td [class.is-alert]="item.acidityOutOfRange">{{ item.acidite_huile_pourcent | number:'1.0-2' }}</td>
                           <td [class.is-alert]="item.peroxideOutOfRange">{{ item.indice_peroxyde_meq_o2_kg | number:'1.0-1' }}</td>
@@ -275,22 +217,163 @@
                             <span *ngIf="item.k270OutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 K270</span>
                           </td>
                         </tr>
-                      </ng-container>
-                    </tbody>
-                  </table>
-                </div>
+                      </tbody>
+                    </table>
+                  </div>
+                </ng-container>
+
+                <!-- Stock table -->
+                <ng-container *ngIf="message.rankingIntent === 'stock'">
+                  <div class="chatbot-widget__ranking-text">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Référence</th>
+                          <th>Variété</th>
+                          <th>Quantité (kg)</th>
+                          <th>Type</th>
+                          <th>Lot(s)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let item of getStockItems(message); let idx = index"
+                            [class.is-best]="idx === 0">
+                          <td>{{ idx + 1 }}</td>
+                          <td><strong>{{ item.reference_stock }}</strong></td>
+                          <td>{{ item.variete }}</td>
+                          <td><strong>{{ item.quantite_disponible | number:'1.0-0' }}</strong></td>
+                          <td>{{ item.type_stock }}</td>
+                          <td>{{ item.lot_reference }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </ng-container>
+
               </ng-container>
+              <!-- end text view -->
+
+              <!-- ── CHART VIEW ──────────────────────────────────── -->
+              <ng-container *ngIf="message.rankingViewMode === 'chart'">
+
+                <!-- Metric toggle buttons — fournisseur -->
+                <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'kg'"
+                      (click)="setRankingMetric(message, 'kg')">
+                      Quantité (kg)
+                    </button>
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'rendement'"
+                      (click)="setRankingMetric(message, 'rendement')">
+                      Rendement (%)
+                    </button>
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'acidite'"
+                      (click)="setRankingMetric(message, 'acidite')">
+                      Acidité (%)
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Metric toggle buttons — machines -->
+                <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'executions'"
+                      (click)="setRankingMetric(message, 'executions')">
+                      Exécutions
+                    </button>
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'rendement'"
+                      (click)="setRankingMetric(message, 'rendement')">
+                      Rendement (%)
+                    </button>
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'production'"
+                      (click)="setRankingMetric(message, 'production')">
+                      Production (L)
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Metric toggle buttons — lots -->
+                <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'quantite'"
+                      (click)="setRankingMetric(message, 'quantite')">
+                      Quantité (kg)
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Metric toggle buttons — analyse labo -->
+                <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'acidite'"
+                      (click)="setRankingMetric(message, 'acidite')">
+                      Acidité (%)
+                    </button>
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'peroxyde'"
+                      (click)="setRankingMetric(message, 'peroxyde')">
+                      Peroxyde (meq)
+                    </button>
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'k270'"
+                      (click)="setRankingMetric(message, 'k270')">
+                      K270
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Metric toggle buttons — stock -->
+                <ng-container *ngIf="message.rankingIntent === 'stock'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button"
+                      [class.is-active]="getRankingMetric(message) === 'quantite'"
+                      (click)="setRankingMetric(message, 'quantite')">
+                      Quantité (kg)
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Chart canvas -->
+                <div class="chatbot-widget__chart">
+                  <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
+                </div>
+
+              </ng-container>
+              <!-- end chart view -->
+
             </div>
           </ng-container>
+          <!-- end ranking result -->
 
-          <!-- Generic Chart -->
-          <ng-container *ngIf="message.sender === 'bot' && !isRankingMessage(message) && isChartMessage(message)">
+          <!-- ══════════════════════════════════════════════════════════
+               GENERIC PLAIN TEXT message  (non-ranking, non-choice)
+               ══════════════════════════════════════════════════════════ -->
+          <ng-container *ngIf="message.sender === 'bot' && !isChoiceMessage(message) && !isRankingMessage(message)">
+            <p>{{ message.content }}</p>
+          </ng-container>
+
+          <!-- User bubble -->
+          <ng-container *ngIf="message.sender === 'user'">
+            <p>{{ message.content }}</p>
+          </ng-container>
+
+          <!-- Generic Chart (non-ranking) -->
+          <ng-container *ngIf="message.sender === 'bot' && !isRankingMessage(message) && !isChoiceMessage(message) && isChartMessage(message)">
             <div class="chatbot-widget__chart">
               <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
             </div>
           </ng-container>
 
-          <time>{{ message.timestamp | date: 'HH:mm' }}</time>
+          <time *ngIf="!isChoiceMessage(message)">{{ message.timestamp | date: 'HH:mm' }}</time>
         </article>
 
         <section class="chatbot-widget__suggestions" *ngIf="showSuggestions && i === 0">
@@ -328,4 +411,482 @@
       </button>
     </form>
   </section>
+
+  <div
+    class="chatbot-widget__modal-overlay"
+    *ngIf="showPredictionModal"
+    (click)="closePredictionModal()"
+  >
+    <div class="chatbot-widget__modal" (click)="$event.stopPropagation()">
+      <div class="chatbot-widget__modal-header">
+        <h4>Paramètres de Prédiction</h4>
+        <button
+          type="button"
+          class="chatbot-widget__modal-close"
+          (click)="closePredictionModal()"
+          aria-label="Close modal"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form class="chatbot-widget__modal-body">
+        <div *ngIf="predictionFormErrors.length || backendPredictionError" class="chatbot-widget__modal-errors chatbot-widget__form-group--full-width">
+          <strong *ngIf="predictionFormErrors.length">Veuillez corriger les erreurs suivantes :</strong>
+          <ul class="chatbot-widget__error-list" *ngIf="predictionFormErrors.length">
+            <li *ngFor="let e of predictionFormErrors">{{ e }}</li>
+          </ul>
+          <div class="chatbot-widget__backend-error" *ngIf="backendPredictionError">{{ backendPredictionError }}</div>
+        </div>
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_variete">Variété</label>
+          <select
+            id="prediction_variete"
+            [ngModel]="predictionField('variete')"
+            (ngModelChange)="updatePredictionField('variete', $event)"
+            name="variete"
+          >
+            <option value="Chemlali">Chemlali</option>
+            <option value="Koroneiki">Koroneiki</option>
+            <option value="Arbequina">Arbequina</option>
+            <option value="Frantoio">Frantoio</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_region">Région</label>
+          <select
+            id="prediction_region"
+            [ngModel]="predictionField('region')"
+            (ngModelChange)="updatePredictionField('region', $event)"
+            name="region"
+          >
+            <option value="Mahdia">Mahdia</option>
+            <option value="Kairouan">Kairouan</option>
+            <option value="Sfax">Sfax</option>
+            <option value="Sousse">Sousse</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_methode">Méthode de récolte</label>
+          <select
+            id="prediction_methode"
+            [ngModel]="predictionField('methode_recolte')"
+            (ngModelChange)="updatePredictionField('methode_recolte', $event)"
+            name="methode_recolte"
+          >
+            <option value="manuelle">Manuelle</option>
+            <option value="mecanique">Mécanique</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_sol">Type de sol</label>
+          <select
+            id="prediction_sol"
+            [ngModel]="predictionField('type_sol')"
+            (ngModelChange)="updatePredictionField('type_sol', $event)"
+            name="type_sol"
+          >
+            <option value="calcaire">Calcaire</option>
+            <option value="argile">Argile</option>
+            <option value="sable">Sable</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_poids">Poids des olives (kg)</label>
+          <input
+            type="number"
+            id="prediction_poids"
+            [ngModel]="predictionNumber('poids_olives_kg')"
+            (ngModelChange)="updatePredictionField('poids_olives_kg', $event)"
+            name="poids_olives_kg"
+            min="100"
+            max="50000"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_maturite">Maturité (1-5)</label>
+          <input
+            type="range"
+            id="prediction_maturite"
+            [ngModel]="predictionNumber('maturite_niveau_1_5')"
+            (ngModelChange)="updatePredictionField('maturite_niveau_1_5', $event)"
+            name="maturite_niveau_1_5"
+            min="1"
+            max="5"
+          >
+          <span class="chatbot-widget__slider-value">{{ predictionNumber('maturite_niveau_1_5') }}/5</span>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_stockage">Durée de stockage (jours)</label>
+          <input
+            type="number"
+            id="prediction_stockage"
+            [ngModel]="predictionNumber('duree_stockage_jours')"
+            (ngModelChange)="updatePredictionField('duree_stockage_jours', $event)"
+            name="duree_stockage_jours"
+            min="0"
+            max="30"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_recolte">Temps depuis récolte (heures)</label>
+          <input
+            type="number"
+            id="prediction_recolte"
+            [ngModel]="predictionNumber('temps_depuis_recolte_heures')"
+            (ngModelChange)="updatePredictionField('temps_depuis_recolte_heures', $event)"
+            name="temps_depuis_recolte_heures"
+            min="0"
+            max="96"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_temp">Température malaxage (°C)</label>
+          <input
+            type="number"
+            id="prediction_temp"
+            [ngModel]="predictionNumber('temperature_malaxage_c')"
+            (ngModelChange)="updatePredictionField('temperature_malaxage_c', $event)"
+            name="temperature_malaxage_c"
+            min="20"
+            max="35"
+            step="0.5"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_duree">Durée malaxage (min)</label>
+          <input
+            type="number"
+            id="prediction_duree"
+            [ngModel]="predictionNumber('duree_malaxage_min')"
+            (ngModelChange)="updatePredictionField('duree_malaxage_min', $event)"
+            name="duree_malaxage_min"
+            min="20"
+            max="60"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_vitesse">Vitesse décanteur (tr/min)</label>
+          <input
+            type="number"
+            id="prediction_vitesse"
+            [ngModel]="predictionNumber('vitesse_decanteur_tr_min')"
+            (ngModelChange)="updatePredictionField('vitesse_decanteur_tr_min', $event)"
+            name="vitesse_decanteur_tr_min"
+            min="1000"
+            max="4000"
+            required
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_humidite">Humidité (%)</label>
+          <input
+            type="number"
+            id="prediction_humidite"
+            [ngModel]="predictionNumber('humidite_pourcent')"
+            (ngModelChange)="updatePredictionField('humidite_pourcent', $event)"
+            name="humidite_pourcent"
+            min="0"
+            max="100"
+            step="0.1"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_acidite">Acidité des olives (%)</label>
+          <input
+            type="number"
+            id="prediction_acidite"
+            [ngModel]="predictionNumber('acidite_olives_pourcent')"
+            (ngModelChange)="updatePredictionField('acidite_olives_pourcent', $event)"
+            name="acidite_olives_pourcent"
+            min="0"
+            max="10"
+            step="0.1"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_feuilles">Taux de feuilles (%)</label>
+          <input
+            type="number"
+            id="prediction_feuilles"
+            [ngModel]="predictionNumber('taux_feuilles_pourcent')"
+            (ngModelChange)="updatePredictionField('taux_feuilles_pourcent', $event)"
+            name="taux_feuilles_pourcent"
+            min="0"
+            max="100"
+            step="0.1"
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_lavage">Lavage effectué</label>
+          <select
+            id="prediction_lavage"
+            [ngModel]="predictionField('lavage_effectue')"
+            (ngModelChange)="updatePredictionField('lavage_effectue', $event)"
+            name="lavage_effectue"
+          >
+            <option value="oui">Oui</option>
+            <option value="non">Non</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_machine">Type de machine</label>
+          <select
+            id="prediction_machine"
+            [ngModel]="predictionField('type_machine')"
+            (ngModelChange)="updatePredictionField('type_machine', $event)"
+            name="type_machine"
+          >
+            <option value="3_phase">3 Phase</option>
+            <option value="2_phase">2 Phase</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_broyeur">Type de broyeur</label>
+          <input
+            type="text"
+            id="prediction_broyeur"
+            [ngModel]="predictionField('type_broyeur')"
+            (ngModelChange)="updatePredictionField('type_broyeur', $event)"
+            name="type_broyeur"
+            placeholder="Ex: meules"
+            required
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_malaxeur">Type de malaxeur</label>
+          <input
+            type="text"
+            id="prediction_malaxeur"
+            [ngModel]="predictionField('type_malaxeur')"
+            (ngModelChange)="updatePredictionField('type_malaxeur', $event)"
+            name="type_malaxeur"
+            placeholder="Ex: horizontal"
+            required
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_nettoyage">Type de nettoyage</label>
+          <input
+            type="text"
+            id="prediction_nettoyage"
+            [ngModel]="predictionField('type_nettoyage')"
+            (ngModelChange)="updatePredictionField('type_nettoyage', $event)"
+            name="type_nettoyage"
+            placeholder="Ex: lavage_eau"
+            required
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_separation">Type de séparation</label>
+          <input
+            type="text"
+            id="prediction_separation"
+            [ngModel]="predictionField('type_separation')"
+            (ngModelChange)="updatePredictionField('type_separation', $event)"
+            name="type_separation"
+            placeholder="Ex: centrifugation"
+            required
+          >
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_controle">Contrôle température</label>
+          <select
+            id="prediction_controle"
+            [ngModel]="predictionField('controle_temperature')"
+            (ngModelChange)="updatePredictionField('controle_temperature', $event)"
+            name="controle_temperature"
+            required
+          >
+            <option value="oui">Oui</option>
+            <option value="non">Non</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_pression">Pression extraction (bar)</label>
+          <input type="number"
+                 id="prediction_pression"
+                 [ngModel]="predictionNumber('pression_extraction_bar')"
+                 (ngModelChange)="updatePredictionField('pression_extraction_bar', $event)"
+                 name="pression_extraction_bar"
+                 min="0"
+                 max="300"
+                 step="1"
+                 required>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_etapes">Nombre d'étapes</label>
+          <input type="number"
+                 id="prediction_etapes"
+                 [ngModel]="predictionNumber('nombre_etapes')"
+                 (ngModelChange)="updatePredictionField('nombre_etapes', $event)"
+                 name="nombre_etapes"
+                 min="1"
+                 max="20"
+                 required>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_presence_eau">Ajout d'eau</label>
+          <select id="prediction_presence_eau"
+                  [ngModel]="predictionField('presence_ajout_eau')"
+                  (ngModelChange)="updatePredictionField('presence_ajout_eau', $event)"
+                  name="presence_ajout_eau"
+                  required>
+            <option value="0">Non</option>
+            <option value="1">Oui</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_presence_presse">Présence presse</label>
+          <select id="prediction_presence_presse"
+                  [ngModel]="predictionField('presence_presse')"
+                  (ngModelChange)="updatePredictionField('presence_presse', $event)"
+                  name="presence_presse"
+                  required>
+            <option value="0">Non</option>
+            <option value="1">Oui</option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_presence_separateur">Présence séparateur</label>
+          <select id="prediction_presence_separateur"
+                  [ngModel]="predictionField('presence_separateur')"
+                  (ngModelChange)="updatePredictionField('presence_separateur', $event)"
+                  name="presence_separateur"
+                  required>
+            <option value="0">Non</option>
+            <option value="1">Oui</option>
+          </select>
+        </div>
+
+        <!-- ✨ NOUVEAU: Section Analyse Labo Optionnelle ✨ -->
+        <div class="chatbot-widget__form-divider"></div>
+
+        <div class="chatbot-widget__form-group chatbot-widget__form-group--full-width">
+          <label class="chatbot-widget__checkbox-label">
+            <input type="checkbox" 
+                   [ngModel]="showLabAnalysisFields"
+                   (change)="toggleLabAnalysisFields()"
+                   name="hasLabAnalysis">
+            <span>Ajouter résultats analyse de labo (optionnel)</span>
+          </label>
+        </div>
+
+        <!-- Champs de lab (conditionnels) -->
+        <ng-container *ngIf="showLabAnalysisFields">
+          <!-- Acidité -->
+          <div class="chatbot-widget__form-group">
+            <label for="prediction_acidite_huile">Acidité huile (%)</label>
+            <input type="number" 
+                   id="prediction_acidite_huile"
+                   [ngModel]="predictionNumber('acidite_huile_pourcent')"
+                   (ngModelChange)="updatePredictionField('acidite_huile_pourcent', $event)"
+                   name="acidite_huile_pourcent"
+                   min="0"
+                   max="5"
+                   step="0.01"
+                   placeholder="0.0 - 5.0">
+          </div>
+
+          <!-- Peroxyde -->
+          <div class="chatbot-widget__form-group">
+            <label for="prediction_peroxyde">Peroxyde (meq O2/kg)</label>
+            <input type="number" 
+                   id="prediction_peroxyde"
+                   [ngModel]="predictionNumber('indice_peroxyde_meq_o2_kg')"
+                   (ngModelChange)="updatePredictionField('indice_peroxyde_meq_o2_kg', $event)"
+                   name="indice_peroxyde_meq_o2_kg"
+                   min="0"
+                   max="50"
+                   step="0.1"
+                   placeholder="0.0 - 50.0">
+          </div>
+
+          <!-- K270 -->
+          <div class="chatbot-widget__form-group">
+            <label for="prediction_k270">K270</label>
+            <input type="number" 
+                   id="prediction_k270"
+                   [ngModel]="predictionNumber('k270')"
+                   (ngModelChange)="updatePredictionField('k270', $event)"
+                   name="k270"
+                   min="0"
+                   max="1"
+                   step="0.001"
+                   placeholder="0.0 - 1.0">
+          </div>
+
+          <!-- Polyphenols (optionnel) -->
+          <div class="chatbot-widget__form-group">
+            <label for="prediction_polyphenols">Polyphénols (mg/kg) - optionnel</label>
+            <input type="number"
+                   id="prediction_polyphenols"
+                   [ngModel]="predictionNumber('polyphenols_mg_kg')"
+                   (ngModelChange)="updatePredictionField('polyphenols_mg_kg', $event)"
+                   name="polyphenols_mg_kg"
+                   min="0"
+                   max="2000"
+                   step="1"
+                   placeholder="ex: 450">
+          </div>
+
+          <div class="chatbot-widget__form-group">
+            <label for="prediction_k232">K232 - optionnel</label>
+            <input type="number"
+                   id="prediction_k232"
+                   [ngModel]="predictionNumber('k232')"
+                   (ngModelChange)="updatePredictionField('k232', $event)"
+                   name="k232"
+                   min="0"
+                   max="10"
+                   step="0.01"
+                   placeholder="ex: 1.75">
+          </div>
+        </ng-container>
+      </form>
+
+      <div class="chatbot-widget__modal-footer">
+        <button
+          type="button"
+          class="chatbot-widget__btn chatbot-widget__btn--secondary"
+          (click)="closePredictionModal()"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          class="chatbot-widget__btn chatbot-widget__btn--primary"
+          (click)="submitPredictionForm()"
+          [disabled]="isLoading"
+        >
+          <span *ngIf="!isLoading">Lancer prédiction</span>
+          <span *ngIf="isLoading" class="chatbot-widget__send-spinner"></span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

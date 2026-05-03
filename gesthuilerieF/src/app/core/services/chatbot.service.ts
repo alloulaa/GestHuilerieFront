@@ -5,7 +5,7 @@ import { AuthService } from '../auth/auth.service';
 
 export type ChatbotResponseType = 'text' | 'choice' | 'chart';
 export type ChatbotChartType = 'bar' | 'line' | 'pie';
-export type RankingIntent = 'fournisseur' | 'machines_utilisees' | 'lot_liste' | 'analyse_labo';
+export type RankingIntent = 'fournisseur' | 'machines_utilisees' | 'lot_liste' | 'analyse_labo' | 'stock';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ranking Data Interfaces
@@ -110,6 +110,42 @@ export interface ChatbotRequest {
   jwt_token: string;
   user_id?: number;
   selection?: 'texte' | 'graphique';
+  prediction_payload?: Record<string, unknown>;
+}
+
+// Payload sent specifically for prediction flow
+export interface PredictionPayload {
+  variete: string;
+  region: string;
+  methode_recolte: string;
+  type_sol: string;
+  lavage_effectue: string;
+  type_machine: string;
+  type_broyeur: string;
+  type_malaxeur: string;
+  type_nettoyage: string;
+  type_separation: string;
+  controle_temperature: string;
+  poids_olives_kg: number;
+  maturite_niveau_1_5: number;
+  duree_stockage_jours: number;
+  temps_depuis_recolte_heures: number;
+  temperature_malaxage_c: number;
+  duree_malaxage_min: number;
+  vitesse_decanteur_tr_min: number;
+  humidite_pourcent: number;
+  acidite_olives_pourcent: number;
+  taux_feuilles_pourcent: number;
+  pression_extraction_bar: number;
+  nombre_etapes: number;
+  presence_ajout_eau: number;
+  presence_presse: number;
+  presence_separateur: number;
+  acidite_huile_pourcent?: number;
+  indice_peroxyde_meq_o2_kg?: number;
+  k270?: number;
+  polyphenols_mg_kg?: number;
+  k232?: number;
 }
 @Injectable({ providedIn: 'root' })
 export class ChatbotService {
@@ -121,7 +157,7 @@ export class ChatbotService {
     private readonly authService: AuthService,
   ) {}
 
-  sendMessage(message: string, selection?: 'texte' | 'graphique'): Observable<ChatbotResponse> {
+  sendMessage(message: string, selection?: 'texte' | 'graphique', predictionPayload?: Record<string, unknown>): Observable<ChatbotResponse> {
     const trimmedMessage = message.trim();
 
     if (!trimmedMessage) {
@@ -152,6 +188,7 @@ export class ChatbotService {
       jwt_token: token,
       ...(userId !== null ? { user_id: userId } : {}),
       ...(selection ? { selection } : {}),
+      ...(predictionPayload ? { prediction_payload: predictionPayload } : {}),
     };
 
     const headers = new HttpHeaders({
@@ -172,6 +209,35 @@ export class ChatbotService {
           data: { error: error.message },
         }));
       })
+    );
+  }
+
+  // Send prediction using fixed session id 'front-session' and allow component to handle HTTP errors (422)
+  sendPrediction(predictionPayload: PredictionPayload): Observable<ChatbotResponse> {
+    const token = this.resolveToken();
+    if (!token) {
+      return of(this.normalizeResponse({
+        type: 'text',
+        message: 'Session expirée. Veuillez vous reconnecter pour utiliser le chatbot.',
+        intent: 'auth_required',
+        data: null,
+      }));
+    }
+
+    const request: ChatbotRequest = {
+      message: 'prediction',
+      session_id: 'front-session',
+      token,
+      jwt_token: token,
+      prediction_payload: predictionPayload as unknown as Record<string, unknown>,
+    };
+
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+    // Do not swallow HTTP errors here; let component inspect status codes (e.g., 422)
+    return this.httpClient.post<unknown>(this.apiUrl, request, { headers }).pipe(
+      map((response) => this.normalizeResponse(response)),
+      tap((response) => console.log('[Chatbot API] Prediction response received:', response))
     );
   }
 
@@ -232,7 +298,7 @@ export class ChatbotService {
       data: response?.data ?? normalizedChartData ?? null,
       selected_option: typeof response?.selected_option === 'string' ? response.selected_option : null,
       pending_choice: !!response?.pending_choice,
-      intent: typeof response?.intent === 'string' ? response.intent : null,
+      intent: this.normalizeIntent(response?.intent),
       confidence: typeof response?.confidence === 'number' ? response.confidence : null,
       applied_scope: typeof response?.applied_scope === 'string' ? response.applied_scope : null,
       response: typeof response?.response === 'string' ? response.response : resolvedMessage,
@@ -323,5 +389,18 @@ export class ChatbotService {
     }
 
     return null;
+  }
+
+  private normalizeIntent(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const normalizedIntent = value.trim().toLowerCase();
+    if (!normalizedIntent) {
+      return null;
+    }
+
+    return normalizedIntent === 'intent_prediction' ? 'prediction' : normalizedIntent;
   }
 }

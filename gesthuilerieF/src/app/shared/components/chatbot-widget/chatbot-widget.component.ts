@@ -6,12 +6,12 @@ import { Chart, ChartConfiguration, ChartDataset, ChartType, registerables, Tool
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
-import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService, RankingIntent, FournisseurItem, MachineItem, LotItem, AnalysisItem } from '../../../core/services/chatbot.service';
+import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService, PredictionPayload, RankingIntent, FournisseurItem, MachineItem, LotItem, AnalysisItem } from '../../../core/services/chatbot.service';
 
 Chart.register(...registerables);
 
 const CHART_COLORS = ['#6f8d3a', '#9bb85a', '#d8c65a', '#7e9fcb', '#f3a15f', '#c96c6c'];
-const RANKING_INTENTS: RankingIntent[] = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo'];
+const RANKING_INTENTS: RankingIntent[] = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock'];
 
 const SUPPLIER_ACIDITY_RANGE = { min: 0.2, max: 1.5 };
 const SUPPLIER_RENDEMENT_RANGE = { min: 10, max: 30 };
@@ -85,7 +85,21 @@ interface AnalysisRankingPayload {
   items: AnalysisRankingItem[];
 }
 
-type RankingPayload = SupplierRankingPayload | MachineRankingPayload | LotRankingPayload | AnalysisRankingPayload | null;
+interface StockRankingItem {
+  name: string;
+  reference_stock: string;
+  variete: string;
+  quantite_disponible: number;
+  type_stock: string;
+  lot_reference: string;
+  huilerie_nom: string;
+}
+
+interface StockRankingPayload {
+  items: StockRankingItem[];
+}
+
+type RankingPayload = SupplierRankingPayload | MachineRankingPayload | LotRankingPayload | AnalysisRankingPayload | StockRankingPayload | null;
 type RankingViewMode = 'chart' | 'text';
 
 interface ChatMessage {
@@ -126,6 +140,11 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   draftMessage = '';
   hasSentUserMessage = false;
   isMobile = window.innerWidth <= 640;
+  showPredictionModal = false;
+  showLabAnalysisFields = false;
+  predictionFormData: Record<string, unknown> = this.initPredictionFormData();
+  predictionFormErrors: string[] = [];
+  backendPredictionError: string | null = null;
   private messageIdSequence = 0;
   private chartInstances = new Map<number, Chart>();
   private chartCanvasSubscription?: Subscription;
@@ -350,75 +369,82 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   sendChoice(option: string): void {
     if (this.isLoading) return;
-    
-    // Map French option labels to selection values
+
     const selection = option.toLowerCase() === 'graphique' ? 'graphique' : 'texte';
-    
-    // Find the last CHOICE message with pending ranking data (skip non-choice messages)
-    const choiceMessage = [...this.messages].reverse().find(m => {
-      const hasData = (m as any)._pendingRankingData;
-      const hasIntent = (m as any)._pendingRankingIntent;
-      return m.sender === 'bot' && m.type === 'choice' && hasData && hasIntent;
-    });
-    
-    const pendingRankingData = choiceMessage ? (choiceMessage as any)._pendingRankingData : null;
+
+    // Trouver le dernier message choice avec données en attente
+    const choiceMessage = [...this.messages]
+      .reverse()
+      .find(m =>
+        m.sender === 'bot' &&
+        m.type === 'choice' &&
+        !!(m as any)._pendingRankingData &&
+        !!(m as any)._pendingRankingIntent,
+      );
+
+    const pendingRankingData  = choiceMessage ? (choiceMessage as any)._pendingRankingData  : null;
     const pendingRankingIntent = choiceMessage ? (choiceMessage as any)._pendingRankingIntent : null;
 
-    console.log('[sendChoice] selection:', selection, 'choice message found:', !!choiceMessage, 'pendingData exists:', !!pendingRankingData, 'pendingIntent:', pendingRankingIntent);
+    // Message utilisateur (bulle de droite)
+    this.messages.push({
+      id: this.nextMessageId(),
+      sender: 'user',
+      content: selection === 'graphique' ? 'Graphique' : 'Texte',
+      timestamp: new Date(),
+      type: 'text',
+      options: [],
+      chartType: null,
+      chartData: null,
+      rankingData: null,
+      rankingIntent: null,
+      rankingViewMode: 'chart',
+      debug: null,
+    });
 
-    // If we have pending ranking data, don't call backend - create response directly
     if (pendingRankingData && pendingRankingIntent) {
-      const userMessage: ChatMessage = {
-        id: this.nextMessageId(),
-        sender: 'user',
-        content: selection === 'graphique' ? 'Graphique' : 'Texte',
-        timestamp: new Date(),
-        type: 'text',
-        options: [],
-        chartType: null,
-        chartData: null,
-        rankingData: null,
-        rankingIntent: null,
-        rankingViewMode: 'chart',
-        debug: null,
-      };
-      this.messages.push(userMessage);
+      // Construire le chartData avec la métrique par défaut de cet intent
+      const defaultMetric = this.defaultMetricForIntent(pendingRankingIntent);
+      const chartData = selection === 'graphique'
+        ? this.buildRankingChartPayload(pendingRankingData, pendingRankingIntent, defaultMetric)
+        : null;
 
-      // Build chart data if displaying chart mode
-      let chartData: ChatbotChartPayload | null = null;
-      if (selection === 'graphique') {
-        chartData = this.buildRankingChartPayload(pendingRankingData, pendingRankingIntent);
-      }
-
-      // Create a bot response message with the ranking data
       const botResponse: ChatMessage = {
         id: this.nextMessageId(),
         sender: 'bot',
-        content: `Voici les résultats en mode ${selection === 'graphique' ? 'graphique' : 'texte'}...`,
+        content: selection === 'graphique'
+          ? 'Voici les résultats en mode graphique...'
+          : 'Voici les résultats en mode texte...',
         timestamp: new Date(),
-        type: selection === 'graphique' ? 'chart' : 'text',  // ← Match type to selection
+        type: selection === 'graphique' ? 'chart' : 'text',
         options: [],
         chartType: selection === 'graphique' ? 'bar' : null,
-        chartData: chartData,
+        chartData,
         rankingData: pendingRankingData,
         rankingIntent: pendingRankingIntent,
         rankingViewMode: selection === 'graphique' ? 'chart' : 'text',
-        rankingMetric: undefined,
+        rankingMetric: defaultMetric,
         debug: null,
       };
+
       this.messages.push(botResponse);
       this.scrollToBottom();
       setTimeout(() => this.renderCharts());
       return;
     }
 
-    // Otherwise, send to backend normally
+    // Fallback : envoyer au backend si pas de données en attente
     this.sendMessage(option, selection as 'texte' | 'graphique');
   }
 
   sendMessage(messageOverride?: string, selection?: 'texte' | 'graphique'): void {
     const message = (messageOverride ?? this.draftMessage).trim();
     if (!message || this.isLoading) return;
+
+    if (this.isMessageAboutPrediction(message)) {
+      this.draftMessage = message;
+      this.openPredictionModal(message);
+      return;
+    }
 
     this.messages.push({
       id: this.nextMessageId(),
@@ -477,6 +503,10 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
         
         this.messages.push(botMessage);
 
+        if (this.shouldOpenPredictionModalFromResponse(response, botMessage)) {
+          this.showPredictionModal = true;
+        }
+
         if (!this.isOpen) {
           this.hasUnreadPulse = true;
         }
@@ -486,6 +516,309 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
           this.scrollToBottom();
         });
       });
+  }
+
+  private initPredictionFormData(): Record<string, unknown> {
+    return {
+      variete: 'Chemlali',
+      region: 'Sfax',
+      methode_recolte: 'manuelle',
+      type_sol: 'argile',
+      lavage_effectue: 'oui',
+      type_machine: 'moderne_2_phases',
+      type_broyeur: 'standard',
+      type_malaxeur: 'standard',
+      type_nettoyage: 'standard',
+      type_separation: 'standard',
+      controle_temperature: 'oui',
+      poids_olives_kg: 7200,
+      maturite_niveau_1_5: 3,
+      duree_stockage_jours: 1,
+      temps_depuis_recolte_heures: 10,
+      temperature_malaxage_c: 26,
+      duree_malaxage_min: 32,
+      vitesse_decanteur_tr_min: 3200,
+      humidite_pourcent: 18,
+      acidite_olives_pourcent: 0.35,
+      taux_feuilles_pourcent: 0.9,
+      pression_extraction_bar: 95,
+      nombre_etapes: 6,
+      presence_ajout_eau: 0,
+      presence_presse: 0,
+      presence_separateur: 0,
+      // lab fields
+      acidite_huile_pourcent: 0.42,
+      indice_peroxyde_meq_o2_kg: 6.8,
+      polyphenols_mg_kg: 450,
+      k232: 1.75,
+      k270: 0.13,
+    };
+  }
+
+  toggleLabAnalysisFields(): void {
+    this.showLabAnalysisFields = !this.showLabAnalysisFields;
+    if (!this.showLabAnalysisFields) {
+      // Réinitialise les valeurs lab si on désactive
+      this.predictionFormData['acidite_huile_pourcent'] = 0;
+      this.predictionFormData['indice_peroxyde_meq_o2_kg'] = 0;
+      this.predictionFormData['k270'] = 0;
+    }
+  }
+
+  private isMessageAboutPrediction(message: string): boolean {
+    const normalizedMessage = message
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    const keywords = ['prediction', 'predection', 'predic', 'qualite', 'rendement', 'olives'];
+    return keywords.some((keyword) => normalizedMessage.includes(keyword));
+  }
+
+  openPredictionModal(message: string): void {
+    if (this.isMessageAboutPrediction(message)) {
+      this.showPredictionModal = true;
+      console.log('[Chatbot Widget] Opening prediction modal');
+    }
+  }
+
+  closePredictionModal(): void {
+    this.showPredictionModal = false;
+  }
+
+  submitPredictionForm(): void {
+    if (!this.canSend || this.isLoading) return;
+
+    const message = this.draftMessage.trim() || 'prediction';
+
+    // Build and validate payload
+    const payload = this.buildPredictionPayload();
+    const errors = this.validatePredictionPayload(payload);
+    this.predictionFormErrors = errors;
+    this.backendPredictionError = null;
+    if (errors.length > 0) {
+      // keep modal open to allow corrections
+      return;
+    }
+
+    // Push user message (same behaviour as normal send)
+    this.messages.push({
+      id: this.nextMessageId(),
+      sender: 'user',
+      content: message,
+      timestamp: new Date(),
+      type: 'text',
+      options: [],
+      chartType: null,
+      chartData: null,
+      rankingData: null,
+      rankingIntent: null,
+      rankingViewMode: 'chart',
+      debug: null,
+    });
+
+    this.hasSentUserMessage = true;
+    this.draftMessage = '';
+    this.resetTextareaHeight();
+    this.isLoading = true;
+    this.scrollToBottom();
+
+    console.log('[Chatbot Widget] Sending prediction (prediction_payload):', payload);
+
+    this.chatbotService.sendPrediction(payload)
+      .pipe(finalize(() => { this.isLoading = false; this.scrollToBottom(); }))
+      .subscribe({
+        next: (response: ChatbotResponse) => {
+          console.log('[Chatbot Widget] Prediction response received:', response);
+          const botMessage = this.createBotMessage(response);
+          if (!botMessage) return;
+
+          const isDuplicate = this.messages.some((msg) =>
+            msg.sender === 'bot' &&
+            msg.type === botMessage.type &&
+            msg.content === botMessage.content &&
+            msg.rankingIntent === botMessage.rankingIntent &&
+            msg.rankingIntent !== null
+          );
+
+          if (!isDuplicate) {
+            this.messages.push(botMessage);
+          }
+
+          // Close modal on success
+          this.showPredictionModal = false;
+          if (!this.isOpen) this.hasUnreadPulse = true;
+
+          setTimeout(() => { this.renderCharts(); this.scrollToBottom(); });
+        },
+        error: (err: any) => {
+          console.error('[Chatbot Widget] Prediction error:', err);
+          if (err && err.status === 422 && err.error) {
+            // Prefer structured backend validation messages
+            try {
+              const backend = err.error;
+              if (typeof backend === 'string') {
+                this.backendPredictionError = backend;
+              } else if (backend?.errors && Array.isArray(backend.errors)) {
+                this.backendPredictionError = backend.errors.join('\n');
+              } else if (backend?.message) {
+                this.backendPredictionError = String(backend.message);
+              } else {
+                this.backendPredictionError = JSON.stringify(backend);
+              }
+            } catch (e) {
+              this.backendPredictionError = 'Erreur de validation du serveur (422).';
+            }
+          } else {
+            this.backendPredictionError = 'Erreur lors de l\'appel au serveur. Vérifiez la connexion.';
+          }
+          // keep modal open so user can correct
+          this.showPredictionModal = true;
+        }
+      });
+  }
+
+  updatePredictionField(field: string, value: unknown): void {
+    this.predictionFormData[field] = value;
+    console.log(`[Chatbot Widget] Updated prediction field ${field}:`, value);
+  }
+
+  private buildPredictionPayload(): PredictionPayload {
+    const pd = this.predictionFormData;
+    const toNum = (k: string, fallback = 0) => {
+      const v = pd[k];
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    const toOptionalNum = (k: string): number | undefined => {
+      const v = pd[k];
+      if (v === null || v === undefined || v === '') {
+        return undefined;
+      }
+
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    };
+    const toBinary = (k: string) => {
+      const v = pd[k];
+      const n = Number(v);
+      if (Number.isFinite(n)) return n === 1 ? 1 : 0;
+      // accept truthy strings like 'yes'/'oui'
+      if (typeof v === 'string') {
+        const s = v.toLowerCase();
+        return (s === '1' || s === 'oui' || s === 'true' || s === 'yes') ? 1 : 0;
+      }
+      return 0;
+    };
+
+    const payload: PredictionPayload = {
+      variete: String(pd['variete'] ?? ''),
+      region: String(pd['region'] ?? ''),
+      methode_recolte: String(pd['methode_recolte'] ?? ''),
+      type_sol: String(pd['type_sol'] ?? ''),
+      lavage_effectue: String(pd['lavage_effectue'] ?? ''),
+      type_machine: String(pd['type_machine'] ?? ''),
+      type_broyeur: String(pd['type_broyeur'] ?? ''),
+      type_malaxeur: String(pd['type_malaxeur'] ?? ''),
+      type_nettoyage: String(pd['type_nettoyage'] ?? ''),
+      type_separation: String(pd['type_separation'] ?? ''),
+      controle_temperature: String(pd['controle_temperature'] ?? ''),
+      poids_olives_kg: toNum('poids_olives_kg'),
+      maturite_niveau_1_5: toNum('maturite_niveau_1_5'),
+      duree_stockage_jours: toNum('duree_stockage_jours'),
+      temps_depuis_recolte_heures: toNum('temps_depuis_recolte_heures'),
+      temperature_malaxage_c: toNum('temperature_malaxage_c'),
+      duree_malaxage_min: toNum('duree_malaxage_min'),
+      vitesse_decanteur_tr_min: toNum('vitesse_decanteur_tr_min'),
+      humidite_pourcent: toNum('humidite_pourcent'),
+      acidite_olives_pourcent: toNum('acidite_olives_pourcent'),
+      taux_feuilles_pourcent: toNum('taux_feuilles_pourcent'),
+      pression_extraction_bar: toNum('pression_extraction_bar'),
+      nombre_etapes: toNum('nombre_etapes'),
+      presence_ajout_eau: toBinary('presence_ajout_eau'),
+      presence_presse: toBinary('presence_presse'),
+      presence_separateur: toBinary('presence_separateur'),
+      ...(this.showLabAnalysisFields ? {
+        acidite_huile_pourcent: toOptionalNum('acidite_huile_pourcent'),
+        indice_peroxyde_meq_o2_kg: toOptionalNum('indice_peroxyde_meq_o2_kg'),
+        polyphenols_mg_kg: toOptionalNum('polyphenols_mg_kg'),
+        k232: toOptionalNum('k232'),
+        k270: toOptionalNum('k270'),
+      } : {}),
+    };
+
+    return payload;
+  }
+
+  private validatePredictionPayload(payload: PredictionPayload): string[] {
+    const errors: string[] = [];
+    const requireNumber = (key: keyof PredictionPayload, label: string) => {
+      const value = (payload as any)[key];
+      if (!Number.isFinite(value)) {
+        errors.push(`${label} doit être un nombre valide.`);
+      }
+    };
+
+    // Required text fields
+    const requiredTextFields: (keyof PredictionPayload)[] = [
+      'variete',
+      'region',
+      'methode_recolte',
+      'type_sol',
+      'lavage_effectue',
+      'type_machine',
+      'type_broyeur',
+      'type_malaxeur',
+      'type_nettoyage',
+      'type_separation',
+      'controle_temperature',
+    ];
+    requiredTextFields.forEach((key) => {
+      const raw = payload[key];
+      if (!raw || String(raw).trim() === '') {
+        errors.push(`${String(key)} est requis.`);
+      }
+    });
+
+    // Required numeric fields
+    requireNumber('poids_olives_kg','poids_olives_kg');
+    requireNumber('maturite_niveau_1_5','maturite_niveau_1_5');
+    requireNumber('duree_stockage_jours','duree_stockage_jours');
+    requireNumber('temps_depuis_recolte_heures','temps_depuis_recolte_heures');
+    requireNumber('temperature_malaxage_c','temperature_malaxage_c');
+    requireNumber('duree_malaxage_min','duree_malaxage_min');
+    requireNumber('vitesse_decanteur_tr_min','vitesse_decanteur_tr_min');
+    requireNumber('humidite_pourcent','humidite_pourcent');
+    requireNumber('acidite_olives_pourcent','acidite_olives_pourcent');
+    requireNumber('taux_feuilles_pourcent','taux_feuilles_pourcent');
+    requireNumber('pression_extraction_bar','pression_extraction_bar');
+    requireNumber('nombre_etapes','nombre_etapes');
+    requireNumber('presence_ajout_eau','presence_ajout_eau');
+    requireNumber('presence_presse','presence_presse');
+    requireNumber('presence_separateur','presence_separateur');
+    if (this.showLabAnalysisFields) {
+      requireNumber('acidite_huile_pourcent','acidite_huile_pourcent');
+      requireNumber('indice_peroxyde_meq_o2_kg','indice_peroxyde_meq_o2_kg');
+      requireNumber('k270','k270');
+      requireNumber('polyphenols_mg_kg','polyphenols_mg_kg');
+      requireNumber('k232','k232');
+    }
+
+    return errors;
+  }
+
+  private shouldOpenPredictionModalFromResponse(response: ChatbotResponse, botMessage: ChatMessage | null): boolean {
+    const intent = String(response.intent ?? '').toLowerCase();
+
+    return intent === 'prediction';
+  }
+
+  predictionField(field: string): string {
+    return String(this.predictionFormData[field] ?? '');
+  }
+
+  predictionNumber(field: string): number {
+    const numericValue = Number(this.predictionFormData[field]);
+    return Number.isFinite(numericValue) ? numericValue : 0;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -525,14 +858,27 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     this.destroyAllCharts();
   }
 
+  /** Returns the first/default metric key for a given ranking intent */
+  private defaultMetricForIntent(intent: RankingIntent | string | null): string {
+    switch (intent) {
+      case 'fournisseur':        return 'kg';
+      case 'machines_utilisees': return 'executions';
+      case 'lot_liste':          return 'quantite';
+      case 'analyse_labo':       return 'acidite';
+      case 'stock':              return 'quantite';
+      default:                   return 'kg';
+    }
+  }
+
   getRankingMetric(message: ChatMessage): string {
-    return message.rankingMetric ?? 'kg';
+    if (message.rankingMetric) return message.rankingMetric;
+    return this.defaultMetricForIntent(message.rankingIntent);
   }
 
   setRankingMetric(message: ChatMessage, metric: string): void {
     message.rankingMetric = metric;
     // Rebuild chart data with new metric for ranking types that support it
-    if (message.rankingData && message.rankingIntent && ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo'].includes(message.rankingIntent)) {
+    if (message.rankingData && message.rankingIntent && ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock'].includes(message.rankingIntent)) {
       message.chartData = this.buildRankingChartPayload(message.rankingData, message.rankingIntent, metric);
     }
     setTimeout(() => this.renderCharts());
@@ -559,6 +905,10 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   getAnalysisItems(message: ChatMessage): AnalysisRankingItem[] {
     return this.getRankingItems(message) as AnalysisRankingItem[];
+  }
+
+  getStockItems(message: ChatMessage): StockRankingItem[] {
+    return this.getRankingItems(message) as StockRankingItem[];
   }
 
   getDisplayedItems<T>(items: T[], limit: number = 8): T[] {
@@ -748,67 +1098,115 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   private createBotMessage(response: ChatbotResponse): ChatMessage | null {
     let intent = (response.intent ?? null) as RankingIntent | string | null;
-    
-    // Smart detection: if intent is "unknown"/"inconnu" AND we have data, try to detect from content
-    if ((!intent || String(intent).toLowerCase() === 'inconnu' || String(intent).toLowerCase() === 'unknown') 
-        && response.data) {
+    const isRankingIntent = RANKING_INTENTS.includes(intent as RankingIntent);
+
+    // ── 1. Détection automatique de l'intent depuis le texte si inconnu ──────
+    if (
+      (!intent || ['inconnu', 'unknown'].includes(String(intent).toLowerCase())) &&
+      response.data
+    ) {
       const textContent = (response.message || response.response || '').toLowerCase();
-      
-      // Detect ranking type from text patterns
-      if (textContent.includes('lot') && (textContent.includes('**lo') || textContent.includes('référence'))) {
-        intent = 'lot_liste';
-      } else if (textContent.includes('fournisseur') || textContent.includes('supplier')) {
+      if (textContent.includes('fournisseur') || textContent.includes('supplier')) {
         intent = 'fournisseur';
+      } else if (
+        textContent.includes('panne') ||
+        textContent.includes('en panne') ||
+        textContent.includes('défaill') ||
+        textContent.includes('defaill') ||
+        textContent.includes('incident machine')
+      ) {
+        intent = 'machines_pannes';
+      } else if (
+        textContent.includes('qualité') ||
+        textContent.includes('qualite') ||
+        textContent.includes('type de machine') ||
+        textContent.includes('machines de huilerie') ||
+        textContent.includes('huilerie')
+      ) {
+        intent = 'machines_huilerie';
       } else if (textContent.includes('machine') || textContent.includes('execution')) {
         intent = 'machines_utilisees';
-      } else if (textContent.includes('analyse') || textContent.includes('acidité') || textContent.includes('peroxyde')) {
+      } else if (textContent.includes('lot') && textContent.includes('référence')) {
+        intent = 'lot_liste';
+      } else if (textContent.includes('analyse') || textContent.includes('acidité')) {
         intent = 'analyse_labo';
       }
-    } else if ((!intent || String(intent).toLowerCase() === 'inconnu') && !response.data) {
-      // If backend sent "unknown" intent AND no data, this is probably a duplicate empty response - skip it
-      console.log('[Chatbot Widget] Skipping empty response with no data');
+    }
+
+    // ── 2. Si backend envoie type='choice' SANS données de ranking → ignorer ─
+    //    C'est le doublon parasite qu'on veut éliminer.
+    if (
+      response.type === 'choice' &&
+      isRankingIntent &&
+      !response.data
+    ) {
+      console.log('[Chatbot Widget] Skipping empty choice message (no data)');
       return null;
     }
-    
-    const isRankingIntent = RANKING_INTENTS.includes(intent as RankingIntent);
-    
+
+    // ── 3. Si intent inconnu ET aucune donnée → ignorer ──────────────────────
+    if (
+      (!intent || ['inconnu', 'unknown'].includes(String(intent).toLowerCase())) &&
+      !response.data
+    ) {
+      console.log('[Chatbot Widget] Skipping empty response with no data and unknown intent');
+      return null;
+    }
+
+    const isRanking = RANKING_INTENTS.includes(intent as RankingIntent);
+
+    // ── 4. Normaliser les données de ranking ─────────────────────────────────
     let rankingData: RankingPayload = null;
     let chartData: ChatbotChartPayload | null = null;
 
-    // Try to normalize ranking data based on intent
-    if (isRankingIntent && response.type !== 'choice') {
+    if (isRanking && response.type !== 'choice') {
       rankingData = this.normalizeRankingData(response.data, intent as RankingIntent);
       if (rankingData) {
-        chartData = this.buildRankingChartPayload(rankingData, intent as RankingIntent);
+        chartData = this.buildRankingChartPayload(
+          rankingData,
+          intent as RankingIntent,
+          this.defaultMetricForIntent(intent as RankingIntent),
+        );
       }
     }
 
-    // Fallback to generic chart data if no ranking data
-    if (!chartData) {
-      chartData = response.type === 'chart' ? this.normalizeChartData(response.data) : null;
+    // Fallback chart générique
+    if (!chartData && response.type === 'chart') {
+      chartData = this.normalizeChartData(response.data);
     }
 
-    // Smart flow: If backend sends ranking data with type='text'/'chart' directly,
-    // convert to choice message first (ignore the actual type)
+    // ── 5. Décider le type de message final ──────────────────────────────────
     let messageType = response.type ?? 'text';
-    let rankedItemsToDisplay: RankingPayload | null = null;
-    
-    // Only create a choice message if we have actual ranking data
-    if (isRankingIntent && rankingData && messageType !== 'choice') {
-      // Store ranking data to display after choice
-      rankedItemsToDisplay = rankingData;
-      // Convert to choice message
+    let pendingRankingData: RankingPayload = null;
+
+    if (isRanking && rankingData && messageType !== 'choice') {
+      // Backend a renvoyé directement text/chart avec les données
+      // → on intercepte et on crée le message choice
+      pendingRankingData = rankingData;
       messageType = 'choice';
-    } else if (messageType === 'choice' && !rankingData && isRankingIntent) {
-      // If backend sent "choice" but no ranking data, change to text
-      // (this is probably a duplicate response without the actual data)
-      messageType = 'text';
+    } else if (isRanking && messageType === 'choice') {
+      // Backend a envoyé type='choice' avec données → stocker pour après
+      rankingData = this.normalizeRankingData(response.data, intent as RankingIntent);
+      if (rankingData) {
+        chartData = this.buildRankingChartPayload(
+          rankingData,
+          intent as RankingIntent,
+          this.defaultMetricForIntent(intent as RankingIntent),
+        );
+        pendingRankingData = rankingData;
+      }
     }
 
-    const shouldAttachRanking = messageType !== 'choice' && (isRankingIntent && !!rankingData);
-    const viewMode: RankingViewMode = response.selected_option === 'texte' ? 'text' : 'chart';
+    // Si on vient de sendChoice (selected_option), on affiche le résultat
+    if (response.selected_option) {
+      messageType = response.selected_option === 'graphique' ? 'chart' : 'text';
+    }
 
-    console.log('[Chatbot Widget] createBotMessage - intent:', intent, 'isRanking:', isRankingIntent, 'rankingData:', rankingData, 'messageType:', messageType);
+    const shouldAttachRanking =
+      messageType !== 'choice' && isRanking && !!rankingData;
+
+    const viewMode: RankingViewMode =
+      response.selected_option === 'texte' ? 'text' : 'chart';
 
     const botMessage: ChatMessage = {
       id: this.nextMessageId(),
@@ -816,26 +1214,25 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       content: response.message || response.response || 'Réponse reçue.',
       timestamp: new Date(),
       type: messageType,
-      options: messageType === 'choice' ? ['texte', 'graphique'] : [],
-      chartType: messageType === 'chart' ? response.chart_type : null,
+      options: messageType === 'choice' ? ['graphique', 'texte'] : [],
+      chartType: messageType === 'chart' ? (response.chart_type ?? 'bar') : null,
       chartData: messageType === 'chart' ? chartData : null,
       rankingData: shouldAttachRanking ? rankingData : null,
       rankingIntent: shouldAttachRanking ? (intent as RankingIntent) : null,
       rankingViewMode: viewMode,
-      rankingMetric: 'kg',
-      debug:
-        response.intent || response.confidence !== null || response.applied_scope
-          ? {
-              intent: response.intent,
-              confidence: response.confidence,
-              appliedScope: response.applied_scope,
-            }
-          : null,
+      rankingMetric: this.defaultMetricForIntent(intent as RankingIntent),
+      debug: response.intent || response.confidence !== null || response.applied_scope
+        ? {
+            intent: response.intent,
+            confidence: response.confidence,
+            appliedScope: response.applied_scope,
+          }
+        : null,
     };
 
-    // If we're showing a choice message but have ranking data, store it for later display
-    if (messageType === 'choice' && rankedItemsToDisplay) {
-      (botMessage as any)._pendingRankingData = rankedItemsToDisplay;
+    // Stocker les données en attente sur le message choice
+    if (messageType === 'choice' && pendingRankingData) {
+      (botMessage as any)._pendingRankingData = pendingRankingData;
       (botMessage as any)._pendingRankingIntent = intent as RankingIntent;
     }
 
@@ -867,6 +1264,8 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
         return this.normalizeLotsData(data);
       case 'analyse_labo':
         return this.normalizeAnalysesData(data);
+      case 'stock':
+        return this.normalizeStockData(data);
       default:
         return null;
     }
@@ -1021,6 +1420,26 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     };
   }
 
+  private normalizeStockData(data: unknown): StockRankingPayload | null {
+    const rows = this.extractArrayData(data, ['value', 'stocks', 'items', 'data']);
+    if (!rows.length) return null;
+
+    const items = rows
+      .map((r: any) => ({
+        name: String(r.reference_stock || r.reference || 'N/D'),
+        reference_stock: String(r.reference_stock || r.reference || 'N/D'),
+        variete: String(r.variete || 'Inconnue'),
+        quantite_disponible: Number(r.quantite_disponible || r.total_stock || 0),
+        type_stock: String(r.type_stock || 'Olive'),
+        lot_reference: String(r.lot_reference || r.references_lots || ''),
+        huilerie_nom: String(r.huilerie_nom || ''),
+      }))
+      .filter((i: any) => i.reference_stock !== 'N/D');
+
+    if (!items.length) return null;
+    return { items };
+  }
+
   private extractArrayData(data: unknown, keys: string[]): unknown[] {
     if (Array.isArray(data)) return data;
     if (!data || typeof data !== 'object') return [];
@@ -1131,6 +1550,16 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
         return {
           labels: analyses.map((a) => a.lot_ref),
           datasets,
+        };
+      }
+
+      if (intent === 'stock' && (items[0] as any).quantite_disponible !== undefined) {
+        const stockItems = items as StockRankingItem[];
+        return {
+          labels: stockItems.map(s => `${s.reference_stock} (${s.variete})`),
+          datasets: [
+            { label: 'Quantité disponible (kg)', data: stockItems.map(s => s.quantite_disponible), type: 'bar' },
+          ],
         };
       }
     }
