@@ -13,6 +13,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LotOlivesService } from '../../services/lot-olives.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { ParameterValidationService } from '../../../../shared/services/parameter-validation.service';
 import {
   METHODE_RECOLTE_OPTIONS,
   REGION_OPTIONS,
@@ -52,6 +53,7 @@ export class LotDetailsComponent implements OnInit {
     private lotOlivesService: LotOlivesService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
+    private parameterValidationService: ParameterValidationService,
   ) { }
 
   ngOnInit(): void {
@@ -76,6 +78,9 @@ export class LotDetailsComponent implements OnInit {
       matierePremiereReference: ['', [Validators.required]],
       campagneReference: ['', [Validators.required]],
     });
+
+    this.setupLotParameterValidation();
+
     const lotId = Number(this.route.snapshot.paramMap.get('id'));
     if (!lotId) return;
 
@@ -153,6 +158,8 @@ export class LotDetailsComponent implements OnInit {
       this.toastService.error('Veuillez corriger les champs du lot.');
       return;
     }
+
+    this.validateLotParameterBounds();
 
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Confirmer la modification',
@@ -245,6 +252,9 @@ export class LotDetailsComponent implements OnInit {
     if (stage === 'PRODUIT_FINAL') {
       return 'Produit final';
     }
+    if (stage === 'PREDICTION') {
+      return 'Prediction IA';
+    }
     return 'Stock';
   }
 
@@ -278,5 +288,47 @@ export class LotDetailsComponent implements OnInit {
       matierePremiereReference: String(lot.matierePremiereReference ?? ''),
       campagneReference: String(lot.campagneId ?? ''),
     };
+  }
+
+  private setupLotParameterValidation(): void {
+    const watchedFields: Array<{ controlName: string; label: string }> = [
+      { controlName: 'aciditeOlivesPourcent', label: 'Acidité olives' },
+      { controlName: 'humiditePourcent', label: 'Humidité' },
+      { controlName: 'tauxFeuillesPourcent', label: 'Feuilles' },
+    ];
+
+    watchedFields.forEach(({ controlName, label }) => {
+      const control = this.form.get(controlName);
+      if (!control) {
+        return;
+      }
+
+      control.valueChanges.subscribe((value) => {
+        if (!control.dirty && !control.touched) {
+          return;
+        }
+
+        const message = this.parameterValidationService.validateExecutionParameter(label, Number(value));
+        if (message) {
+          this.toastService.warning(message);
+        }
+      });
+    });
+  }
+
+  private validateLotParameterBounds(): void {
+    const checks: Array<{ controlName: string; label: string }> = [
+      { controlName: 'aciditeOlivesPourcent', label: 'Acidité olives' },
+      { controlName: 'humiditePourcent', label: 'Humidité' },
+      { controlName: 'tauxFeuillesPourcent', label: 'Feuilles' },
+    ];
+
+    checks.forEach(({ controlName, label }) => {
+      const control = this.form.get(controlName);
+      const message = this.parameterValidationService.validateExecutionParameter(label, Number(control?.value));
+      if (message) {
+        this.toastService.warning(message);
+      }
+    });
   }
 }

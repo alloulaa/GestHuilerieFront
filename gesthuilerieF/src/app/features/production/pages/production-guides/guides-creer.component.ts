@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, forwardRef, OnDestroy } from '@angular/core';
-import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { Subscription } from 'rxjs';
 import { Huilerie, Machine } from '../../../machines/models/enterprise.models';
+import { ParameterValidationService } from '../../../../shared/services/parameter-validation.service';
 import { HuilerieService } from '../../../machines/services/huilerie.service';
 import { MachineService } from '../../../machines/services/machine.service';
 import { EtapeProduction, ParametreEtape } from '../../models/production.models';
@@ -33,53 +34,70 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
   private etapesSubscription?: Subscription;
   private currentTypeMachine: string | null = null;
 
-  readonly fixedParametreOptions: Array<{ code: string; unite: string; description: string; valeur: string }> = [
-    {
-      code: 'temperature_malaxage_c',
-      unite: 'C',
-      description: 'Temperature de malaxage',
-      valeur: '27',
-    },
-    {
-      code: 'duree_malaxage_min',
-      unite: 'min',
-      description: 'Duree de malaxage',
-      valeur: '40',
-    },
-    {
-      code: 'vitesse_decanteur_tr_min',
-      unite: 'tr/min',
-      description: 'Vitesse du decanteur',
-      valeur: '3200',
-    },
-    {
-      code: 'pression_extraction_bar',
-      unite: 'bar',
-      description: 'Pression d extraction',
-      valeur: '2.5',
-    },
-    {
-      code: 'presence_ajout_eau',
-      unite: '',
-      description: '1 = ajout d eau actif, 0 = pas d ajout',
-      valeur: '1',
-    },
-    {
-      code: 'presence_separateur',
-      unite: '',
-      description: '0 ou 1 selon configuration',
-      valeur: '0',
-    },
-    {
-      code: 'presence_presse',
-      unite: '',
-      description: '1 = pressage actif',
-      valeur: '1',
-    },
-  ];
+  readonly fixedParametreOptions: Array<{
+    code: string;
+    unite: string;
+    description: string;
+    valeur: string;
+    min: number;
+    max: number;
+    step: string;
+    inputType: 'number';
+  }> = [
+      {
+        code: 'vitesse_decanteur_tr_min',
+        unite: 'tr/min',
+        description: 'Vitesse du décanteur',
+        valeur: '3200',
+        min: 3000,
+        max: 3400,
+        step: '1',
+        inputType: 'number',
+      },
+      {
+        code: 'pression_extraction_bar',
+        unite: 'bar',
+        description: "Pression d'extraction",
+        valeur: '250',
+        min: 50,
+        max: 350,
+        step: '1',
+        inputType: 'number',
+      },
+      {
+        code: 'temperature_malaxage_c',
+        unite: 'C',
+        description: 'Température de malaxage',
+        valeur: '27',
+        min: 24,
+        max: 27,
+        step: '0.1',
+        inputType: 'number',
+      },
+      {
+        code: 'duree_malaxage_min',
+        unite: 'min',
+        description: 'Durée de malaxage',
+        valeur: '40',
+        min: 25,
+        max: 40,
+        step: '1',
+        inputType: 'number',
+      },
+    ];
   readonly customParametreCode = 'autre';
 
+  readonly guideParameterHelp = [
+    { code: 'vitesse_decanteur_tr_min', label: 'Vitesse du décanteur', min: 3000, max: 3400, unite: 'tr/min' },
+    { code: 'pression_extraction_bar', label: "Pression d'extraction", min: 50, max: 350, unite: 'bar' },
+    { code: 'temperature_malaxage_c', label: 'Température de malaxage', min: 24, max: 27, unite: 'C' },
+    { code: 'duree_malaxage_min', label: 'Durée de malaxage', min: 25, max: 40, unite: 'min' },
+  ] as const;
+
   readonly guideForm;
+
+  // intervals from shared validation rules (valeurs réelles)
+  executionParameterRanges: Array<{ label: string; min: number; max: number; unite?: string }> = [];
 
   constructor(
     private fb: FormBuilder,
@@ -89,6 +107,7 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
     private huilerieService: HuilerieService,
     @Inject(forwardRef(() => MachineService))
     private machineService: MachineService,
+    private parameterValidationService: ParameterValidationService,
   ) {
     this.guideForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -103,6 +122,33 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadReferenceData();
+    this.loadExecutionParameterRanges();
+  }
+
+  private loadExecutionParameterRanges(): void {
+    try {
+      const dict = this.parameterValidationService.getExecutionParameters();
+      if (dict && typeof dict === 'object') {
+        // Only keep the four parameters we want (in specified order)
+        const allowedKeys = ['vitesse.*décanteur', 'pression', 'température', 'durée.*malaxage'];
+        const ranges = allowedKeys
+          .filter((k) => Object.prototype.hasOwnProperty.call(dict, k))
+          .map((k) => {
+            const item: any = (dict as any)[k];
+            return {
+              label: item?.name || 'Paramètre',
+              min: item?.min ?? 0,
+              max: item?.max ?? 100,
+              unite: '',
+            };
+          });
+        this.executionParameterRanges = ranges;
+        console.log('[guides-creer] executionParameterRanges loaded:', this.executionParameterRanges.length, 'items');
+      }
+    } catch (e) {
+      console.warn('[guides-creer] failed to load executionParameterRanges', e);
+      this.executionParameterRanges = [];
+    }
   }
 
   ngOnDestroy(): void {
@@ -283,6 +329,7 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       group.patchValue({ nom: '' });
       customNameControl.setValidators([Validators.required]);
       customNameControl.updateValueAndValidity();
+      this.applyParametreValueValidators(group, null);
       return;
     }
 
@@ -292,6 +339,7 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
 
     const selectedOption = this.fixedParametreOptions.find((option) => option.code === selectedCode);
     if (!selectedOption) {
+      this.applyParametreValueValidators(group, null);
       return;
     }
 
@@ -301,11 +349,44 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       description: selectedOption.description,
       valeur: selectedOption.valeur,
     });
+
+    this.applyParametreValueValidators(group, selectedOption);
   }
 
   isCustomParamSelected(etapeIndex: number, parametreIndex: number): boolean {
     const selectedCode = this.getParametres(etapeIndex).at(parametreIndex).get('codeParametre')?.value;
     return String(selectedCode ?? '') === this.customParametreCode;
+  }
+
+  getParametreHelp(codeParametre: string | null | undefined) {
+    const normalizedCode = String(codeParametre ?? '').trim();
+    return this.guideParameterHelp.find((item) => item.code === normalizedCode) ?? null;
+  }
+
+  isParametreValueInvalid(etapeIndex: number, parametreIndex: number): boolean {
+    const control = this.getParametres(etapeIndex).at(parametreIndex).get('valeur');
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  getParametreValueError(etapeIndex: number, parametreIndex: number): string | null {
+    const parametreGroup = this.getParametres(etapeIndex).at(parametreIndex);
+    const valueControl = parametreGroup.get('valeur');
+    const selectedCode = String(parametreGroup.get('codeParametre')?.value ?? '').trim();
+    const help = this.getParametreHelp(selectedCode);
+
+    if (!valueControl || !valueControl.errors || !(valueControl.dirty || valueControl.touched)) {
+      return null;
+    }
+
+    if (valueControl.errors['range'] && help) {
+      return `${help.label} doit rester entre ${help.min} et ${help.max}${help.unite ? ` ${help.unite}` : ''}`;
+    }
+
+    if (valueControl.errors['required']) {
+      return 'Valeur obligatoire';
+    }
+
+    return 'Valeur invalide';
   }
 
   submitGuide(): void {
@@ -547,7 +628,7 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
   }
 
   private createParametreGroupFromTemplate(parametre: { codeParametre: string; nom: string; uniteMesure: string; description: string; valeur: string }): ReturnType<FormBuilder['group']> {
-    return this.fb.group({
+    const group = this.fb.group({
       codeParametre: [parametre.codeParametre, [Validators.required]],
       nom: [parametre.nom],
       nomPersonnalise: [''],
@@ -555,6 +636,10 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       description: [parametre.description, [Validators.required]],
       valeur: [parametre.valeur, [Validators.required]],
     });
+
+    const selectedOption = this.fixedParametreOptions.find((option) => option.code === parametre.codeParametre) ?? null;
+    this.applyParametreValueValidators(group, selectedOption);
+    return group;
   }
 
   private createParametreGroup(): ReturnType<FormBuilder['group']> {
@@ -566,6 +651,40 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       description: ['', [Validators.required]],
       valeur: ['', [Validators.required]],
     });
+  }
+
+  private createRangeValidator(min: number, max: number): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const rawValue = control.value;
+      if (rawValue === null || rawValue === undefined || rawValue === '') {
+        return null;
+      }
+
+      const value = Number(rawValue);
+      if (Number.isNaN(value) || value < min || value > max) {
+        return { range: { min, max, actual: rawValue } };
+      }
+
+      return null;
+    };
+  }
+
+  private applyParametreValueValidators(
+    parametreGroup: AbstractControl,
+    selectedOption: { code: string; unite: string; description: string; valeur: string; min: number; max: number; step: string; inputType: 'number' } | null,
+  ): void {
+    const valueControl = parametreGroup.get('valeur');
+    if (!valueControl) {
+      return;
+    }
+
+    const validators: ValidatorFn[] = [Validators.required];
+    if (selectedOption) {
+      validators.push(this.createRangeValidator(selectedOption.min, selectedOption.max));
+    }
+
+    valueControl.setValidators(validators);
+    valueControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private reorderEtapes(): void {

@@ -120,6 +120,104 @@
     padding-top: 0.35rem;
 }
 
+.footer-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: end;
+    margin-top: 0.35rem;
+}
+
+.interval-help-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 2px solid rgba(118, 164, 94, 0.25);
+    background: linear-gradient(135deg, rgba(248, 252, 241, 0.95) 0%, rgba(239, 247, 232, 0.95) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.interval-help-panel::before {
+    content: "ℹ";
+    display: inline-block;
+    width: 1.2rem;
+    height: 1.2rem;
+    line-height: 1.2rem;
+    text-align: center;
+    border-radius: 50%;
+    background: rgba(118, 164, 94, 0.15);
+    color: #4a6c42;
+    font-weight: bold;
+    font-size: 0.75rem;
+    margin-bottom: 0.1rem;
+}
+
+.interval-help-panel__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-left: 0;
+
+    span {
+        color: #2e4c22;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
+    }
+
+    small {
+        color: #6b8461;
+        font-size: 0.78rem;
+        font-weight: 500;
+    }
+}
+
+.interval-help-panel__chips {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.6rem;
+}
+
+.interval-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    border: 1px solid rgba(118, 164, 94, 0.4);
+    background: rgba(255, 255, 255, 0.9);
+    min-width: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-out;
+
+    &:hover {
+        border-color: rgba(118, 164, 94, 0.7);
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 3px 8px rgba(118, 164, 94, 0.15);
+        transform: translateY(-1px);
+    }
+
+    strong {
+        color: #2e4c22;
+        font-size: 0.8rem;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    em {
+        color: #5f725b;
+        font-style: normal;
+        font-size: 0.75rem;
+        font-weight: 500;
+        line-height: 1.15;
+    }
+}
+
 :host ::ng-deep .actions .mat-mdc-raised-button,
 :host ::ng-deep .actions .mat-mdc-outlined-button {
     min-height: 42px;
@@ -221,6 +319,11 @@
 
     .form-field {
         grid-column: auto;
+    }
+
+    .footer-row {
+        grid-template-columns: 1fr;
+        align-items: stretch;
     }
 
     .stats-strip {

@@ -56,7 +56,9 @@
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Maturité</mat-label>
-                <input matInput formControlName="maturite" />
+                <input matInput type="number" min="1" max="5" step="1" formControlName="maturite" />
+                <mat-error *ngIf="getReceptionIntervalError('maturite') as maturiteError">{{ maturiteError
+                    }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Date récolte</mat-label>
@@ -108,15 +110,21 @@
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Humidité (%)</mat-label>
-                <input matInput type="number" min="0" max="100" formControlName="humiditePourcent" />
+                <input matInput type="number" min="10" max="30" formControlName="humiditePourcent" />
+                <mat-error *ngIf="getReceptionIntervalError('humiditePourcent') as humiditeError">{{ humiditeError
+                    }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Acidité des olives (%)</mat-label>
-                <input matInput type="number" min="0" max="100" formControlName="aciditeOlivesPourcent" />
+                <input matInput type="number" min="0.1" max="2.5" step="0.1" formControlName="aciditeOlivesPourcent" />
+                <mat-error *ngIf="getReceptionIntervalError('aciditeOlivesPourcent') as aciditeError">{{ aciditeError
+                    }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Taux de feuilles (%)</mat-label>
-                <input matInput type="number" min="0" max="100" formControlName="tauxFeuillesPourcent" />
+                <input matInput type="number" min="0" max="5" step="0.1" formControlName="tauxFeuillesPourcent" />
+                <mat-error *ngIf="getReceptionIntervalError('tauxFeuillesPourcent') as feuillesError">{{ feuillesError
+                    }}</mat-error>
             </mat-form-field>
             <div class="form-field wash-field">
                 <span class="field-label">Lavage effectué</span>
@@ -146,15 +154,31 @@
                 </mat-select>
             </mat-form-field>
 
-            <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+            <div class="footer-row">
+                <div class="interval-help-panel">
+                    <div class="interval-help-panel__header">
+                        <span>Intervalles de saisie</span>
+                        <small>Les champs hors plage passent en rouge automatiquement.</small>
+                    </div>
+                    <div class="interval-help-panel__chips">
+                        <span class="interval-chip" *ngFor="let rule of receptionIntervalRules">
+                            <strong>{{ rule.label }}</strong>
+                            <em>{{ rule.min }} à {{ rule.max }}{{ rule.unit }}</em>
+                        </span>
+                    </div>
+                </div>
 
-            <div class="actions">
-                <button mat-raised-button color="primary" type="submit">{{ isEditMode ? 'Mettre à jour' : 'Enregistrer'
-                    }}</button>
-                <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">Annuler
-                    édition</button>
-                <a mat-stroked-button [routerLink]="['/pages/reception']">Retour liste</a>
+                <div class="actions">
+                    <button mat-raised-button color="primary" type="submit">{{ isEditMode ? 'Mettre à jour' :
+                        'Enregistrer'
+                        }}</button>
+                    <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">Annuler
+                        édition</button>
+                    <a mat-stroked-button [routerLink]="['/pages/reception']">Retour liste</a>
+                </div>
             </div>
+
+            <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
         </form>
     </mat-card-content>
 </mat-card>

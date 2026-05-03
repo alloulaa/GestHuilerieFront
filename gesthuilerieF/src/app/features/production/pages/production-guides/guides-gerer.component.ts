@@ -13,6 +13,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { ParameterValidationService } from '../../../../shared/services/parameter-validation.service';
 import { TYPE_MACHINE_OPTIONS, buildGuideStepTemplates } from '../../../../shared/constants/domain-options';
 
 @Component({
@@ -49,49 +50,41 @@ export class GuidesGererComponent implements OnInit {
 
   readonly fixedParametreOptions: Array<{ code: string; unite: string; description: string; valeur: string }> = [
     {
-      code: 'temperature_malaxage_c',
-      unite: 'C',
-      description: 'Temperature de malaxage',
-      valeur: '27',
-    },
-    {
-      code: 'duree_malaxage_min',
-      unite: 'min',
-      description: 'Duree de malaxage',
-      valeur: '40',
-    },
-    {
       code: 'vitesse_decanteur_tr_min',
       unite: 'tr/min',
-      description: 'Vitesse du decanteur',
+      description: 'Vitesse du décanteur',
       valeur: '3200',
     },
     {
       code: 'pression_extraction_bar',
       unite: 'bar',
-      description: 'Pression d extraction',
-      valeur: '2.5',
+      description: "Pression d'extraction",
+      valeur: '250',
     },
     {
-      code: 'presence_ajout_eau',
-      unite: '',
-      description: '1 = ajout d eau actif, 0 = pas d ajout',
-      valeur: '1',
+      code: 'temperature_malaxage_c',
+      unite: 'C',
+      description: 'Température de malaxage',
+      valeur: '27',
     },
     {
-      code: 'presence_separateur',
-      unite: '',
-      description: '0 ou 1 selon configuration',
-      valeur: '0',
-    },
-    {
-      code: 'presence_presse',
-      unite: '',
-      description: '1 = pressage actif',
-      valeur: '1',
+      code: 'duree_malaxage_min',
+      unite: 'min',
+      description: 'Durée de malaxage',
+      valeur: '40',
     },
   ];
   readonly customParametreCode = 'autre';
+
+  // intervals from shared validation rules (valeurs réelles)
+  executionParameterRanges: Array<{ label: string; min: number; max: number; unite?: string }> = [];
+
+  readonly guideParameterHelp = [
+    { code: 'vitesse_decanteur_tr_min', label: 'Vitesse du décanteur', min: 3000, max: 3400, unite: 'tr/min' },
+    { code: 'pression_extraction_bar', label: "Pression d'extraction", min: 50, max: 350, unite: 'bar' },
+    { code: 'temperature_malaxage_c', label: 'Température de malaxage', min: 24, max: 27, unite: 'C' },
+    { code: 'duree_malaxage_min', label: 'Durée de malaxage', min: 25, max: 40, unite: 'min' },
+  ] as const;
 
   readonly guideForm;
   readonly executionForm;
@@ -106,6 +99,7 @@ export class GuidesGererComponent implements OnInit {
     private confirmDialogService: ConfirmDialogService,
     private permissionService: PermissionService,
     private authService: AuthService,
+    private parameterValidationService: ParameterValidationService,
   ) {
     this.guideForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -125,6 +119,33 @@ export class GuidesGererComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadReferenceData();
+    this.loadExecutionParameterRanges();
+  }
+
+  private loadExecutionParameterRanges(): void {
+    try {
+      const dict = this.parameterValidationService.getExecutionParameters();
+      if (dict && typeof dict === 'object') {
+        // Only keep the four parameters we want (in specified order)
+        const allowedKeys = ['vitesse.*décanteur', 'pression', 'température', 'durée.*malaxage'];
+        const ranges = allowedKeys
+          .filter((k) => Object.prototype.hasOwnProperty.call(dict, k))
+          .map((k) => {
+            const item: any = (dict as any)[k];
+            return {
+              label: item?.name || 'Paramètre',
+              min: item?.min ?? 0,
+              max: item?.max ?? 100,
+              unite: '',
+            };
+          });
+        this.executionParameterRanges = ranges;
+        console.log('[guides-gerer] executionParameterRanges loaded:', this.executionParameterRanges.length, 'items');
+      }
+    } catch (e) {
+      console.warn('[guides-gerer] failed to load executionParameterRanges', e);
+      this.executionParameterRanges = [];
+    }
   }
 
   get canUpdate(): boolean {

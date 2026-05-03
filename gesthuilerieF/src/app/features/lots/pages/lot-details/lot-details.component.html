@@ -118,6 +118,30 @@
         <div class="timeline-content">
           <p class="timeline-step">{{ stageLabel(event.etape) }}</p>
           <p class="timeline-desc">{{ event.description }}</p>
+
+          <!-- Structured prediction display -->
+          <div *ngIf="event.predictionId" class="prediction-block" title="Données de prédiction IA">
+            <span class="prediction-icon">🔮</span>
+            <div class="prediction-details">
+              <div>
+                <strong>Qualité</strong>
+                <span>{{ event.qualitePredite || '—' }}</span>
+              </div>
+              <div>
+                <strong>Probabilité</strong>
+                <span>{{ (event.probabiliteQualite ?? 0) | number:'1.0-2' }}</span>
+              </div>
+              <div>
+                <strong>Rendement</strong>
+                <span>{{ (event.rendementPreditPourcent ?? 0) | number:'1.0-1' }}%</span>
+              </div>
+              <div>
+                <strong>Quantité (L)</strong>
+                <span>{{ (event.quantiteHuileRecalculeeLitres ?? 0) | number:'1.0-1' }}</span>
+              </div>
+            </div>
+          </div>
+
           <p class="timeline-date">{{ event.date }} · {{ event.reference }}</p>
         </div>
       </div>

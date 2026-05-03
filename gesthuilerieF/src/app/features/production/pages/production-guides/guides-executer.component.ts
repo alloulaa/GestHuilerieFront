@@ -19,7 +19,19 @@ import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.s
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { TYPE_MACHINE_OPTIONS } from '../../../../shared/constants/domain-options';
-import { of, switchMap } from 'rxjs';
+import { forkJoin, of, switchMap } from 'rxjs';
+import { StockService } from '../../../stock/services/stock.service';
+import { StockManagementService } from '../../../stock/services/stock-management.service';
+import { StockMovement } from '../../../stock/models/stock.models';
+import { ParameterValidationService } from '../../../../shared/services/parameter-validation.service';
+
+interface ExecutionIntervalHelpRow {
+  parameterName: string;
+  label: string;
+  min: number;
+  max: number;
+  unit: string;
+}
 
 @Component({
   selector: 'app-guides-executer',
@@ -29,8 +41,14 @@ import { of, switchMap } from 'rxjs';
   imports: [CommonModule, ReactiveFormsModule, NbCardModule, NbButtonModule, NbInputModule, NbSelectModule],
 })
 export class GuidesExecuterComponent implements OnInit {
+  private readonly qualityLabelMap: Record<string, string> = {
+    Excellente: 'Extra Vierge',
+    Bonne: 'Vierge',
+    Moyenne: 'Lampante',
+  };
+
   private readonly executionCacheKey = 'execution-productions-cache';
-  private readonly executionRealValuesCache = new Map<number, Array<{ parametreEtapeId: number; valeurReelle: string }>>();
+  private readonly executionRealValuesCache = new Map<number, Array<{ parametreEtapeId: number; valeurReelle: number }>>();
 
   guides: GuideProduction[] = [];
   machines: Machine[] = [];
@@ -39,6 +57,8 @@ export class GuidesExecuterComponent implements OnInit {
   filteredLots: LotOlives[] = [];
   matieresPremieres: MatierePremiere[] = [];
   executions: ExecutionProduction[] = [];
+  private availableLotIds = new Set<number>();
+  private blockedLotIds = new Set<number>();
 
   executionMessage = '';
   executionError = '';
@@ -57,6 +77,8 @@ export class GuidesExecuterComponent implements OnInit {
     estimatedValue: string;
   }> = [];
 
+  executionIntervalHelpRows: ExecutionIntervalHelpRow[] = [];
+
   constructor(
     private fb: FormBuilder,
     @Inject(forwardRef(() => GuideProductionService))
@@ -69,9 +91,14 @@ export class GuidesExecuterComponent implements OnInit {
     private lotOlivesService: LotOlivesService,
     @Inject(forwardRef(() => RawMaterialService))
     private rawMaterialService: RawMaterialService,
+    @Inject(forwardRef(() => StockService))
+    private stockService: StockService,
+    @Inject(forwardRef(() => StockManagementService))
+    private stockManagementService: StockManagementService,
     private authService: AuthService,
     private confirmDialogService: ConfirmDialogService,
     private toastService: ToastService,
+    private parameterValidationService: ParameterValidationService,
   ) {
     this.executionForm = this.fb.group({
       dateDebut: [this.today(), [Validators.required]],
@@ -81,6 +108,8 @@ export class GuidesExecuterComponent implements OnInit {
       rendement: [0, [Validators.required, Validators.min(0)]],
       observations: [''],
       controleTemperature: [false, [Validators.required]],
+      produitFinalQualite: this.fb.control<string>(''),
+      produitFinalQuantiteProduite: this.fb.control<number | null>(null),
       guideProductionId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
       typeMachine: this.fb.control<string | null>(null),
       machineId: this.fb.control<number | null>(null),
@@ -164,11 +193,59 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   hasRecordedRealValues(execution: ExecutionProduction): boolean {
-    return (execution.valeursReelles ?? []).length > 0 && (execution.valeursReelles ?? []).some((v) => String(v?.valeurReelle ?? '').trim().length > 0);
+    return (execution.valeursReelles ?? []).length > 0 && (execution.valeursReelles ?? []).some((v) => v?.valeurReelle != null);
+  }
+
+  hasPrediction(execution: ExecutionProduction | null | undefined): boolean {
+    return !!this.getLatestPrediction(execution);
+  }
+
+  getLatestPrediction(execution: ExecutionProduction | null | undefined): Prediction | null {
+    const prediction = execution?.predictions?.[0];
+    return prediction ?? null;
+  }
+
+  formatPredictionProbability(value: number | null | undefined): string {
+    return value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(4) : '-';
+  }
+
+  formatPredictionMetric(value: number | null | undefined, digits = 2): string {
+    return value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '-';
+  }
+
+  normalizeQualityLabel(value: string | null | undefined): string {
+    const normalized = String(value ?? '').trim();
+    return this.qualityLabelMap[normalized] ?? normalized;
   }
 
   getParameterLabel(parameterName: string | undefined): string {
     return String(parameterName ?? '').trim() || '-';
+  }
+
+  getParameterLabelFromExecution(execution: ExecutionProduction, valeur: any): string {
+    // Try to extract parameter id from multiple possible shapes returned by API
+    const paramId = Number(
+      valeur?.parametreEtapeId
+      ?? valeur?.idParametreEtape
+      ?? valeur?.parametreEtape?.idParametreEtape
+      ?? valeur?.parametreId
+      ?? 0,
+    );
+
+    // Find guide and parameter name from guide metadata
+    const guide = this.guides.find((g) => Number(g?.idGuideProduction ?? 0) === Number(execution?.guideProductionId ?? 0));
+    if (guide && paramId > 0) {
+      for (const etape of (guide.etapes ?? [])) {
+        for (const param of (etape.parametres ?? [])) {
+          const id = Number(param?.idParametreEtape ?? 0);
+          if (id === paramId) {
+            return String(param?.nom ?? '').trim() || this.getParameterLabel(valeur?.parametreEtapeNom ?? valeur?.parametreNom);
+          }
+        }
+      }
+    }
+
+    return this.getParameterLabel(valeur?.parametreEtapeNom ?? valeur?.parametreNom ?? valeur?.parametre);
   }
 
   lotDisplayLabel(lot: LotOlives): string {
@@ -397,9 +474,10 @@ export class GuidesExecuterComponent implements OnInit {
           this.submittingExecution = false;
           this.executionMessage = 'Exécution de production créée avec succès.';
           this.toastService.success('Exécution de production créée avec succès.');
-          this.executions = [createdExecution, ...this.executions];
+          const enriched = this.enrichExecutionWithLotInfo({ ...createdExecution, lotId: payload.lotId, guideProductionId: payload.guideProductionId });
+          this.executions = [enriched, ...this.executions];
           this.saveExecutionCache(this.executions);
-          this.selectedExecution = createdExecution;
+          this.selectedExecution = enriched;
           this.lotOlivesService.getAll().subscribe((items) => {
             this.refreshAvailableLots(items);
             this.refreshFilteredLotsForSelectedGuide();
@@ -464,8 +542,13 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   selectExecution(execution: ExecutionProduction): void {
-    this.selectedExecution = execution;
-    this.populateExecutionValuesFromGuideOrExecution(execution);
+    const enriched = this.enrichExecutionWithLotInfo(execution);
+    this.selectedExecution = enriched;
+    this.executionForm.patchValue({
+      produitFinalQualite: enriched.produitFinalQualite ?? '',
+      produitFinalQuantiteProduite: enriched.produitFinalQuantiteProduite ?? null,
+    });
+    this.populateExecutionValuesFromGuideOrExecution(enriched);
   }
 
   saveValeursReelles(): void {
@@ -474,6 +557,7 @@ export class GuidesExecuterComponent implements OnInit {
       this.toastService.error('Veuillez remplir toutes les valeurs réelles.');
       return;
     }
+
     const valeursPayload = this.mapValeursReellesPayload(this.executionForm.get('valeursReelles')?.value || []);
     this.executionProductionService.saveValeursReelles(this.selectedExecution.idExecutionProduction, valeursPayload)
       .subscribe({
@@ -510,6 +594,13 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
+    const produitFinalQualite = String(this.executionForm.get('produitFinalQualite')?.value ?? '').trim();
+    const produitFinalQuantiteProduite = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
+    if (!produitFinalQualite || !Number.isFinite(produitFinalQuantiteProduite) || produitFinalQuantiteProduite <= 0) {
+      this.toastService.error('Veuillez saisir la qualité et la quantité produite avant de terminer l\'exécution.');
+      return;
+    }
+
     const dateFinReelle = this.today();
 
     const confirmed = await this.confirmDialogService.confirm({
@@ -537,7 +628,10 @@ export class GuidesExecuterComponent implements OnInit {
       : of(void 0);
 
     saveValeursReelles$.pipe(
-      switchMap(() => this.executionProductionService.createProduitFinal(executionToFinalize)),
+      switchMap(() => this.executionProductionService.createProduitFinal(executionToFinalize, {
+        qualite: produitFinalQualite,
+        quantiteProduite: produitFinalQuantiteProduite,
+      })),
     ).subscribe({
       next: (executionWithProduct) => {
         const mergedExecution: ExecutionProduction = {
@@ -545,6 +639,8 @@ export class GuidesExecuterComponent implements OnInit {
           ...(executionWithProduct ?? {}),
           dateFinReelle: executionWithProduct?.dateFinReelle ?? executionToFinalize.dateFinReelle,
           statut: executionWithProduct?.statut ?? executionToFinalize.statut,
+          produitFinalQualite: produitFinalQualite,
+          produitFinalQuantiteProduite: produitFinalQuantiteProduite,
           valeursReelles: (executionWithProduct?.valeursReelles && executionWithProduct.valeursReelles.length > 0)
             ? executionWithProduct.valeursReelles
             : valeursPayload,
@@ -552,6 +648,10 @@ export class GuidesExecuterComponent implements OnInit {
 
         this.executionMessage = 'Valeurs réelles enregistrées, produit final créé et exécution terminée.';
         this.selectedExecution = mergedExecution;
+        this.executionForm.patchValue({
+          produitFinalQualite,
+          produitFinalQuantiteProduite,
+        });
         this.populateExecutionValuesFromGuideOrExecution(mergedExecution);
         this.executions = this.executions.map((item) =>
           item.idExecutionProduction === mergedExecution.idExecutionProduction ? mergedExecution : item,
@@ -570,16 +670,31 @@ export class GuidesExecuterComponent implements OnInit {
     this.guideProductionService.getAll().subscribe((items) => (this.guides = items));
     this.machines = [];
     this.filteredMachines = [];
-    this.lotOlivesService.getAll().subscribe((items) => {
-      this.refreshAvailableLots(items);
-      this.refreshFilteredLotsForSelectedGuide();
+
+    forkJoin({
+      lots: this.lotOlivesService.getAll(),
+      stocks: this.stockService.getAll(),
+      matieresPremieres: this.rawMaterialService.getAll(),
+      ignored: this.stockManagementService.loadInitialData(undefined, true),
+    }).subscribe({
+      next: ({ lots, stocks, matieresPremieres }) => {
+        this.matieresPremieres = matieresPremieres ?? [];
+        this.updateAvailableLotIds(stocks ?? []);
+        this.updateBlockedLotIds(this.stockManagementService.getCurrentMovements());
+        this.refreshAvailableLots(lots ?? []);
+        this.refreshFilteredLotsForSelectedGuide();
+      },
+      error: () => {
+        this.matieresPremieres = [];
+        this.lots = [];
+        this.filteredLots = [];
+      },
     });
-    this.rawMaterialService.getAll().subscribe((items) => (this.matieresPremieres = items));
   }
 
   private loadExecutions(): void {
     this.executionProductionService.getAll().subscribe((items) => {
-      this.executions = this.filterExecutionsByCurrentHuilerie(items ?? []);
+      this.executions = this.filterExecutionsByCurrentHuilerie((items ?? []).map((e) => this.enrichExecutionWithLotInfo(e)));
       this.saveExecutionCache(this.executions);
       this.refreshAvailableLots(this.lots);
       this.refreshFilteredLotsForSelectedGuide();
@@ -640,7 +755,51 @@ export class GuidesExecuterComponent implements OnInit {
         .filter((id) => Number.isFinite(id) && id > 0),
     );
 
-    this.lots = (items ?? []).filter((lot) => !usedLotIds.has(Number(lot?.idLot ?? 0)));
+    this.lots = (items ?? []).filter((lot) => {
+      const lotId = Number(lot?.idLot ?? 0);
+      if (!lotId || usedLotIds.has(lotId)) {
+        return false;
+      }
+
+      if (this.blockedLotIds.has(lotId)) {
+        return false;
+      }
+
+      if (this.availableLotIds.size === 0) {
+        return true;
+      }
+
+      return this.availableLotIds.has(lotId);
+    });
+  }
+
+  private updateAvailableLotIds(stocks: Array<{ referenceId?: number; quantiteDisponible?: number }>): void {
+    const nextIds = new Set<number>();
+
+    (stocks ?? []).forEach((stock) => {
+      const lotId = Number(stock?.referenceId ?? 0);
+      const quantity = Number(stock?.quantiteDisponible ?? 0);
+      if (lotId > 0 && quantity > 0) {
+        nextIds.add(lotId);
+      }
+    });
+
+    this.availableLotIds = nextIds;
+  }
+
+  private updateBlockedLotIds(movements: StockMovement[]): void {
+    const nextIds = new Set<number>();
+
+    (movements ?? [])
+      .filter((movement) => movement.typeMouvement === 'TRANSFERT' || movement.typeMouvement === 'AJUSTEMENT')
+      .forEach((movement) => {
+        const lotId = Number(movement?.lotId ?? 0);
+        if (lotId > 0) {
+          nextIds.add(lotId);
+        }
+      });
+
+    this.blockedLotIds = nextIds;
   }
 
   private filterLotsByGuideHuilerie(guide: GuideProduction): LotOlives[] {
@@ -682,6 +841,22 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionForm.patchValue({ guideProductionId: guide.idGuideProduction });
   }
 
+  private enrichExecutionWithLotInfo(execution: ExecutionProduction): ExecutionProduction {
+    if (!execution) {
+      return execution;
+    }
+
+    const lotId = Number(execution.lotId ?? 0);
+    const lot = this.lots.find((l) => Number(l?.idLot ?? 0) === lotId);
+    const guide = this.guides.find((g) => Number(g?.idGuideProduction ?? 0) === Number(execution.guideProductionId ?? 0));
+
+    return {
+      ...execution,
+      lotReference: String(lot?.reference ?? execution.lotReference ?? (lotId ? `LOT-${lotId}` : '')).trim() || execution.lotReference,
+      guideProductionReference: String(guide?.reference ?? execution.guideProductionReference ?? '').trim() || execution.guideProductionReference,
+    } as ExecutionProduction;
+  }
+
   private populateExecutionValuesFromGuideOrExecution(
     execution: ExecutionProduction,
     guideOverride?: GuideProduction,
@@ -694,14 +869,14 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionValueRows = [];
     this.valeursReelles.clear();
 
-    const realValuesByParamId = new Map<number, string>();
+    const realValuesByParamId = new Map<number, number>();
     const cachedValues = this.executionRealValuesCache.get(execution.idExecutionProduction) ?? [];
     const sourceValues = (execution.valeursReelles && execution.valeursReelles.length > 0)
       ? execution.valeursReelles
       : cachedValues;
 
     sourceValues.forEach((value) => {
-      realValuesByParamId.set(Number(value.parametreEtapeId), String(value.valeurReelle ?? '').trim());
+      realValuesByParamId.set(Number(value.parametreEtapeId), Number(value.valeurReelle ?? 0));
     });
     const executionParamIds = new Set(Array.from(realValuesByParamId.keys()).filter((id) => id > 0));
 
@@ -750,30 +925,52 @@ export class GuidesExecuterComponent implements OnInit {
       Array.from(uniqueParamsByKey.values()).forEach((parametre: any) => {
         const parametreEtapeId = Number(parametre.idParametreEtape ?? 0);
         const estimatedValue = String(parametre.valeur ?? '').trim();
-        const realValue = realValuesByParamId.get(parametreEtapeId) ?? String(parametre.valeurReelle ?? '').trim();
+        const realValue = realValuesByParamId.get(parametreEtapeId) ?? Number(parametre.valeurReelle ?? 0);
+        const parameterName = String(parametre.nom ?? '').trim();
 
         this.executionValueRows.push({
           parametreEtapeId,
           stepName: etape.nom,
-          parameterName: parametre.nom,
+          parameterName: parameterName,
           uniteMesure: parametre.uniteMesure,
           estimatedValue,
         });
 
-        this.valeursReelles.push(
-          this.fb.group({
-            parametreEtapeId: [parametreEtapeId, [Validators.required]],
-            valeurReelle: [realValue, [Validators.required]],
-          }),
-        );
+        const executionRange = this.parameterValidationService.getExecutionParameterRange(parameterName);
+        if (executionRange) {
+          this.executionIntervalHelpRows.push({
+            parameterName,
+            label: executionRange.name,
+            min: executionRange.min,
+            max: executionRange.max,
+            unit: String(parametre.uniteMesure ?? '').trim(),
+          });
+        }
+
+        const formGroup = this.fb.group({
+          parametreEtapeId: [parametreEtapeId, [Validators.required]],
+          valeurReelle: [realValue, [Validators.required]],
+        });
+
+        // Ajouter la validation sur changement de valeur
+        const valeurReelleControl = formGroup.get('valeurReelle');
+        if (valeurReelleControl) {
+          valeurReelleControl.valueChanges.subscribe((value) => {
+            // Déterminer le paramName pour la validation
+            // Utiliser le nom du paramètre standardisé (snake_case)
+            this.validateExecutionParameter(parameterName, value);
+          });
+        }
+
+        this.valeursReelles.push(formGroup);
       });
     });
   }
 
-  private mapValeursReellesPayload(valeursReelles: unknown[]): Array<{ parametreEtapeId: number; valeurReelle: string }> {
+  private mapValeursReellesPayload(valeursReelles: unknown[]): Array<{ parametreEtapeId: number; valeurReelle: number }> {
     return (valeursReelles as Array<Record<string, unknown>>).map((valeur) => ({
       parametreEtapeId: Number(valeur['parametreEtapeId'] ?? 0),
-      valeurReelle: String(valeur['valeurReelle'] ?? '').trim(),
+      valeurReelle: Number(String(valeur['valeurReelle'] ?? '').trim()),
     }));
   }
 
@@ -788,6 +985,8 @@ export class GuidesExecuterComponent implements OnInit {
       rendement: 0,
       observations: '',
       controleTemperature: false,
+      produitFinalQualite: '',
+      produitFinalQuantiteProduite: null,
       guideProductionId,
       typeMachine: null,
       machineId: null,
@@ -796,6 +995,7 @@ export class GuidesExecuterComponent implements OnInit {
 
     this.valeursReelles.clear();
     this.executionValueRows = [];
+    this.executionIntervalHelpRows = [];
   }
 
   private attachPredictionToExecution(executionId: number, prediction: Prediction): void {
@@ -816,7 +1016,7 @@ export class GuidesExecuterComponent implements OnInit {
   private async showPredictionPopup(prediction: Prediction): Promise<void> {
     const lines = [
       `Mode de prédiction: ${String(prediction.modePrediction ?? '-').toUpperCase()}`,
-      `Qualité prédite: ${String(prediction.qualitePredite ?? '-')}`,
+      `Qualité prédite: ${this.normalizeQualityLabel(prediction.qualitePredite)}`,
       `Probabilité de qualité: ${prediction.probabiliteQualite != null ? Number(prediction.probabiliteQualite).toFixed(4) : '-'}`,
       `Rendement prédit (%): ${prediction.rendementPreditPourcent != null ? Number(prediction.rendementPreditPourcent).toFixed(2) : '-'}`,
       `Quantité d'huile recalculée (L): ${prediction.quantiteHuileRecalculeeLitres != null ? Number(prediction.quantiteHuileRecalculeeLitres).toFixed(2) : '-'}`,
@@ -881,6 +1081,26 @@ export class GuidesExecuterComponent implements OnInit {
   isExecutionFieldInvalid(controlName: string): boolean {
     const control = this.executionForm.get(controlName);
     return !!control && control.invalid && (control.touched || control.dirty);
+  }
+
+  /**
+   * Valide un paramètre d'exécution et affiche un toast si hors limites
+   */
+  validateExecutionParameter(paramName: string, value: number | null | undefined): void {
+    const message = this.parameterValidationService.validateExecutionParameter(paramName, value);
+    if (message) {
+      this.toastService.warning(message);
+    }
+  }
+
+  /**
+   * Valide un paramètre d'analyse et affiche un toast si hors limites
+   */
+  validateAnalysisParameter(paramName: string, value: number | null | undefined): void {
+    const message = this.parameterValidationService.validateAnalysisParameter(paramName, value);
+    if (message) {
+      this.toastService.warning(message);
+    }
   }
 
   isValeurReelleInvalid(index: number): boolean {

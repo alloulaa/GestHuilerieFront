@@ -91,14 +91,17 @@ export class ExecutionProductionService {
         return new HttpParams().set('huilerieNom', normalized);
     }
 
-    createProduitFinal(execution: ExecutionProduction): Observable<ExecutionProductionDTO> {
+    createProduitFinal(
+        execution: ExecutionProduction,
+        produitFinal: { qualite: string; quantiteProduite: number },
+    ): Observable<ExecutionProductionDTO> {
         const dateProduction = String(execution?.dateFinReelle ?? '').trim() || new Date().toISOString().slice(0, 19);
-        const quantiteProduite = Number(execution?.rendement ?? 0);
         const produitNomFallback = String(execution?.lotVariete ?? '').trim();
         const payload = {
             executionProductionId: execution.idExecutionProduction,
             nomProduit: produitNomFallback ? `Huile ${produitNomFallback}` : `Huile lot ${execution.reference ?? execution.idExecutionProduction}`,
-            quantiteProduite,
+            quantiteProduite: Number(produitFinal.quantiteProduite ?? 0),
+            qualite: String(produitFinal.qualite ?? '').trim(),
             dateProduction,
         };
 
@@ -109,7 +112,13 @@ export class ExecutionProductionService {
         return this.http.delete<void>(`${this.apiUrl}/${idExecutionProduction}`);
     }
 
-    saveValeursReelles(idExecutionProduction: number, valeurs: { parametreEtapeId: number; valeurReelle: string }[]): Observable<void> {
-        return this.http.post<void>(`${this.apiUrl}/${idExecutionProduction}/valeurs-reelles`, valeurs);
+    saveValeursReelles(idExecutionProduction: number, valeurs: { parametreEtapeId: number; valeurReelle: number; uniteMesure?: string }[]): Observable<void> {
+        const payload = valeurs.map((valeur) => ({
+            parametreEtapeId: valeur.parametreEtapeId,
+            valeurReelle: Number(valeur.valeurReelle),
+            uniteMesure: valeur.uniteMesure,
+        }));
+
+        return this.http.post<void>(`${this.apiUrl}/${idExecutionProduction}/valeurs-reelles`, payload);
     }
 }

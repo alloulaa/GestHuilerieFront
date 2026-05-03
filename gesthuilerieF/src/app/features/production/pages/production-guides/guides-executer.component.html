@@ -100,14 +100,28 @@
         </div>
       </div>
 
-      <div class="feedback success" *ngIf="executionMessage">{{ executionMessage }}</div>
-      <div class="feedback error" *ngIf="executionError">{{ executionError }}</div>
-
       <div class="actions-row actions-row--execution">
+        <div class="interval-help-panel interval-help-panel--compact"
+          *ngIf="executionIntervalHelpRows.length > 0 && executionForm.get('statut')?.value === 'TERMINEE'">
+          <div class="interval-help-panel__header">
+            <span>Intervalles réels utilisés</span>
+            <small>Les valeurs hors plage sont signalées immédiatement.</small>
+          </div>
+          <div class="interval-help-panel__chips">
+            <span class="interval-chip" *ngFor="let row of executionIntervalHelpRows">
+              <strong>{{ row.label }}</strong>
+              <em>{{ row.min }} à {{ row.max }}{{ row.unit ? ' ' + row.unit : '' }}</em>
+            </span>
+          </div>
+        </div>
+
         <button nbButton status="primary" class="btn-start-execution" type="submit" [disabled]="submittingExecution">
           {{ submittingExecution ? 'Démarrage...' : 'Commencer exécution' }}
         </button>
       </div>
+
+      <div class="feedback success" *ngIf="executionMessage">{{ executionMessage }}</div>
+      <div class="feedback error" *ngIf="executionError">{{ executionError }}</div>
     </form>
 
     <div class="values-box values-box--execution execution-list-block">
@@ -130,7 +144,6 @@
           </header>
 
           <div class="execution-card__meta">
-            <p><strong>Machine:</strong> {{ execution.machineNom || ('#' + execution.machineId) }}</p>
             <p><strong>Date fin réelle:</strong> {{ formatExecutionDate(execution.dateFinReelle) }}</p>
             <p><strong>Produit final:</strong> {{ execution.produitFinalReference || '-' }}</p>
           </div>
@@ -167,10 +180,7 @@
         <div class="execution-detail-grid">
           <div class="execution-detail-item"><span>Guide</span><strong>{{ execution.guideProductionReference || ('#' +
               execution.guideProductionId) }}</strong></div>
-          <div class="execution-detail-item"><span>Machine</span><strong>{{ execution.machineNom || ('#' +
-              execution.machineId) }}</strong></div>
-          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotReference || ('#' +
-              execution.lotId) }}</strong></div>
+          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotReference || '-' }}</strong></div>
           <div class="execution-detail-item"><span>Date fin réelle</span><strong>{{
               formatExecutionDate(execution.dateFinReelle) }}</strong></div>
           <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
@@ -178,6 +188,24 @@
           <div class="execution-detail-item"><span>Contrôle température</span><strong>{{ execution.controleTemperature ?
               'Oui' : 'Non' }}</strong></div>
           <div class="execution-detail-item"><span>Date début</span><strong>{{ execution.dateDebut || '-' }}</strong>
+          </div>
+          <div class="execution-detail-item">
+            <span>Qualité produite</span>
+            <div [formGroup]="executionForm">
+              <input *ngIf="!isExecutionTerminated(execution)" nbInput fullWidth formControlName="produitFinalQualite"
+                placeholder="Ex: Extra Vierge, Vierge, Lampante" />
+              <strong *ngIf="isExecutionTerminated(execution)">{{ normalizeQualityLabel(execution.produitFinalQualite)
+                || '-' }}</strong>
+            </div>
+          </div>
+          <div class="execution-detail-item">
+            <span>Quantité produite (L)</span>
+            <div [formGroup]="executionForm">
+              <input *ngIf="!isExecutionTerminated(execution)" nbInput fullWidth type="number" min="0" step="0.01"
+                formControlName="produitFinalQuantiteProduite" placeholder="0" />
+              <strong *ngIf="isExecutionTerminated(execution)">{{ execution.produitFinalQuantiteProduite ?? '-'
+                }}</strong>
+            </div>
           </div>
         </div>
         <div class="execution-detail-observations-card">
@@ -190,15 +218,41 @@
           <h4>Valeurs réelles enregistrées</h4>
           <div class="real-values-list">
             <div class="real-value-item" *ngFor="let valeur of execution.valeursReelles">
-              <span class="real-value-label">{{ getParameterLabel(valeur.parametreEtapeNom) }}</span>
+              <span class="real-value-label">{{ getParameterLabelFromExecution(execution, valeur) }}</span>
               <strong class="real-value-content">{{ valeur.valeurReelle }}</strong>
             </div>
           </div>
         </div>
 
-        <!-- Bloc d'édition des valeurs réelles -->
-        <form [formGroup]="executionForm" (ngSubmit)="saveValeursReelles()">
-          <div class="values-box values-box--execution" *ngIf="executionValueRows.length > 0">
+        <div class="execution-detail-prediction-card" *ngIf="hasPrediction(execution)">
+          <div class="execution-detail-prediction-card__header">
+            <h4>Prédiction IA</h4>
+            <span>{{ getLatestPrediction(execution)?.modePrediction || '-' }}</span>
+          </div>
+          <div class="execution-detail-prediction-grid">
+            <div class="prediction-metric">
+              <span>Qualité prédite</span>
+              <strong>{{ normalizeQualityLabel(getLatestPrediction(execution)?.qualitePredite) || '-' }}</strong>
+            </div>
+            <div class="prediction-metric">
+              <span>Probabilité</span>
+              <strong>{{ formatPredictionProbability(getLatestPrediction(execution)?.probabiliteQualite) }}</strong>
+            </div>
+            <div class="prediction-metric">
+              <span>Rendement prédit (%)</span>
+              <strong>{{ formatPredictionMetric(getLatestPrediction(execution)?.rendementPreditPourcent) }}</strong>
+            </div>
+            <div class="prediction-metric">
+              <span>Quantité d'huile recalculée (L)</span>
+              <strong>{{ formatPredictionMetric(getLatestPrediction(execution)?.quantiteHuileRecalculeeLitres)
+                }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <form [formGroup]="executionForm" (ngSubmit)="saveValeursReelles()"
+          *ngIf="executionValueRows.length > 0 && !isExecutionTerminated(execution)">
+          <div class="values-box values-box--execution">
             <div class="values-box__header">
               <div>
                 <h3>Valeurs estimées et réelles</h3>
@@ -214,8 +268,7 @@
               <div class="value-item__input value-item__input--dual" [formGroupName]="valueIndex"
                 [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
                 <input nbInput fullWidth [value]="row.estimatedValue || '-'" readonly placeholder="Valeur estimée" />
-                <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle"
-                  [readonly]="isExecutionTerminated(execution)" />
+                <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
               </div>
             </div>
           </div>

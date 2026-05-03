@@ -1,15 +1,26 @@
 <section class="pending-shell">
-  <div class="pending-card">
-    <p class="eyebrow">Acces en attente</p>
+  <div class="pending-shell__orb pending-shell__orb--one"></div>
+  <div class="pending-shell__orb pending-shell__orb--two"></div>
+
+  <article class="pending-card">
+    <div class="pending-card__badge">Acces en attente</div>
     <h1>Votre compte est actif</h1>
-    <p>
+    <p class="pending-card__lead">
       Votre inscription est bien prise en compte. Un administrateur doit encore vous attribuer des permissions
       avant d'acceder aux modules.
     </p>
 
+    <div class="pending-card__status">
+      <span class="pending-card__dot"></span>
+      En attente de validation des permissions
+    </div>
+
     <div class="actions">
-      <button type="button" class="btn-primary" (click)="refreshAccess()">Verifier mes permissions</button>
+      <button type="button" class="btn-primary" [disabled]="isChecking" [attr.aria-busy]="isChecking"
+        (click)="refreshAccess()">
+        {{ isChecking ? 'Verification...' : 'Verifier mes permissions' }}
+      </button>
       <button type="button" class="btn-secondary" (click)="logout()">Se deconnecter</button>
     </div>
-  </div>
+  </article>
 </section>

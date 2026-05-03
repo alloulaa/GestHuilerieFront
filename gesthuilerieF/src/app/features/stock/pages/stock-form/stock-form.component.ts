@@ -44,6 +44,7 @@ export class StockFormComponent {
   huileries: Huilerie[] = [];
   editingMovementId: number | null = null;
   private availableLotIds = new Set<number>();
+  private lotIdsWithRestrictedMovements = new Set<number>();
 
   constructor(
     private formBuilder: FormBuilder,
@@ -91,6 +92,8 @@ export class StockFormComponent {
     this.stockManagementService.loadInitialData().subscribe(() => {
       this.stockManagementService.movements$.subscribe(data => {
         this.movements = data;
+        this.updateRestrictedLotIds();
+        this.refreshSelectableLots();
       });
     });
   }
@@ -299,17 +302,39 @@ export class StockFormComponent {
     this.availableLotIds = nextIds;
   }
 
+  private updateRestrictedLotIds(): void {
+    const nextIds = new Set<number>();
+
+    this.movements
+      .filter((movement) => movement.typeMouvement === 'TRANSFERT' || movement.typeMouvement === 'AJUSTEMENT')
+      .forEach((movement) => {
+        const lotId = Number(movement?.lotId ?? 0);
+        if (Number.isFinite(lotId) && lotId > 0) {
+          nextIds.add(lotId);
+        }
+      });
+
+    this.lotIdsWithRestrictedMovements = nextIds;
+  }
+
   private refreshSelectableLots(): void {
     const selectedLotId = Number(this.form.get('lotId')?.value ?? 0);
-    const baseLots = this.lots.filter((lot) => this.availableLotIds.has(Number(lot?.idLot ?? 0)));
+    const baseLots = this.availableLotIds.size > 0
+      ? this.lots.filter((lot) => this.availableLotIds.has(Number(lot?.idLot ?? 0)))
+      : this.lots.slice();
 
-    if (this.isEditMode && selectedLotId > 0 && !baseLots.some((lot) => Number(lot?.idLot ?? 0) === selectedLotId)) {
+    const eligibleLots = baseLots.filter((lot) => {
+      const lotId = Number(lot?.idLot ?? 0);
+      return lotId > 0 && !this.lotIdsWithRestrictedMovements.has(lotId);
+    });
+
+    if (this.isEditMode && selectedLotId > 0 && !eligibleLots.some((lot) => Number(lot?.idLot ?? 0) === selectedLotId)) {
       const selectedLot = this.lots.find((lot) => Number(lot?.idLot ?? 0) === selectedLotId);
-      this.selectableLots = selectedLot ? [selectedLot, ...baseLots] : baseLots;
+      this.selectableLots = selectedLot ? [selectedLot, ...eligibleLots] : eligibleLots;
       return;
     }
 
-    this.selectableLots = baseLots;
+    this.selectableLots = eligibleLots;
 
     if (!this.isEditMode && selectedLotId > 0 && !this.selectableLots.some((lot) => Number(lot?.idLot ?? 0) === selectedLotId)) {
       this.form.patchValue({ lotId: null }, { emitEvent: false });
