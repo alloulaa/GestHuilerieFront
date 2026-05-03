@@ -49,12 +49,14 @@
       <ng-container *ngFor="let message of messages; let i = index; trackBy: trackByMessageId">
         <article
           class="chatbot-widget__message"
-          [class.chatbot-widget__message--chart-rank]="isSupplierRankingMessage(message)"
+          [class.chatbot-widget__message--ranking]="isRankingMessage(message)"
           [class.chatbot-widget__message--user]="message.sender === 'user'"
         >
-          <p>{{ message.content }}</p>
+          <p *ngIf="!(isRankingMessage(message) && message.rankingViewMode === 'text') && !(message.sender === 'bot' && isChoiceMessage(message) && message.rankingIntent)">{{ message.content }}</p>
 
-          <ng-container *ngIf="message.sender === 'bot' && isChoiceMessage(message)">
+          <!-- Choice Prompt for Rankings -->
+          <ng-container *ngIf="message.sender === 'bot' && isChoiceMessage(message) && message.rankingIntent">
+            <p class="chatbot-widget__choice-prompt">Souhaitez-vous voir les résultats sous forme de texte ou de graphique ?</p>
             <div class="chatbot-widget__choices">
               <button
                 class="chatbot-widget__choice-btn"
@@ -68,64 +70,221 @@
             </div>
           </ng-container>
 
-          <ng-container *ngIf="message.sender === 'bot' && isSupplierRankingMessage(message)">
-            <div class="chatbot-widget__supplier-ranking">
-              <div class="chatbot-widget__mode-toggle">
-                <button type="button" [class.is-active]="message.supplierViewMode === 'chart'" (click)="toggleSupplierView(message, 'chart')">Vue graphique</button>
-                <button type="button" [class.is-active]="message.supplierViewMode === 'text'" (click)="toggleSupplierView(message, 'text')">Vue texte</button>
-              </div>
-
-              <div class="chatbot-widget__supplier-chart" *ngIf="message.supplierViewMode === 'chart'">
-                <div class="chatbot-widget__metric-toggle">
-                  <button type="button" [class.is-active]="getSupplierMetric(message) === 'kg'" (click)="setSupplierMetric(message, 'kg')">
-                    Quantité livrée (kg)
-                  </button>
-                  <button type="button" [class.is-active]="getSupplierMetric(message) === 'rendement'" (click)="setSupplierMetric(message, 'rendement')">
-                    Rendement (%)
-                  </button>
-                  <button type="button" [class.is-active]="getSupplierMetric(message) === 'acidite'" (click)="setSupplierMetric(message, 'acidite')">
-                    Acidité (%)
-                  </button>
-                </div>
-                <div class="chatbot-widget__chart">
-                  <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
-                </div>
-              </div>
-
-              <div class="chatbot-widget__supplier-text" *ngIf="message.supplierViewMode === 'text'">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Fournisseur</th>
-                      <th>Kg livrés</th>
-                      <th>Lots</th>
-                      <th>Acidité %</th>
-                      <th>Rendement %</th>
-                      <th>Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let item of message.supplierRanking?.items; let index = index" [class.chatbot-widget__supplier-row--best]="index === 0">
-                      <td>{{ index + 1 }}</td>
-                      <td>{{ item.name }}</td>
-                      <td>{{ item.kg | number:'1.0-0' }}</td>
-                      <td>{{ item.lots }}</td>
-                      <td>{{ item.acidity | number:'1.0-2' }}</td>
-                      <td>{{ item.rendement | number:'1.0-2' }}</td>
-                      <td>
-                        <span *ngIf="index === 0" class="chatbot-widget__status-chip chatbot-widget__status-chip--best">Meilleur</span>
-                        <span *ngIf="item.acidityOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">Acidité hors plage</span>
-                        <span *ngIf="item.rendementOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">Rendement hors plage</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+          <!-- Choice Prompt for Other Types -->
+          <ng-container *ngIf="message.sender === 'bot' && isChoiceMessage(message) && !message.rankingIntent">
+            <p>{{ message.content }}</p>
+            <div class="chatbot-widget__choices">
+              <button
+                class="chatbot-widget__choice-btn"
+                type="button"
+                *ngFor="let option of message.options"
+                (click)="sendChoice(option)"
+                [disabled]="isLoading"
+              >
+                {{ option === 'graphique' ? 'Graphique' : 'Texte' }}
+              </button>
             </div>
           </ng-container>
 
-          <ng-container *ngIf="message.sender === 'bot' && !isSupplierRankingMessage(message) && isChartMessage(message)">
+          <!-- Unified Ranking View -->
+          <ng-container *ngIf="message.sender === 'bot' && isRankingMessage(message)">
+            <div class="chatbot-widget__ranking" [attr.data-intent]="message.rankingIntent">
+              <!-- Fournisseur (Suppliers) -->
+              <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
+                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'kg'" (click)="setRankingMetric(message, 'kg')">
+                      Quantité (kg)
+                    </button>
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'rendement'" (click)="setRankingMetric(message, 'rendement')">
+                      Rendement (%)
+                    </button>
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'acidite'" (click)="setRankingMetric(message, 'acidite')">
+                      Acidité (%)
+                    </button>
+                  </div>
+                  <div class="chatbot-widget__chart">
+                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
+                  </div>
+                </div>
+
+                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Fournisseur</th>
+                        <th>Kg</th>
+                        <th>Lots</th>
+                        <th>Acidité %</th>
+                        <th>Rendement %</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
+                        <tr *ngFor="let item of getFournisseurItems(message); let idx = index" [class.is-best]="idx === 0">
+                          <td>{{ idx + 1 }}</td>
+                          <td>{{ item.name }}</td>
+                          <td>{{ item.kg | number:'1.0-0' }}</td>
+                          <td>{{ item.lots }}</td>
+                          <td [class.is-alert]="item.acidityOutOfRange">{{ item.acidity | number:'1.0-2' }}</td>
+                          <td [class.is-alert]="item.rendementOutOfRange">{{ item.rendement | number:'1.0-2' }}</td>
+                          <td>
+                            <span *ngIf="idx === 0" class="chatbot-widget__status-chip chatbot-widget__status-chip--best">⭐ Meilleur</span>
+                            <span *ngIf="item.acidityOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 Acidité</span>
+                            <span *ngIf="item.rendementOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 Rendement</span>
+                          </td>
+                        </tr>
+                      </ng-container>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-container>
+
+              <!-- Machines Utilisées (Used Machines) -->
+              <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
+                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'executions'" (click)="setRankingMetric(message, 'executions')">
+                      Exécutions
+                    </button>
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'rendement'" (click)="setRankingMetric(message, 'rendement')">
+                      Rendement moyen (%)
+                    </button>
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'production'" (click)="setRankingMetric(message, 'production')">
+                      Production (L)
+                    </button>
+                  </div>
+                  <div class="chatbot-widget__chart">
+                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
+                  </div>
+                </div>
+
+                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Machine</th>
+                        <th>Exécutions</th>
+                        <th>Rendement moyen (%)</th>
+                        <th>Production (L)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
+                        <tr *ngFor="let item of getMachineItems(message); let idx = index" [class.is-best]="idx === 0">
+                          <td>{{ idx + 1 }}</td>
+                          <td>{{ item.name }}</td>
+                          <td>{{ item.nbExecutions }}</td>
+                          <td>{{ item.rendementMoyen | number:'1.0-1' }}%</td>
+                          <td>{{ item.totalProduit | number:'1.0-1' }} L</td>
+                        </tr>
+                      </ng-container>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-container>
+
+              <!-- Lots Liste (Batch List) -->
+              <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
+                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'quantite'" (click)="setRankingMetric(message, 'quantite')">
+                      Quantité (kg)
+                    </button>
+                  </div>
+                  <div class="chatbot-widget__chart">
+                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
+                  </div>
+                </div>
+
+                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Référence</th>
+                        <th>Variété</th>
+                        <th>Fournisseur</th>
+                        <th>Quantité (kg)</th>
+                        <th>Qualité</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
+                        <tr *ngFor="let item of getLotItems(message); let idx = index">
+                          <td>{{ idx + 1 }}</td>
+                          <td>{{ item.reference }}</td>
+                          <td>{{ item.variete }}</td>
+                          <td>{{ item.fournisseur_nom }}</td>
+                          <td>{{ item.quantite_initiale | number:'1.0-0' }}</td>
+                          <td>{{ item.qualite_huile }}</td>
+                        </tr>
+                      </ng-container>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-container>
+
+              <!-- Analyses Labo (Lab Analyses) -->
+              <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
+                <div class="chatbot-widget__ranking-chart" *ngIf="message.rankingViewMode === 'chart'">
+                  <div class="chatbot-widget__metric-toggle">
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'acidite'" (click)="setRankingMetric(message, 'acidite')">
+                      Acidité (%)
+                    </button>
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'peroxyde'" (click)="setRankingMetric(message, 'peroxyde')">
+                      Peroxyde (meq)
+                    </button>
+                    <button type="button" [class.is-active]="getRankingMetric(message) === 'k270'" (click)="setRankingMetric(message, 'k270')">
+                      K270
+                    </button>
+                  </div>
+                  <div class="chatbot-widget__chart">
+                    <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
+                  </div>
+                </div>
+
+                <div class="chatbot-widget__ranking-text" *ngIf="message.rankingViewMode === 'text'">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Lot Ref</th>
+                        <th>Date Analyse</th>
+                        <th>Acidité (%)</th>
+                        <th>Peroxyde (meq O2/kg)</th>
+                        <th>K270</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
+                        <tr *ngFor="let item of getAnalysisItems(message); let idx = index">
+                          <td>{{ idx + 1 }}</td>
+                          <td>{{ item.lot_ref }}</td>
+                          <td>{{ item.date_analyse }}</td>
+                          <td [class.is-alert]="item.acidityOutOfRange">{{ item.acidite_huile_pourcent | number:'1.0-2' }}</td>
+                          <td [class.is-alert]="item.peroxideOutOfRange">{{ item.indice_peroxyde_meq_o2_kg | number:'1.0-1' }}</td>
+                          <td [class.is-alert]="item.k270OutOfRange">{{ item.k270 | number:'1.0-3' }}</td>
+                          <td>
+                            <span *ngIf="item.acidityOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 Acidité</span>
+                            <span *ngIf="item.peroxideOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 Peroxyde</span>
+                            <span *ngIf="item.k270OutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 K270</span>
+                          </td>
+                        </tr>
+                      </ng-container>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+
+          <!-- Generic Chart -->
+          <ng-container *ngIf="message.sender === 'bot' && !isRankingMessage(message) && isChartMessage(message)">
             <div class="chatbot-widget__chart">
               <canvas #chartCanvas [attr.data-message-id]="message.id"></canvas>
             </div>

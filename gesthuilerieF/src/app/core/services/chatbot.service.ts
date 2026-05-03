@@ -5,6 +5,73 @@ import { AuthService } from '../auth/auth.service';
 
 export type ChatbotResponseType = 'text' | 'choice' | 'chart';
 export type ChatbotChartType = 'bar' | 'line' | 'pie';
+export type RankingIntent = 'fournisseur' | 'machines_utilisees' | 'lot_liste' | 'analyse_labo';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ranking Data Interfaces
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface FournisseurItem {
+  rang: number;
+  name: string;
+  fournisseur_nom: string;
+  kg: number;
+  acidity: number;
+  rendement: number;
+  lots: number;
+  kg_str: string;
+  acidity_str: string;
+  rendement_str: string;
+  acidite_status: 'ok' | 'out of range';
+  rendement_status: 'ok' | 'out of range';
+}
+
+export interface MachineItem {
+  rang: number;
+  name: string;
+  nomMachine: string;
+  machineRef: string;
+  nbExecutions: number;
+  rendementMoyen: number;
+  totalProduit: number;
+  nb_exec_str: string;
+  rend_str: string;
+  prod_str: string;
+}
+
+export interface LotItem {
+  rang: number;
+  name: string;
+  reference: string;
+  variete: string;
+  fournisseur_nom: string;
+  quantite_initiale: number;
+  qualite_huile: string;
+  qte_str: string;
+}
+
+export interface AnalysisItem {
+  rang: number;
+  name: string;
+  lot_ref: string;
+  date_analyse: string;
+  acidite_huile_pourcent: number;
+  indice_peroxyde_meq_o2_kg: number;
+  k270: number;
+  acid_str: string;
+  peroxide_str: string;
+  k270_str: string;
+  acidity_status: 'ok' | 'out of range';
+  peroxide_status: 'ok' | 'out of range';
+  k270_status: 'ok' | 'out of range';
+}
+
+export interface RankingPayload {
+  suppliers?: FournisseurItem[];
+  machines?: MachineItem[];
+  lots?: LotItem[];
+  analyses?: AnalysisItem[];
+}
 
 export interface ChatbotChartPoint {
   label: string;
@@ -14,6 +81,7 @@ export interface ChatbotChartPoint {
 export interface ChatbotChartDataset {
   label: string;
   data: number[];
+  type?: ChatbotChartType;
 }
 
 export interface ChatbotChartPayload {
@@ -27,6 +95,8 @@ export interface ChatbotResponse {
   options: string[];
   chart_type: ChatbotChartType | null;
   data: unknown;
+  selected_option?: string | null;
+  pending_choice?: boolean;
   intent: string | null;
   confidence: number | null;
   applied_scope: string | null;
@@ -39,6 +109,7 @@ export interface ChatbotRequest {
   token: string;
   jwt_token: string;
   user_id?: number;
+  selection?: 'texte' | 'graphique';
 }
 @Injectable({ providedIn: 'root' })
 export class ChatbotService {
@@ -50,7 +121,7 @@ export class ChatbotService {
     private readonly authService: AuthService,
   ) {}
 
-  sendMessage(message: string): Observable<ChatbotResponse> {
+  sendMessage(message: string, selection?: 'texte' | 'graphique'): Observable<ChatbotResponse> {
     const trimmedMessage = message.trim();
 
     if (!trimmedMessage) {
@@ -80,6 +151,7 @@ export class ChatbotService {
       token,
       jwt_token: token,
       ...(userId !== null ? { user_id: userId } : {}),
+      ...(selection ? { selection } : {}),
     };
 
     const headers = new HttpHeaders({
@@ -158,6 +230,8 @@ export class ChatbotService {
       // Keep raw backend payload first to preserve supplier fields
       // such as acidite/rendement/nb_lots used by chatbot widget ranking view.
       data: response?.data ?? normalizedChartData ?? null,
+      selected_option: typeof response?.selected_option === 'string' ? response.selected_option : null,
+      pending_choice: !!response?.pending_choice,
       intent: typeof response?.intent === 'string' ? response.intent : null,
       confidence: typeof response?.confidence === 'number' ? response.confidence : null,
       applied_scope: typeof response?.applied_scope === 'string' ? response.applied_scope : null,
