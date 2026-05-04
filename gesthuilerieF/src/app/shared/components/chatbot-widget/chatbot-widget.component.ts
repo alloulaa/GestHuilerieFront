@@ -570,8 +570,33 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
-    const keywords = ['prediction', 'predection', 'predic', 'qualite', 'rendement', 'olives'];
-    return keywords.some((keyword) => normalizedMessage.includes(keyword));
+
+    const explicitPredictionKeywords = [
+      'prediction',
+      'prevision',
+      'predire',
+      'prevoir',
+      'simuler',
+      'simulation',
+    ];
+
+    const implicitPredictionPhrases = [
+      'est-ce que',
+      'est ce que',
+      'va etre',
+      'sera',
+      'serait',
+    ];
+
+    const containsExplicitPrediction = explicitPredictionKeywords.some((keyword) => normalizedMessage.includes(keyword));
+    if (containsExplicitPrediction) {
+      return true;
+    }
+
+    const containsImplicitPrediction = implicitPredictionPhrases.some((phrase) => normalizedMessage.includes(phrase));
+    const containsQualityTopic = ['qualite', 'rendement', 'olives', 'lot'].some((keyword) => normalizedMessage.includes(keyword));
+
+    return containsImplicitPrediction && containsQualityTopic;
   }
 
   openPredictionModal(message: string): void {
