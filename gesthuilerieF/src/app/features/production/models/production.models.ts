@@ -16,7 +16,7 @@ export interface EtapeProduction {
     ordre: number;
     description: string;
     codeEtape?: string;
-    machineId?: number;
+    machineId?: number | null;
     parametres: ParametreEtape[];
 }
 
@@ -41,7 +41,7 @@ export interface GuideProductionCreateDTO {
         ordre: number;
         description: string;
         codeEtape?: string;
-        machineId?: number;
+        machineId?: number | null;
         parametres: Array<{
             nom: string;
             codeParametre?: string;
@@ -75,6 +75,8 @@ export interface ExecutionPredictionStartDTO {
     aciditeOlivesPourcent?: number;
     tauxFeuillesPourcent?: number;
     pressionExtractionBar?: number;
+    presenceSeparateur?: boolean;
+    presenceAjoutEau?: boolean;
 }
 
 export interface ExecutionProduction {

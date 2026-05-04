@@ -73,6 +73,18 @@ export class GuidesGererComponent implements OnInit {
       description: 'Durée de malaxage',
       valeur: '40',
     },
+    {
+      code: 'presence_eau',
+      unite: '',
+      description: 'Présence eau',
+      valeur: '1',
+    },
+    {
+      code: 'presence_separateur',
+      unite: '',
+      description: 'Présence séparateur',
+      valeur: '1',
+    },
   ];
   readonly customParametreCode = 'autre';
 
@@ -240,6 +252,7 @@ export class GuidesGererComponent implements OnInit {
       ordre: [ordre, [Validators.required]],
       description: ['', [Validators.required]],
       codeEtape: [''],
+      machineId: [null],
       parametres: this.fb.array([this.createParametreGroup()]),
     });
   }
@@ -443,23 +456,35 @@ export class GuidesGererComponent implements OnInit {
       dateCreation: String(raw.dateCreation ?? this.today()),
       huilerieId: Number(raw.huilerieId),
       typeMachine: String(raw.typeMachine ?? '').trim(),
-      etapes: (raw.etapes ?? []).map((e: any) => ({
-        ...(e.idEtapeProduction ? { idEtapeProduction: Number(e.idEtapeProduction) } : {}),
-        nom: String(e.nom ?? '').trim(),
-        ordre: Number(e.ordre),
-        description: String(e.description ?? '').trim(),
-        codeEtape: String(e.codeEtape ?? '').trim(),
-        machineId: e.machineId ? Number(e.machineId) : undefined,
-        parametres: (e.parametres ?? []).map((p: any) => ({
-          ...(p.idParametreEtape ? { idParametreEtape: Number(p.idParametreEtape) } : {}),
-          codeParametre: String(p.codeParametre ?? '').trim(),
-          nom: this.resolveParametreNom(p),
-          uniteMesure: String(p.uniteMesure ?? '').trim(),
-          description: String(p.description ?? '').trim(),
-          valeur: String(p.valeur ?? '').trim(),
-        })),
-      })),
+      etapes: (raw.etapes ?? []).map((e: any) => {
+        const codeEtape = String(e.codeEtape ?? '').trim();
+        const requiresMachine = this.isMachineRequiredForCodeEtape(codeEtape);
+        const resolvedMachineId = this.resolveEtapeMachineId(e);
+
+        return {
+          ...(e.idEtapeProduction ? { idEtapeProduction: Number(e.idEtapeProduction) } : {}),
+          nom: String(e.nom ?? '').trim(),
+          ordre: Number(e.ordre),
+          description: String(e.description ?? '').trim(),
+          codeEtape,
+          machineId: requiresMachine ? (resolvedMachineId || undefined) : null,
+          parametres: (e.parametres ?? []).map((p: any) => ({
+            ...(p.idParametreEtape ? { idParametreEtape: Number(p.idParametreEtape) } : {}),
+            codeParametre: String(p.codeParametre ?? '').trim(),
+            nom: this.resolveParametreNom(p),
+            uniteMesure: String(p.uniteMesure ?? '').trim(),
+            description: String(p.description ?? '').trim(),
+            valeur: String(p.valeur ?? '').trim(),
+          })),
+        };
+      }),
     };
+
+    const etapeSansMachine = payload.etapes.find((etape: any) => this.isMachineRequiredForCodeEtape(etape.codeEtape) && Number(etape.machineId ?? 0) <= 0);
+    if (etapeSansMachine) {
+      this.toastService.error(`Aucune machine valide trouvée pour l'étape "${String(etapeSansMachine.nom ?? '').trim() || 'sans nom'}".`);
+      return;
+    }
 
     if (this.guideEditingId) {
       const existingGuide = this.guides.find((g) => g.idGuideProduction === this.guideEditingId);
@@ -505,6 +530,34 @@ export class GuidesGererComponent implements OnInit {
         },
       });
     }
+  }
+
+  private resolveEtapeMachineId(etape: Record<string, unknown>): number {
+    const codeEtape = String(etape['codeEtape'] ?? '').trim() || null;
+    if (!this.isMachineRequiredForCodeEtape(codeEtape)) {
+      return 0;
+    }
+
+    const explicitMachineId = Number(etape['machineId'] ?? 0);
+    if (explicitMachineId > 0) {
+      return explicitMachineId;
+    }
+
+    const stepMachines = this.getMachinesForStep(codeEtape);
+    if (stepMachines.length > 0) {
+      return Number(stepMachines[0].idMachine ?? 0);
+    }
+
+    const selectedHuilerieId = Number(this.guideForm.get('huilerieId')?.value ?? 0);
+    const fallbackMachine = this.allMachines.find((machine) => {
+      return selectedHuilerieId <= 0 || Number(machine.huilerieId ?? 0) === selectedHuilerieId;
+    });
+
+    return Number(fallbackMachine?.idMachine ?? 0);
+  }
+
+  private isMachineRequiredForCodeEtape(codeEtape: string | null | undefined): boolean {
+    return this.getStepMachineCategory(String(codeEtape ?? '').trim() || null) !== null;
   }
 
   editGuide(guide: GuideProduction): void {

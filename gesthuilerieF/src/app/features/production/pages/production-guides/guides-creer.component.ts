@@ -84,6 +84,26 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
         step: '1',
         inputType: 'number',
       },
+      {
+        code: 'presence_eau',
+        unite: '',
+        description: 'Présence eau',
+        valeur: '1',
+        min: 0,
+        max: 1,
+        step: '1',
+        inputType: 'number',
+      },
+      {
+        code: 'presence_separateur',
+        unite: '',
+        description: 'Présence séparateur',
+        valeur: '1',
+        min: 0,
+        max: 1,
+        step: '1',
+        inputType: 'number',
+      },
     ];
   readonly customParametreCode = 'autre';
 
@@ -395,10 +415,6 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.submittingGuide = true;
-    this.guideError = '';
-    this.guideMessage = '';
-
     const raw = this.guideForm.getRawValue();
     const payload = {
       nom: String(raw.nom ?? '').trim(),
@@ -408,6 +424,17 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       typeMachine: String(raw.typeMachine ?? '').trim(),
       etapes: this.mapEtapesPayload(raw.etapes ?? []),
     };
+
+    const etapeSansMachine = payload.etapes.find((etape) => this.isMachineRequiredForCodeEtape(etape.codeEtape) && Number(etape.machineId ?? 0) <= 0);
+    if (etapeSansMachine) {
+      this.guideError = `Aucune machine valide trouvée pour l'étape "${etapeSansMachine.nom}".`;
+      this.guideMessage = '';
+      return;
+    }
+
+    this.submittingGuide = true;
+    this.guideError = '';
+    this.guideMessage = '';
 
     this.guideProductionService.create(payload).subscribe({
       next: () => {
@@ -694,13 +721,48 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
   }
 
   private mapEtapesPayload(etapes: unknown[]): EtapeProduction[] {
-    return (etapes as Array<Record<string, unknown>>).map((etape) => ({
-      nom: String(etape['nom'] ?? '').trim(),
-      ordre: Number(etape['ordre'] ?? 1),
-      description: String(etape['description'] ?? '').trim(),
-      machineId: etape['machineId'] ? Number(etape['machineId']) : undefined,
-      parametres: this.mapParametresPayload((etape['parametres'] as unknown[]) ?? []),
-    }));
+    return (etapes as Array<Record<string, unknown>>).map((etape) => {
+      const codeEtape = String(etape['codeEtape'] ?? '').trim() || undefined;
+      const requiresMachine = this.isMachineRequiredForCodeEtape(codeEtape);
+      const resolvedMachineId = this.resolveEtapeMachineId(etape);
+
+      return {
+        nom: String(etape['nom'] ?? '').trim(),
+        ordre: Number(etape['ordre'] ?? 1),
+        description: String(etape['description'] ?? '').trim(),
+        codeEtape,
+        machineId: requiresMachine ? (resolvedMachineId || undefined) : null,
+        parametres: this.mapParametresPayload((etape['parametres'] as unknown[]) ?? []),
+      };
+    });
+  }
+
+  private resolveEtapeMachineId(etape: Record<string, unknown>): number {
+    const codeEtape = String(etape['codeEtape'] ?? '').trim() || null;
+    if (!this.isMachineRequiredForCodeEtape(codeEtape)) {
+      return 0;
+    }
+
+    const explicitMachineId = Number(etape['machineId'] ?? 0);
+    if (explicitMachineId > 0) {
+      return explicitMachineId;
+    }
+
+    const stepMachines = this.getMachinesForStep(codeEtape);
+    if (stepMachines.length > 0) {
+      return Number(stepMachines[0].idMachine ?? 0);
+    }
+
+    const selectedHuilerieId = Number(this.guideForm.get('huilerieId')?.value ?? 0);
+    const fallbackMachine = this.allMachines.find((machine) => {
+      return selectedHuilerieId <= 0 || Number(machine.huilerieId ?? 0) === selectedHuilerieId;
+    });
+
+    return Number(fallbackMachine?.idMachine ?? 0);
+  }
+
+  private isMachineRequiredForCodeEtape(codeEtape: string | null | undefined): boolean {
+    return this.getStepMachineCategory(String(codeEtape ?? '').trim() || null) !== null;
   }
 
   private mapParametresPayload(parametres: unknown[]): ParametreEtape[] {
