@@ -106,7 +106,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             campagneId: [null as string | null],
             huilerieId: [1, [Validators.required, Validators.min(1)]],
             fournisseurNom: [''],
-            fournisseurCIN: [''],
+            fournisseurCIN: ['', [Validators.required]],
         });
 
         this.form.valueChanges.subscribe(values => {
@@ -149,6 +149,15 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
     get isEditMode(): boolean {
         return this.editingId !== null;
+    }
+
+    get selectedExistingLot(): LotOlives | null {
+        const existingLotId = Number(this.form.get('existingLotId')?.value ?? 0);
+        if (!existingLotId) {
+            return null;
+        }
+
+        return this.lots.find((lot) => Number(lot.idLot) === existingLotId) ?? null;
     }
 
     private loadCampagnesForHuilerie(huilerieId: number, preferredCampagneReference?: string | null): void {
@@ -287,6 +296,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             huilerieId: Number(raw.huilerieId),
             origine: String(raw.origine ?? ''),
             varieteOlive: String(raw.varieteOlive ?? ''),
+            // Prefer sending fournisseur name + CIN. no fournisseurId sent from UI.
+            fournisseurId: undefined,
             fournisseurNom: String(raw.fournisseurNom ?? ''),
             fournisseurCIN: String(raw.fournisseurCIN ?? ''),
             maturite: String(raw.maturite ?? ''),
@@ -495,6 +506,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                 aciditeOlivesPourcent: lot.aciditeOlivesPourcent ?? 0,
                 tauxFeuillesPourcent: lot.tauxFeuillesPourcent ?? 0,
                 lavageEffectue: lot.lavageEffectue ?? '',
+                fournisseurNom: lot.fournisseurNom ?? null,
+                fournisseurCIN: lot.fournisseurCIN ?? null,
             },
             { emitEvent: false },
         );
@@ -570,10 +583,10 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             tauxFeuillesPourcent: Number(lot?.tauxFeuillesPourcent ?? this.form.get('tauxFeuillesPourcent')?.value ?? 0),
             lavageEffectue: String(lot?.lavageEffectue ?? this.form.get('lavageEffectue')?.value ?? ''),
             dureeStockageAvantBroyage: Number(lot?.dureeStockageAvantBroyage ?? this.form.get('dureeStockageAvantBroyage')?.value ?? 1),
+            fournisseurNom: lot?.fournisseurNom ?? this.form.get('fournisseurNom')?.value ?? null,
+            fournisseurCIN: lot?.fournisseurCIN ?? this.form.get('fournisseurCIN')?.value ?? null,
             matierePremiereId: matiereId,
             campagneId: campagneReference,
-            fournisseurNom: String(pesee.fournisseurNom ?? lot?.fournisseurNom ?? ''),
-            fournisseurCIN: String(pesee.fournisseurCIN ?? lot?.fournisseurCIN ?? ''),
             huilerieId,
         } as any);
 
@@ -617,6 +630,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                     humiditePourcent: availableLot.humiditePourcent ?? 0,
                     aciditeOlivesPourcent: availableLot.aciditeOlivesPourcent ?? 0,
                     tauxFeuillesPourcent: availableLot.tauxFeuillesPourcent ?? 0,
+                    fournisseurNom: availableLot.fournisseurNom ?? null,
+                    fournisseurCIN: availableLot.fournisseurCIN ?? null,
                 },
                 { emitEvent: false },
             );

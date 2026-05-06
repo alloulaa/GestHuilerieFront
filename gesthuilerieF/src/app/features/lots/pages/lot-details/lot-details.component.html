@@ -68,12 +68,16 @@
           <input nbInput fullWidth formControlName="dateReception" />
         </label>
         <label>
+          Fournisseur ID
+          <input nbInput fullWidth type="number" formControlName="fournisseurId" />
+        </label>
+        <label>
           Fournisseur
-          <input nbInput fullWidth formControlName="fournisseurNom" />
+          <input nbInput fullWidth [value]="currentLot.fournisseurNom || '-'" disabled />
         </label>
         <label>
           CIN fournisseur
-          <input nbInput fullWidth formControlName="fournisseurCIN" />
+          <input nbInput fullWidth [value]="currentLot.fournisseurCIN || '-'" disabled />
         </label>
         <label>
           Durée stockage avant broyage
@@ -107,6 +111,9 @@
       <div><strong>Temps depuis recolte:</strong> {{ currentLot.tempsDepuisRecolteHeures ?? '-' }} h</div>
       <div><strong>Quantite initiale:</strong> {{ currentLot.quantiteInitiale }} kg</div>
       <div><strong>Quantite restante:</strong> {{ currentLot.quantiteRestante }} kg</div>
+      <div><strong>Fournisseur ID:</strong> {{ currentLot.fournisseurId ?? '-' }}</div>
+      <div><strong>Fournisseur:</strong> {{ currentLot.fournisseurNom || '-' }}</div>
+      <div><strong>CIN fournisseur:</strong> {{ currentLot.fournisseurCIN || '-' }}</div>
     </div>
 
     <p class="traceability-error" *ngIf="traceabilityErrorMessage">{{ traceabilityErrorMessage }}</p>

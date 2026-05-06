@@ -13,6 +13,7 @@ import { PermissionService } from '../../../../core/services/permission.service'
 import { AnalyseLaboratoireService } from '../../../lots/services/analyse-laboratoire.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { NbButtonModule, NbIconModule } from '@nebular/theme';
+import { LAB_ANALYSIS_STANDARDS } from '../../../../shared/constants/lab-analysis-standards';
 
 @Component({
   selector: 'app-reception-list',
@@ -42,6 +43,9 @@ export class ReceptionListComponent implements OnInit {
     k232: 1.9,
     k270: 0.18,
   };
+
+  // Lab analysis standards for Tunisia
+  labStandards = LAB_ANALYSIS_STANDARDS;
 
   constructor(
     private lotManagementService: LotManagementService,
@@ -107,9 +111,12 @@ export class ReceptionListComponent implements OnInit {
 
     if (fournisseurValue) {
       filtered = filtered.filter((pesee) => {
+        const fournisseurId = String(pesee.fournisseurId ?? '').toLowerCase();
         const fournisseurNom = String(pesee.fournisseurNom ?? '').toLowerCase();
         const fournisseurCIN = String(pesee.fournisseurCIN ?? '').toLowerCase();
-        return fournisseurNom.includes(fournisseurValue) || fournisseurCIN.includes(fournisseurValue);
+        return fournisseurId.includes(fournisseurValue)
+          || fournisseurNom.includes(fournisseurValue)
+          || fournisseurCIN.includes(fournisseurValue);
       });
     }
 

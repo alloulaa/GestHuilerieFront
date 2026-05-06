@@ -14,6 +14,7 @@ export interface LotOlives {
   lavageEffectue?: string;
   dateRecolte: string;
   dateReception: string;
+  fournisseurId?: number;
   fournisseurNom?: string;
   fournisseurCIN?: string;
   dureeStockageAvantBroyage: number;

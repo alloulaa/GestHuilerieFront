@@ -15,8 +15,9 @@ export interface CreatePeseeInput {
   huilerieId: number;
   origine: string;
   varieteOlive: string;
-  fournisseurNom: string;
-  fournisseurCIN: string;
+  fournisseurId?: number;
+  fournisseurNom?: string;
+  fournisseurCIN?: string;
   maturite: string;
   dateRecolte: string;
   dateReception: string;
@@ -152,6 +153,7 @@ export class LotManagementService {
       origine: input.origine,
       variete: input.varieteOlive,
       varieteOlive: input.varieteOlive,
+      fournisseurId: Number(input.fournisseurId),
       fournisseurNom: input.fournisseurNom,
       fournisseurCIN: input.fournisseurCIN,
       maturite_niveau_1_5: input.maturite,
@@ -191,6 +193,7 @@ export class LotManagementService {
       origine: input.origine,
       variete: input.varieteOlive,
       varieteOlive: input.varieteOlive,
+      fournisseurId: Number(input.fournisseurId),
       fournisseurNom: input.fournisseurNom,
       fournisseurCIN: input.fournisseurCIN,
       maturite_niveau_1_5: input.maturite,

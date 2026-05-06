@@ -29,9 +29,9 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
 
   // Lazy-load cache: codeEtape -> filtered machines
   private machinesCacheByStep = new Map<string, Machine[]>();
-  private loadingStepsCache = new Set<string>();
 
   private etapesSubscription?: Subscription;
+  private huilerieSubscription?: Subscription;
   private currentTypeMachine: string | null = null;
 
   readonly fixedParametreOptions: Array<{
@@ -143,6 +143,13 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadReferenceData();
     this.loadExecutionParameterRanges();
+    // Refresh machines when the selected huilerie changes
+    const huilerieControl = this.guideForm.get('huilerieId');
+    if (huilerieControl) {
+      this.huilerieSubscription = huilerieControl.valueChanges.subscribe((value) => {
+        this.reloadMachinesForSelectedHuilerie(value);
+      });
+    }
   }
 
   private loadExecutionParameterRanges(): void {
@@ -174,6 +181,9 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.etapesSubscription) {
       this.etapesSubscription.unsubscribe();
+    }
+    if (this.huilerieSubscription) {
+      this.huilerieSubscription.unsubscribe();
     }
   }
 
@@ -267,21 +277,7 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
 
       const codeVal = etapeControl.get('codeEtape')?.value;
       const code = codeVal == null ? null : String(codeVal);
-
-      // Check cache first
-      if (code && this.machinesCacheByStep.has(code)) {
-        const cached = this.machinesCacheByStep.get(code) || [];
-        console.log(`[guides-creer] getMachinesForStepByIndex(${index}) [CACHED] code="${code}":`, {
-          machineCount: cached.length,
-        });
-        return cached;
-      }
-
-      // Compute and cache result
       const result = this.getMachinesForStep(code);
-      if (code) {
-        this.machinesCacheByStep.set(code, result);
-      }
       console.log(`[guides-creer] getMachinesForStepByIndex(${index}) [COMPUTED] code="${code}":`, {
         machineCount: result?.length || 0,
         allMachinesCount: this.allMachines.length,
@@ -462,11 +458,20 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       etapesArray.controls.forEach((etapeControl) => {
         const code = String(etapeControl.get('codeEtape')?.value ?? null);
         const machines = this.getMachinesForStep(code);
-        if (machines && machines.length === 1) {
-          const current = etapeControl.get('machineId')?.value;
-          if (!current) {
-            etapeControl.get('machineId')?.setValue(machines[0].idMachine);
-          }
+
+        const machineControl = etapeControl.get('machineId');
+        const currentMachineId = Number(machineControl?.value ?? 0);
+        const currentStillValid = currentMachineId > 0
+          && machines.some((machine) => Number(machine.idMachine ?? 0) === currentMachineId);
+
+        // Drop previously selected machine if it no longer belongs to current huilerie/step filter
+        if (currentMachineId > 0 && !currentStillValid) {
+          machineControl?.setValue(null, { emitEvent: false });
+        }
+
+        // Auto-assign only if exactly one valid machine remains
+        if (!currentStillValid && machines && machines.length === 1) {
+          machineControl?.setValue(machines[0].idMachine, { emitEvent: false });
         }
       });
     } catch (e) {
@@ -486,6 +491,50 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       // Attempt to auto-assign machines to any existing étapes
       this.autoAssignMachinesToEtapes();
     });
+  }
+
+  private reloadMachinesForSelectedHuilerie(value: unknown): void {
+    try {
+      this.machinesCacheByStep.clear();
+      this.resetEtapesMachineSelection();
+
+      const selectedHuilerieId = Number(value ?? 0) || 0;
+      this.machineService.getAll().subscribe({
+        next: (items) => {
+          const filtered = selectedHuilerieId > 0
+            ? items.filter((machine) => Number(machine?.huilerieId ?? 0) === selectedHuilerieId)
+            : items;
+
+          this.allMachines = filtered;
+          this.machinesCacheByStep.clear();
+          this.autoAssignMachinesToEtapes();
+
+          console.log('[guides-creer] machines reloaded on huilerie change', {
+            selectedHuilerieId,
+            totalMachines: items.length,
+            filteredMachines: filtered.length,
+          });
+        },
+        error: (err) => {
+          console.warn('[guides-creer] failed to reload machines on huilerie change', err);
+          this.allMachines = [];
+          this.machinesCacheByStep.clear();
+          this.autoAssignMachinesToEtapes();
+        },
+      });
+    } catch (e) {
+      console.error('[guides-creer] error handling huilerie change', e);
+    }
+  }
+
+  private resetEtapesMachineSelection(): void {
+    try {
+      this.etapes.controls.forEach((etapeControl) => {
+        etapeControl.get('machineId')?.setValue(null, { emitEvent: false });
+      });
+    } catch (e) {
+      console.warn('[guides-creer] failed to reset machine selections', e);
+    }
   }
 
   private setupExtractionWatcher(): void {

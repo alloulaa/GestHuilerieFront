@@ -13,6 +13,7 @@ export interface Pesee {
   huilerieId?: number;
   huilerieNom?: string;
   bonPeseePdfPath?: string;
+  fournisseurId?: number;
   fournisseurNom?: string;
   fournisseurCIN?: string;
 }
@@ -36,6 +37,7 @@ export interface ReceptionPeseeCreatePayload {
   lavage_effectue?: string;
   dateRecolte?: string;
   dateReception?: string;
+  fournisseurId?: number;
   fournisseurNom?: string;
   fournisseurCIN?: string;
   duree_stockage_jours?: number;

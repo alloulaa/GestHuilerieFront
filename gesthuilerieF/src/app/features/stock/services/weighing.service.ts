@@ -96,6 +96,7 @@ export class WeighingService {
       huilerieId: raw?.huilerieId != null ? Number(raw.huilerieId) : undefined,
       huilerieNom: raw?.huilerieNom != null ? String(raw.huilerieNom) : undefined,
       bonPeseePdfPath: raw?.bonPeseePdfPath ?? undefined,
+      fournisseurId: raw?.fournisseurId != null ? Number(raw.fournisseurId) : undefined,
       fournisseurNom: raw?.fournisseurNom != null ? String(raw.fournisseurNom) : undefined,
       fournisseurCIN: raw?.fournisseurCIN != null ? String(raw.fournisseurCIN) : undefined,
     };
