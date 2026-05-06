@@ -20,8 +20,7 @@ export interface LotOlivesUpdatePayload {
   lavage_effectue?: string;
   dateRecolte?: string;
   dateReception?: string;
-  fournisseurNom?: string;
-  fournisseurCIN?: string;
+  fournisseurId?: number;
   duree_stockage_jours?: number;
   poids_olives_kg?: number;
   quantiteInitiale?: number;
@@ -106,6 +105,7 @@ export class LotOlivesService {
       lavageEffectue: item?.lavageEffectue ?? item?.lavage_effectue,
       dureeStockageAvantBroyage: item?.dureeStockageAvantBroyage ?? item?.duree_stockage_jours,
       pesee: item?.pesee ?? item?.poids_olives_kg,
+      fournisseurId: item?.fournisseurId ?? item?.fournisseur_id,
       huilerieId: item?.huilerieId,
       huilerieNom: item?.huilerieNom,
     };

@@ -80,7 +80,12 @@
             <td>{{ getLotValue(pesee, 'methodeRecolte') }}</td>
             <td>{{ getLotValue(pesee, 'typeSol') }}</td>
             <td>{{ getLotValue(pesee, 'tempsDepuisRecolteHeures') }}</td>
-            <td>{{ pesee.fournisseurNom || '-' }} / {{ pesee.fournisseurCIN || '-' }}</td>
+            <td>
+              #{{ pesee.fournisseurId ?? '-' }}
+              <span *ngIf="pesee.fournisseurNom || pesee.fournisseurCIN">
+                - {{ pesee.fournisseurNom || '-' }} / {{ pesee.fournisseurCIN || '-' }}
+              </span>
+            </td>
             <td *ngIf="!showFilters" class="actions-cell">
               <button nbButton ghost status="primary" size="small" type="button" class="icon-action-btn"
                 (click)="triggerEdit(pesee)" aria-label="Modifier">
@@ -103,6 +108,26 @@
       <div class="analysis-modal">
         <h3>Ajouter analyse laboratoire</h3>
         <p class="analysis-kicker">Lot {{ selected.lotId }} · {{ selected.reference || ('#' + selected.idPesee) }}</p>
+
+        <div class="analysis-info-panel">
+          <div class="info-header">
+            <span class="info-icon">ℹ️</span>
+            <h4>Intervalles standards en Tunisie</h4>
+          </div>
+          <div class="info-content">
+            <div class="standards-grid">
+              <div class="standard-item" *ngFor="let standard of labStandards">
+                <div class="standard-label">{{ standard.label }}</div>
+                <div class="standard-range">
+                  <span class="range-value">{{ standard.min }}</span>
+                  <span class="range-separator">à</span>
+                  <span class="range-value">{{ standard.max }}</span>
+                  <span class="range-unit">{{ standard.unit }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="analysis-grid">
           <label>

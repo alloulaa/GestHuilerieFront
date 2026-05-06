@@ -138,12 +138,20 @@
                 </div>
             </div>
             <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Fournisseur</mat-label>
-                <input matInput formControlName="fournisseurNom" />
+                <mat-label>Fournisseur (nom)</mat-label>
+                <input matInput type="text" formControlName="fournisseurNom" />
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>CIN fournisseur</mat-label>
-                <input matInput formControlName="fournisseurCIN" />
+                <input matInput type="text" formControlName="fournisseurCIN" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Fournisseur actuel</mat-label>
+                <input matInput [value]="selectedExistingLot?.fournisseurNom || '-'" disabled />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>CIN actuel</mat-label>
+                <input matInput [value]="selectedExistingLot?.fournisseurCIN || '-'" disabled />
             </mat-form-field>
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Huilerie</mat-label>
