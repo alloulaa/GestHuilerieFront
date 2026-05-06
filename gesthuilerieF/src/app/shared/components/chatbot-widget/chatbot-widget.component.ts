@@ -1,5 +1,5 @@
 ﻿import { CommonModule } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Chart, ChartConfiguration, ChartDataset, ChartType, registerables, TooltipItem } from 'chart.js';
@@ -81,6 +81,21 @@ interface AnalysisRankingItem {
   k270OutOfRange: boolean;
 }
 
+interface MachineTableItem {
+  name?: string;
+  machine?: string;
+  nomMachine?: string;
+  machineRef?: string;
+  status?: string;
+  statut?: string;
+  etat?: string;
+  state?: string;
+  details?: string;
+  info?: string;
+  description?: string;
+  [key: string]: any;
+}
+
 interface AnalysisRankingPayload {
   items: AnalysisRankingItem[];
 }
@@ -116,6 +131,9 @@ interface ChatMessage {
   rankingViewMode: RankingViewMode;
   rankingMetric?: string;
   debug: ChatDebugInfo | null;
+  // For non-ranking tabular responses (e.g., machine states, machines en panne)
+  tableData?: unknown;
+  tableIntent?: string | null;
 }
 
 @Component({
@@ -184,6 +202,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   constructor(
     private readonly chatbotService: ChatbotService,
     private readonly sanitizer: DomSanitizer,
+    private readonly cdr: ChangeDetectorRef,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -385,23 +404,26 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     const pendingRankingData  = choiceMessage ? (choiceMessage as any)._pendingRankingData  : null;
     const pendingRankingIntent = choiceMessage ? (choiceMessage as any)._pendingRankingIntent : null;
 
-    // Message utilisateur (bulle de droite)
-    this.messages.push({
-      id: this.nextMessageId(),
-      sender: 'user',
-      content: selection === 'graphique' ? 'Graphique' : 'Texte',
-      timestamp: new Date(),
-      type: 'text',
-      options: [],
-      chartType: null,
-      chartData: null,
-      rankingData: null,
-      rankingIntent: null,
-      rankingViewMode: 'chart',
-      debug: null,
-    });
-
     if (pendingRankingData && pendingRankingIntent) {
+      // Set loading state to prevent double-clicks while displaying local data
+      this.isLoading = true;
+
+      // Message utilisateur (bulle de droite)
+      this.messages.push({
+        id: this.nextMessageId(),
+        sender: 'user',
+        content: selection === 'graphique' ? 'Graphique' : 'Texte',
+        timestamp: new Date(),
+        type: 'text',
+        options: [],
+        chartType: null,
+        chartData: null,
+        rankingData: null,
+        rankingIntent: null,
+        rankingViewMode: 'chart',
+        debug: null,
+      });
+
       // Construire le chartData avec la métrique par défaut de cet intent
       const defaultMetric = this.defaultMetricForIntent(pendingRankingIntent);
       const chartData = selection === 'graphique'
@@ -428,11 +450,21 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
       this.messages.push(botResponse);
       this.scrollToBottom();
-      setTimeout(() => this.renderCharts());
+      const safeTimeoutId = setTimeout(() => {
+        if (this.isLoading) {
+          console.warn('[Chatbot Widget] Force resetting isLoading in sendChoice (timeout)');
+          this.isLoading = false;
+        }
+      }, 5000);
+      setTimeout(() => {
+        clearTimeout(safeTimeoutId);
+        this.renderCharts();
+        this.isLoading = false;
+      }, 0);
       return;
     }
 
-    // Fallback : envoyer au backend si pas de données en attente
+    // Fallback: send to backend (sendMessage will handle user message, isLoading, and HTTP request)
     this.sendMessage(option, selection as 'texte' | 'graphique');
   }
 
@@ -468,53 +500,74 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
     console.log('[Chatbot Widget] Sending message:', message, 'selection:', selection);
 
+    // Safety timeout to prevent isLoading from being stuck
+    const timeoutId = setTimeout(() => {
+      if (this.isLoading) {
+        console.warn('[Chatbot Widget] Force resetting isLoading (timeout)');
+        this.isLoading = false;
+      }
+    }, 10000);
+
     this.chatbotService
       .sendMessage(message, selection)
       .pipe(
         finalize(() => {
+          clearTimeout(timeoutId);
           this.isLoading = false;
+          this.cdr.detectChanges();
           this.scrollToBottom();
         })
       )
       .subscribe((response: ChatbotResponse) => {
         console.log('[Chatbot Widget] Response received:', response);
-        const botMessage = this.createBotMessage(response);
-        
-        // Skip if message creation returned null (e.g., empty duplicate response)
-        if (!botMessage) {
-          console.log('[Chatbot Widget] Skipping null message');
-          return;
-        }
-        
-        // Deduplication: skip if we already have a message with same type, content, and rankingIntent
-        // (ignore rankingData since backend might send it differently in duplicate responses)
-        const isDuplicate = this.messages.some(msg => 
-          msg.sender === 'bot' && 
-          msg.type === botMessage.type &&
-          msg.content === botMessage.content &&
-          msg.rankingIntent === botMessage.rankingIntent &&
-          msg.rankingIntent !== null  // Only dedupe ranking messages
-        );
-        
-        if (isDuplicate) {
-          console.log('[Chatbot Widget] Skipping duplicate message:', botMessage.type, botMessage.content.substring(0, 30));
-          return;
-        }
-        
-        this.messages.push(botMessage);
-
-        if (this.shouldOpenPredictionModalFromResponse(response, botMessage)) {
-          this.showPredictionModal = true;
-        }
-
-        if (!this.isOpen) {
-          this.hasUnreadPulse = true;
-        }
+        // IMMEDIATE: Reset loading flag right away so UI is responsive
+        this.isLoading = false;
+        this.cdr.detectChanges();
 
         setTimeout(() => {
-          this.renderCharts();
-          this.scrollToBottom();
-        });
+          try {
+            const botMessage = this.createBotMessage(response);
+
+            // Skip if message creation returned null (e.g., empty duplicate response)
+            if (!botMessage) {
+              console.log('[Chatbot Widget] Skipping null message');
+              return;
+            }
+
+            // Deduplication: skip if we already have a message with same type, content, and rankingIntent
+            // (ignore rankingData since backend might send it differently in duplicate responses)
+            const isDuplicate = this.messages.some(msg => 
+              msg.sender === 'bot' && 
+              msg.type === botMessage.type &&
+              msg.content === botMessage.content &&
+              msg.rankingIntent === botMessage.rankingIntent &&
+              msg.rankingIntent !== null  // Only dedupe ranking messages
+            );
+
+            if (isDuplicate) {
+              console.log('[Chatbot Widget] Skipping duplicate message:', botMessage.type, botMessage.content.substring(0, 30));
+              return;
+            }
+
+            this.messages.push(botMessage);
+
+            if (this.shouldOpenPredictionModalFromResponse(response, botMessage)) {
+              this.showPredictionModal = true;
+            }
+
+            if (!this.isOpen) {
+              this.hasUnreadPulse = true;
+            }
+
+            this.renderCharts();
+            this.scrollToBottom();
+            this.cdr.detectChanges();
+          } catch (error) {
+            console.error('[Chatbot Widget] Failed to render bot response', error);
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          }
+        }, 0);
       });
   }
 
@@ -611,7 +664,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   submitPredictionForm(): void {
-    if (!this.canSend || this.isLoading) return;
+    if (this.isLoading) return;
 
     const message = this.draftMessage.trim() || 'prediction';
 
@@ -916,6 +969,61 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     return message.rankingData.items as unknown[];
   }
 
+  public getTableMachineItems(message: ChatMessage): MachineTableItem[] {
+    const data: any = (message as any).tableData;
+    if (!data) return [];
+    const rawItems = Array.isArray(data)
+      ? data
+      : Array.isArray(data.machines)
+        ? data.machines
+        : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+    return rawItems.map((item: any, index: number) => ({
+      name: String(item?.nomMachine ?? item?.name ?? item?.machine ?? `Machine ${index + 1}`),
+      status: String(item?.etatMachine ?? item?.status ?? item?.statut ?? '—'),
+      details: [item?.typeMachine, item?.huilerieNom]
+        .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+        .join(' • ') || '-',
+      machineRef: item?.reference ?? item?.idMachine ?? '',
+      nomMachine: item?.nomMachine,
+      etat: item?.etatMachine,
+      typeMachine: item?.typeMachine,
+      huilerieNom: item?.huilerieNom,
+    }));
+  }
+
+  private extractMachineTableRows(data: unknown): MachineTableItem[] {
+    if (!data || typeof data !== 'object') return [];
+
+    const rawMachines = Array.isArray((data as any).machines)
+      ? (data as any).machines
+      : Array.isArray((data as any).items)
+        ? (data as any).items
+        : [];
+
+    return rawMachines.map((item: any, index: number) => ({
+      name: String(item?.nomMachine ?? item?.name ?? item?.machine ?? `Machine ${index + 1}`),
+      status: String(item?.etatMachine ?? item?.status ?? item?.statut ?? '—'),
+      details: [item?.typeMachine, item?.huilerieNom]
+        .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+        .join(' • ') || '-',
+      machineRef: item?.reference ?? item?.idMachine ?? '',
+      nomMachine: item?.nomMachine,
+      etat: item?.etatMachine,
+      typeMachine: item?.typeMachine,
+      huilerieNom: item?.huilerieNom,
+    }));
+  }
+
+  public isMachineTableMessage(message: ChatMessage): boolean {
+    const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.rankingIntent;
+    if (!intent) return false;
+    const s = String(intent).toLowerCase();
+    return s.includes('machine') || s.includes('panne') || s.includes('etat') || s.includes('tous');
+  }
+
   getFournisseurItems(message: ChatMessage): SupplierRankingItem[] {
     return this.getRankingItems(message) as SupplierRankingItem[];
   }
@@ -1123,6 +1231,10 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   private createBotMessage(response: ChatbotResponse): ChatMessage | null {
     let intent = (response.intent ?? null) as RankingIntent | string | null;
+    const payloadIntent = response.data ? this.inferRankingIntentFromPayload(response.data) : null;
+    if (payloadIntent) {
+      intent = payloadIntent;
+    }
     const isRankingIntent = RANKING_INTENTS.includes(intent as RankingIntent);
 
     // ── 1. Détection automatique de l'intent depuis le texte si inconnu ──────
@@ -1131,7 +1243,9 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       response.data
     ) {
       const textContent = (response.message || response.response || '').toLowerCase();
-      if (textContent.includes('fournisseur') || textContent.includes('supplier')) {
+      if (textContent.includes('stock')) {
+        intent = 'stock';
+      } else if (textContent.includes('fournisseur') || textContent.includes('supplier')) {
         intent = 'fournisseur';
       } else if (
         textContent.includes('panne') ||
@@ -1261,6 +1375,26 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       (botMessage as any)._pendingRankingIntent = intent as RankingIntent;
     }
 
+    // If backend sent a 'choice' or structured data for a non-ranking machine intent,
+    // convert to a direct text/table message and attach raw tableData for template rendering.
+    if (!isRanking && response.data) {
+      const tableIntent = response.intent ?? intent ?? null;
+      (botMessage as any).tableIntent = tableIntent;
+
+      if (tableIntent === 'machine') {
+        const machineRows = this.extractMachineTableRows(response.data);
+        (botMessage as any).tableData = { machines: machineRows };
+        botMessage.content = 'Machines de l\'huilerie';
+      } else {
+        (botMessage as any).tableData = response.data;
+      }
+
+      if (botMessage.type === 'choice') {
+        botMessage.type = 'text';
+        botMessage.options = [];
+      }
+    }
+
     return botMessage;
   }
 
@@ -1296,8 +1430,69 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  private inferRankingIntentFromPayload(data: unknown): RankingIntent | null {
+    if (!data) return null;
+
+    const hasArray = (key: string): boolean =>
+      data && typeof data === 'object' && Array.isArray((data as any)[key]);
+
+    if (hasArray('stocks')) {
+      return 'stock';
+    }
+    if (hasArray('suppliers') || hasArray('fournisseurs')) {
+      return 'fournisseur';
+    }
+    if (hasArray('machines') || hasArray('machinesUtilisees')) {
+      return 'machines_utilisees';
+    }
+    if (hasArray('lots')) {
+      return 'lot_liste';
+    }
+    if (hasArray('analyses')) {
+      return 'analyse_labo';
+    }
+
+    const arrayPayload = Array.isArray(data) ? data : this.extractArrayData(data, ['stocks', 'suppliers', 'fournisseurs', 'machines', 'machinesUtilisees', 'lots', 'analyses', 'items', 'data', 'value']);
+    if (!Array.isArray(arrayPayload) || arrayPayload.length === 0) {
+      return null;
+    }
+
+    const first = arrayPayload[0];
+    if (!first || typeof first !== 'object') {
+      return null;
+    }
+
+    const record = first as Record<string, unknown>;
+    if ('reference_stock' in record || 'quantite_disponible' in record || 'type_stock' in record || 'lot_reference' in record) {
+      return 'stock';
+    }
+    if ('fournisseur_nom' in record || 'kg' in record || 'rendement' in record || 'acidity' in record) {
+      return 'fournisseur';
+    }
+    if ('nbExecutions' in record || 'nomMachine' in record || 'machineRef' in record) {
+      return 'machines_utilisees';
+    }
+    if ('reference' in record && 'qualite_huile' in record) {
+      return 'lot_liste';
+    }
+    if ('lot_ref' in record || 'k270' in record || 'acidite_huile_pourcent' in record) {
+      return 'analyse_labo';
+    }
+
+    return null;
+  }
+
   private normalizeFournisseurData(data: unknown): SupplierRankingPayload | null {
-    const suppliers = this.extractArrayData(data, ['suppliers', 'fournisseurs', 'items', 'data']);
+    let suppliers: unknown[] = [];
+
+    // Check for specific suppliers property first
+    if (data && typeof data === 'object' && 'suppliers' in data && Array.isArray((data as any).suppliers)) {
+      suppliers = (data as any).suppliers;
+    } else {
+      // Fallback to extractArrayData for compatibility
+      suppliers = this.extractArrayData(data, ['suppliers', 'fournisseurs', 'items', 'data']);
+    }
+
     if (!suppliers.length) return null;
 
     const items = suppliers
@@ -1338,7 +1533,16 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private normalizeMachinesData(data: unknown): MachineRankingPayload | null {
-    const machines = this.extractArrayData(data, ['machines', 'machinesUtilisees', 'items', 'data']);
+    let machines: unknown[] = [];
+
+    // Check for specific machines property first
+    if (data && typeof data === 'object' && 'machines' in data && Array.isArray((data as any).machines)) {
+      machines = (data as any).machines;
+    } else {
+      // Fallback to extractArrayData for compatibility
+      machines = this.extractArrayData(data, ['machines', 'machinesUtilisees', 'items', 'data']);
+    }
+
     if (!machines.length) return null;
 
     const items = machines
@@ -1371,7 +1575,16 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private normalizeLotsData(data: unknown): LotRankingPayload | null {
-    const lots = this.extractArrayData(data, ['lots', 'items', 'data']);
+    let lots: unknown[] = [];
+
+    // Check for specific lots property first
+    if (data && typeof data === 'object' && 'lots' in data && Array.isArray((data as any).lots)) {
+      lots = (data as any).lots;
+    } else {
+      // Fallback to extractArrayData for compatibility
+      lots = this.extractArrayData(data, ['lots', 'items', 'data']);
+    }
+
     if (!lots.length) return null;
 
     const items = lots
@@ -1407,7 +1620,16 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private normalizeAnalysesData(data: unknown): AnalysisRankingPayload | null {
-    const analyses = this.extractArrayData(data, ['analyses', 'items', 'data']);
+    let analyses: unknown[] = [];
+
+    // Check for specific analyses property first
+    if (data && typeof data === 'object' && 'analyses' in data && Array.isArray((data as any).analyses)) {
+      analyses = (data as any).analyses;
+    } else {
+      // Fallback to extractArrayData for compatibility
+      analyses = this.extractArrayData(data, ['analyses', 'items', 'data']);
+    }
+
     if (!analyses.length) return null;
 
     const items = analyses
@@ -1446,7 +1668,16 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private normalizeStockData(data: unknown): StockRankingPayload | null {
-    const rows = this.extractArrayData(data, ['value', 'stocks', 'items', 'data']);
+    let rows: unknown[] = [];
+
+    // Check for specific stocks property first
+    if (data && typeof data === 'object' && 'stocks' in data && Array.isArray((data as any).stocks)) {
+      rows = (data as any).stocks;
+    } else {
+      // Fallback to extractArrayData for compatibility
+      rows = this.extractArrayData(data, ['value', 'stocks', 'items', 'data']);
+    }
+
     if (!rows.length) return null;
 
     const items = rows

@@ -355,9 +355,35 @@
           <!-- end ranking result -->
 
           <!-- ══════════════════════════════════════════════════════════
+               MACHINE TABLE for non-ranking machine responses (states, pannes, all machines)
+               ══════════════════════════════════════════════════════════ -->
+          <ng-container *ngIf="message.sender === 'bot' && (message.tableData) && isMachineTableMessage(message)">
+            <div class="chatbot-widget__ranking-text">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Machine</th>
+                    <th>Statut</th>
+                    <th>Détails</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of getTableMachineItems(message); let idx = index">
+                    <td>{{ idx + 1 }}</td>
+                    <td><strong>{{ item.name || item.machine || item.nomMachine || item.machineRef }}</strong></td>
+                    <td>{{ item.status || item.statut || item.etat || item.state || '—' }}</td>
+                    <td>{{ item.details || item.info || item.description || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </ng-container>
+
+          <!-- ══════════════════════════════════════════════════════════
                GENERIC PLAIN TEXT message  (non-ranking, non-choice)
                ══════════════════════════════════════════════════════════ -->
-          <ng-container *ngIf="message.sender === 'bot' && !isChoiceMessage(message) && !isRankingMessage(message)">
+          <ng-container *ngIf="message.sender === 'bot' && !isChoiceMessage(message) && !isRankingMessage(message) && !(message.tableData && isMachineTableMessage(message))">
             <p>{{ message.content }}</p>
           </ng-container>
 
