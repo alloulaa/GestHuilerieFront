@@ -1,0 +1,6 @@
+--- Add getTableMachineListItems method
+public getTableMachineListItems(message: ChatMessage): MachineListItem[] {
+  const data = (message as any).tableData;
+  if (!data || typeof data !== 'object') return [];
+  return Array.isArray((data as any).machineList) ? (data as any).machineList : [];
+}

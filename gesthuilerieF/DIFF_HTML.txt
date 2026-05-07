@@ -1,0 +1,116 @@
+<!--
+=============================================================================
+DIFF COMPLET: Modifications du chatbot-widget.component.html
+=============================================================================
+
+REMPLACER ce bloc (ligne ~358-385):
+
+⬇️ OLD CODE ⬇️
+-->
+
+          <!-- ══════════════════════════════════════════════════════════
+               MACHINE TABLE for non-ranking machine responses (states, pannes, all machines)
+               ══════════════════════════════════════════════════════════ -->
+          <ng-container *ngIf="message.sender === 'bot' && (message.tableData) && isMachineTableMessage(message)">
+            <div class="chatbot-widget__ranking-text">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Machine</th>
+                    <th>Statut</th>
+                    <th>Détails</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of getTableMachineItems(message); let idx = index">
+                    <td>{{ idx + 1 }}</td>
+                    <td><strong>{{ item.name || item.machine || item.nomMachine || item.machineRef }}</strong></td>
+                    <td>{{ item.status || item.statut || item.etat || item.state || '—' }}</td>
+                    <td>{{ item.details || item.info || item.description || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </ng-container>
+
+<!--
+⬇️ NOUVEAU CODE ⬇️
+
+REMPLACE PAR:
+-->
+
+          <!-- ══════════════════════════════════════════════════════════
+               MACHINE LIST for 'machine' intent (unified table view)
+               ══════════════════════════════════════════════════════════ -->
+          <ng-container *ngIf="message.sender === 'bot' && (message.tableData) && isMachineListMessage(message)">
+            <div class="chatbot-widget__ranking-text">
+              <ng-container *ngIf="getTableMachineListItems(message).length > 0; else noMachinesMessage">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Nom</th>
+                      <th>Catégorie</th>
+                      <th>Type</th>
+                      <th>Exécutions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of getTableMachineListItems(message); let idx = index">
+                      <td>{{ idx + 1 }}</td>
+                      <td><strong>{{ item.nom }}</strong></td>
+                      <td>{{ item.categorie }}</td>
+                      <td>{{ item.type }}</td>
+                      <td>{{ item.executions }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </ng-container>
+              <ng-template #noMachinesMessage>
+                <p>{{ message.content }}</p>
+              </ng-template>
+            </div>
+          </ng-container>
+
+          <!-- ══════════════════════════════════════════════════════════
+               MACHINE TABLE for non-ranking machine responses (states, pannes, all machines)
+               ══════════════════════════════════════════════════════════ -->
+          <ng-container *ngIf="message.sender === 'bot' && (message.tableData) && isMachineTableMessage(message) && !isMachineListMessage(message)">
+            <div class="chatbot-widget__ranking-text">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Machine</th>
+                    <th>Statut</th>
+                    <th>Détails</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of getTableMachineItems(message); let idx = index">
+                    <td>{{ idx + 1 }}</td>
+                    <td><strong>{{ item.name || item.machine || item.nomMachine || item.machineRef }}</strong></td>
+                    <td>{{ item.status || item.statut || item.etat || item.state || '—' }}</td>
+                    <td>{{ item.details || item.info || item.description || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </ng-container>
+
+<!--
+=============================================================================
+CHANGEMENTS CLÉS:
+
+1. NOUVEAU BLOC: isMachineListMessage() pour intent='machine'
+   - Affiche tableau avec colonnes: Nom, Catégorie, Type, Exécutions
+   - Montre "Aucune machine trouvée." si la liste est vide
+   - Utilise getTableMachineListItems() (données normalisées)
+
+2. ANCIEN BLOC: Modifié condition pour exclure intent='machine'
+   - Ajoute "&& !isMachineListMessage(message)" au *ngIf
+   - Conserve la compatibilité avec machines_pannes, machines_huilerie, etc.
+
+=============================================================================
+-->

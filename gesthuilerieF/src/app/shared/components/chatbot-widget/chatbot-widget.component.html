@@ -355,9 +355,42 @@
           <!-- end ranking result -->
 
           <!-- ══════════════════════════════════════════════════════════
+               MACHINE LIST for intent 'machine'
+               ══════════════════════════════════════════════════════════ -->
+          <ng-container *ngIf="message.sender === 'bot' && message.tableData && isMachineListMessage(message)">
+            <div class="chatbot-widget__ranking-text">
+              <ng-container *ngIf="getTableMachineListItems(message).length > 0; else noMachineListItems">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Nom</th>
+                      <th>Catégorie</th>
+                      <th>Type</th>
+                      <th>Exécutions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of getTableMachineListItems(message); let idx = index">
+                      <td>{{ idx + 1 }}</td>
+                      <td><strong>{{ item.nom }}</strong></td>
+                      <td>{{ item.categorie }}</td>
+                      <td>{{ item.type }}</td>
+                      <td>{{ item.executions }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </ng-container>
+              <ng-template #noMachineListItems>
+                <p>Aucune machine trouvée.</p>
+              </ng-template>
+            </div>
+          </ng-container>
+
+          <!-- ══════════════════════════════════════════════════════════
                MACHINE TABLE for non-ranking machine responses (states, pannes, all machines)
                ══════════════════════════════════════════════════════════ -->
-          <ng-container *ngIf="message.sender === 'bot' && (message.tableData) && isMachineTableMessage(message)">
+          <ng-container *ngIf="message.sender === 'bot' && (message.tableData) && isMachineTableMessage(message) && !isMachineListMessage(message)">
             <div class="chatbot-widget__ranking-text">
               <table>
                 <thead>

@@ -1,0 +1,85 @@
+// ============================================================================
+// DIFF COMPLET: Modifications du chatbot-widget.component.ts
+// ============================================================================
+// 
+// Ajouter après MachineTableItem interface (ligne ~84-100):
+
+interface MachineListItem {
+  nom: string;
+  categorie: string;
+  type: string;
+  executions: number;
+}
+
+// ============================================================================
+//  Ajouter dans la classe après getTableMachineItems() (ligne ~980):
+// ============================================================================
+
+public getTableMachineListItems(message: ChatMessage): MachineListItem[] {
+  const data = (message as any).tableData;
+  if (!data || typeof data !== 'object') return [];
+  return Array.isArray((data as any).machineList) ? (data as any).machineList : [];
+}
+
+private normalizeMachine(item: any): MachineListItem {
+  const nom = item?.nomMachine ?? item?.nom_machine ?? item?.nom ?? 'Machine inconnue';
+  const categorie = item?.categorieMachine ?? item?.categorie_machine ?? 'Inconnue';
+  const type = item?.typeMachine ?? item?.type_machine ?? 'Inconnu';
+  const executions = Number(item?.nbExecutions ?? item?.nb_executions ?? 0) || 0;
+
+  return {
+    nom: String(nom).trim() || 'Machine inconnue',
+    categorie: String(categorie).trim() || 'Inconnue',
+    type: String(type).trim() || 'Inconnu',
+    executions: executions,
+  };
+}
+
+private extractMachineList(data: unknown): MachineListItem[] {
+  if (!data || typeof data !== 'object') return [];
+
+  const rawMachines = Array.isArray((data as any).machines)
+    ? (data as any).machines
+    : Array.isArray((data as any).items)
+      ? (data as any).items
+      : [];
+
+  return rawMachines.map((item: any) => this.normalizeMachine(item));
+}
+
+public isMachineListMessage(message: ChatMessage): boolean {
+  const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.rankingIntent;
+  if (!intent) return false;
+  return String(intent).toLowerCase() === 'machine';
+}
+
+// ============================================================================
+// REMPLACER le bloc dans createBotMessage() (ligne ~1384):
+// ============================================================================
+
+// OLD:
+/*
+if (tableIntent === 'machine') {
+  const machineRows = this.extractMachineTableRows(response.data);
+  (botMessage as any).tableData = { machines: machineRows };
+  botMessage.content = 'Machines de l\'huilerie';
+} else {
+  (botMessage as any).tableData = response.data;
+}
+*/
+
+// NEW:
+if (tableIntent === 'machine') {
+  const machineList = this.extractMachineList(response.data);
+  if (machineList.length === 0) {
+    botMessage.content = 'Aucune machine trouvée.';
+    botMessage.type = 'text';
+    (botMessage as any).tableData = null;
+  } else {
+    botMessage.content = 'Machines de l\'huilerie';
+    (botMessage as any).tableData = { machineList };
+  }
+} else {
+  const machineRows = this.extractMachineTableRows(response.data);
+  (botMessage as any).tableData = { machines: machineRows };
+}

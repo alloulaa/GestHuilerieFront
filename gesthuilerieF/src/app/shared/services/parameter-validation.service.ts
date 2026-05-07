@@ -26,11 +26,11 @@ export class ParameterValidationService {
 
   // Paramètres d'analyse (produit final)
   private readonly analysisParameters: Record<string, ParameterRange> = {
-    'acidité.*huile': { min: 0.1, max: 3.5, name: 'Acidité huile' },
-    'peroxyde': { min: 3, max: 30, name: 'Peroxyde' },
+    'acidité.*huile': { min: 0.1, max: 5, name: 'Acidité huile' },
+    'peroxyde': { min: 5, max: 40, name: 'Peroxyde' },
     'polyphénols': { min: 100, max: 800, name: 'Polyphénols' },
-    'k232': { min: 1.2, max: 2.8, name: 'K232' },
-    'k270': { min: 0.08, max: 0.4, name: 'K270' },
+    'k232': { min: 1.5, max: 3.5, name: 'K232' },
+    'k270': { min: 0.1, max: 0.5, name: 'K270' },
   };
 
   constructor() { }

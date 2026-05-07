@@ -15,9 +15,9 @@ const RANKING_INTENTS: RankingIntent[] = ['fournisseur', 'machines_utilisees', '
 
 const SUPPLIER_ACIDITY_RANGE = { min: 0.2, max: 1.5 };
 const SUPPLIER_RENDEMENT_RANGE = { min: 10, max: 30 };
-const ANALYSIS_ACIDITY_RANGE = { min: 0.2, max: 0.8 };
-const ANALYSIS_PEROXIDE_RANGE = { min: 5, max: 20 };
-const ANALYSIS_K270_RANGE = { min: 0.2, max: 0.3 };
+const ANALYSIS_ACIDITY_RANGE = { min: 0.1, max: 5 };
+const ANALYSIS_PEROXIDE_RANGE = { min: 5, max: 40 };
+const ANALYSIS_K270_RANGE = { min: 0.1, max: 0.5 };
 
 interface ChatDebugInfo {
   intent: string | null;
@@ -94,6 +94,13 @@ interface MachineTableItem {
   info?: string;
   description?: string;
   [key: string]: any;
+}
+
+interface MachineListItem {
+  nom: string;
+  categorie: string;
+  type: string;
+  executions: number;
 }
 
 interface AnalysisRankingPayload {
@@ -472,6 +479,23 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     const message = (messageOverride ?? this.draftMessage).trim();
     if (!message || this.isLoading) return;
 
+    const normalizedMessage = message
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    const isMachineListQuery =
+      normalizedMessage.includes('machine') &&
+      (
+        normalizedMessage.includes('liste') ||
+        normalizedMessage.includes('quelles sont') ||
+        normalizedMessage.includes('quels sont') ||
+        normalizedMessage.includes('machines de') ||
+        normalizedMessage.includes('machine de')
+      );
+
+    const resolvedSelection = selection ?? (isMachineListQuery ? 'texte' : undefined);
+
     if (this.isMessageAboutPrediction(message)) {
       this.draftMessage = message;
       this.openPredictionModal(message);
@@ -498,7 +522,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     this.isLoading = true;
     this.scrollToBottom();
 
-    console.log('[Chatbot Widget] Sending message:', message, 'selection:', selection);
+    console.log('[Chatbot Widget] Sending message:', message, 'selection:', resolvedSelection);
 
     // Safety timeout to prevent isLoading from being stuck
     const timeoutId = setTimeout(() => {
@@ -509,7 +533,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     }, 10000);
 
     this.chatbotService
-      .sendMessage(message, selection)
+      .sendMessage(message, resolvedSelection)
       .pipe(
         finalize(() => {
           clearTimeout(timeoutId);
@@ -994,6 +1018,32 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     }));
   }
 
+  private normalizeMachine(item: any): MachineListItem {
+    const nom = item?.nomMachine ?? item?.nom_machine ?? item?.nom ?? 'Machine inconnue';
+    const categorie = item?.categorieMachine ?? item?.categorie_machine ?? 'Inconnue';
+    const type = item?.typeMachine ?? item?.type_machine ?? 'Inconnu';
+    const executions = Number(item?.nbExecutions ?? item?.nb_executions ?? 0) || 0;
+
+    return {
+      nom: String(nom).trim() || 'Machine inconnue',
+      categorie: String(categorie).trim() || 'Inconnue',
+      type: String(type).trim() || 'Inconnu',
+      executions: executions,
+    };
+  }
+
+  private extractMachineList(data: unknown): MachineListItem[] {
+    if (!data || typeof data !== 'object') return [];
+
+    const rawMachines = Array.isArray((data as any).machines)
+      ? (data as any).machines
+      : Array.isArray((data as any).items)
+        ? (data as any).items
+        : [];
+
+    return rawMachines.map((item: any) => this.normalizeMachine(item));
+  }
+
   private extractMachineTableRows(data: unknown): MachineTableItem[] {
     if (!data || typeof data !== 'object') return [];
 
@@ -1022,6 +1072,27 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     if (!intent) return false;
     const s = String(intent).toLowerCase();
     return s.includes('machine') || s.includes('panne') || s.includes('etat') || s.includes('tous');
+  }
+
+  public isMachineListMessage(message: ChatMessage): boolean {
+    const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.rankingIntent;
+    if (!intent) return false;
+    return String(intent).toLowerCase() === 'machine';
+  }
+
+  public getTableMachineListItems(message: ChatMessage): MachineListItem[] {
+    const data: any = (message as any).tableData;
+    if (!data) return [];
+
+    const rawItems = Array.isArray(data.machineList)
+      ? data.machineList
+      : Array.isArray(data.machines)
+        ? data.machines
+        : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+    return rawItems.map((item: any) => this.normalizeMachine(item));
   }
 
   getFournisseurItems(message: ChatMessage): SupplierRankingItem[] {
@@ -1232,7 +1303,9 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   private createBotMessage(response: ChatbotResponse): ChatMessage | null {
     let intent = (response.intent ?? null) as RankingIntent | string | null;
     const payloadIntent = response.data ? this.inferRankingIntentFromPayload(response.data) : null;
-    if (payloadIntent) {
+    // Preserve explicit backend intent 'machine' — do not override it with ranking inference.
+    const explicitIntent = response.intent ? String(response.intent).toLowerCase() : null;
+    if (payloadIntent && (!explicitIntent || ['inconnu', 'unknown'].includes(explicitIntent))) {
       intent = payloadIntent;
     }
     const isRankingIntent = RANKING_INTENTS.includes(intent as RankingIntent);
@@ -1318,7 +1391,13 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     let messageType = response.type ?? 'text';
     let pendingRankingData: RankingPayload = null;
 
-    if (isRanking && rankingData && messageType !== 'choice') {
+    if (
+      isRanking &&
+      rankingData &&
+      messageType !== 'choice' &&
+      response.pending_choice !== false &&
+      !response.selected_option
+    ) {
       // Backend a renvoyé directement text/chart avec les données
       // → on intercepte et on crée le message choice
       pendingRankingData = rankingData;
@@ -1382,11 +1461,18 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       (botMessage as any).tableIntent = tableIntent;
 
       if (tableIntent === 'machine') {
+        const machineList = this.extractMachineList(response.data);
+        if (machineList.length === 0) {
+          botMessage.content = 'Aucune machine trouvée.';
+          botMessage.type = 'text';
+          (botMessage as any).tableData = null;
+        } else {
+          botMessage.content = 'Machines de l\'huilerie';
+          (botMessage as any).tableData = { machineList };
+        }
+      } else {
         const machineRows = this.extractMachineTableRows(response.data);
         (botMessage as any).tableData = { machines: machineRows };
-        botMessage.content = 'Machines de l\'huilerie';
-      } else {
-        (botMessage as any).tableData = response.data;
       }
 
       if (botMessage.type === 'choice') {

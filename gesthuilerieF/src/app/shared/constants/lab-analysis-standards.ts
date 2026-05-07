@@ -30,8 +30,8 @@ export const LAB_ANALYSIS_STANDARDS: LabParameterStandard[] = [
     label: 'Acidité de l\'huile',
     unit: '%',
     min: 0.1,
-    max: 5.0,
-    description: 'Huile d\'olive vierge extra (max 0.8%). Pour huile vierge fine: max 1.5%, Pour huile vierge lampante: > 1.5%',
+    max: 5,
+    description: 'Intervalle standard: 0.1 à 5%',
     category: 'extra',
   },
   {
@@ -40,7 +40,7 @@ export const LAB_ANALYSIS_STANDARDS: LabParameterStandard[] = [
     unit: 'meq O₂/kg',
     min: 5,
     max: 40,
-    description: 'Mesure du degré d\'oxydation. Max 20 meq O₂/kg pour huile vierge extra, Max 30 pour huile fine',
+    description: 'Intervalle standard: 5 à 40 meq O₂/kg',
     category: 'extra',
   },
   {
@@ -58,7 +58,7 @@ export const LAB_ANALYSIS_STANDARDS: LabParameterStandard[] = [
     unit: '',
     min: 1.5,
     max: 3.5,
-    description: 'Mesure de l\'absorption UV à 232 nm. Max 2.5 pour huile vierge extra, Max 2.7 pour fine',
+    description: 'Intervalle standard: 1.5 à 3.5',
     category: 'extra',
   },
   {
@@ -66,8 +66,8 @@ export const LAB_ANALYSIS_STANDARDS: LabParameterStandard[] = [
     label: 'Extinction K270',
     unit: '',
     min: 0.1,
-    max: 0.50,
-    description: 'Mesure de l\'absorption UV à 270 nm (conjugated dienes). Max 0.22 pour huile vierge extra',
+    max: 0.5,
+    description: 'Intervalle standard: 0.1 à 0.5',
     category: 'extra',
   },
 ];
