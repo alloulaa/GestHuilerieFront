@@ -1019,10 +1019,10 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private normalizeMachine(item: any): MachineListItem {
-    const nom = item?.nomMachine ?? item?.nom_machine ?? item?.nom ?? 'Machine inconnue';
-    const categorie = item?.categorieMachine ?? item?.categorie_machine ?? 'Inconnue';
-    const type = item?.typeMachine ?? item?.type_machine ?? 'Inconnu';
-    const executions = Number(item?.nbExecutions ?? item?.nb_executions ?? 0) || 0;
+    const nom = item?.nomMachine ?? item?.nom_machine ?? item?.nom ?? item?.name ?? item?.machine ?? 'Machine inconnue';
+    const categorie = item?.categorieMachine ?? item?.categorie_machine ?? item?.categorie ?? item?.category ?? 'Inconnue';
+    const type = item?.typeMachine ?? item?.type_machine ?? item?.type ?? item?.machineType ?? 'Inconnu';
+    const executions = Number(item?.nbExecutions ?? item?.nb_executions ?? item?.executions ?? item?.executionCount ?? 0) || 0;
 
     return {
       nom: String(nom).trim() || 'Machine inconnue',
@@ -1035,11 +1035,18 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   private extractMachineList(data: unknown): MachineListItem[] {
     if (!data || typeof data !== 'object') return [];
 
-    const rawMachines = Array.isArray((data as any).machines)
-      ? (data as any).machines
-      : Array.isArray((data as any).items)
-        ? (data as any).items
-        : [];
+    const record = data as Record<string, unknown>;
+    const rawMachines = Array.isArray(record['machines'])
+      ? record['machines']
+      : Array.isArray(record['items'])
+        ? record['items']
+        : Array.isArray(record['data'])
+          ? record['data']
+          : Array.isArray((record['data'] as any)?.machines)
+            ? (record['data'] as any).machines
+            : Array.isArray((record['data'] as any)?.items)
+              ? (record['data'] as any).items
+              : [];
 
     return rawMachines.map((item: any) => this.normalizeMachine(item));
   }

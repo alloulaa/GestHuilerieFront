@@ -2,6 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { environment } from '../../../../environments/environment';
 
 export type ChatbotResponseType = 'text' | 'choice' | 'chart';
 export type ChatbotChartType = 'bar' | 'line' | 'pie';
@@ -169,6 +170,14 @@ export class ChatbotService {
       }));
     }
 
+    if (this.shouldReturnMachineMock(trimmedMessage)) {
+      return of(this.normalizeResponse(this.buildMachineMockResponse(trimmedMessage))).pipe(
+        tap((response) => {
+          console.log('[Chatbot API] Dev mock response received:', response);
+        })
+      );
+    }
+
     const token = this.resolveToken();
     if (!token) {
       return of(this.normalizeResponse({
@@ -278,6 +287,64 @@ export class ChatbotService {
     }
 
     return null;
+  }
+
+  private shouldReturnMachineMock(message: string): boolean {
+    if (environment.production) {
+      return false;
+    }
+
+    const normalizedMessage = message
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    return (
+      normalizedMessage.includes('__mock_machine__') ||
+      normalizedMessage.includes('mock machine') ||
+      normalizedMessage.includes('demo machine') ||
+      normalizedMessage.includes('machine demo')
+    );
+  }
+
+  private buildMachineMockResponse(message: string): Record<string, unknown> {
+    const hasZitounia = message.toLowerCase().includes('zitounia');
+    const huilerieLabel = hasZitounia ? 'zitounia' : 'démonstration';
+
+    return {
+      type: 'text',
+      message: `Machines de l'huilerie ${huilerieLabel} :\n- **makina1** | catégorie: broyage | type: disques | exécutions: 12 | état: EN_SERVICE\n- **makina2** | catégorie: malaxage | type: vertical | exécutions: 7 | état: EN_SERVICE`,
+      response: `Machines de l'huilerie ${huilerieLabel} :\n- **makina1** | catégorie: broyage | type: disques | exécutions: 12 | état: EN_SERVICE\n- **makina2** | catégorie: malaxage | type: vertical | exécutions: 7 | état: EN_SERVICE`,
+      intent: 'machine',
+      confidence: 1,
+      options: [],
+      chart_type: null,
+      data: {
+        machines: [
+          {
+            rang: 1,
+            nomMachine: 'makina1',
+            categorieMachine: 'broyage',
+            typeMachine: 'disques',
+            nbExecutions: 12,
+            etatMachine: 'EN_SERVICE',
+          },
+          {
+            rang: 2,
+            nomMachine: 'makina2',
+            categorieMachine: 'malaxage',
+            typeMachine: 'vertical',
+            nbExecutions: 7,
+            etatMachine: 'EN_SERVICE',
+          },
+        ],
+        labels: ['makina1', 'makina2'],
+        datasets: [],
+      },
+      applied_scope: hasZitounia ? { huilerie: 'zitounia' } : { huilerie: 'demo' },
+      pending_choice: false,
+      selected_option: null,
+    };
   }
 
   private normalizeResponse(response: any): ChatbotResponse {
