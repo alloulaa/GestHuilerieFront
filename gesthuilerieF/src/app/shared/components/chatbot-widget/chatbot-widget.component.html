@@ -357,8 +357,11 @@
           <!-- ══════════════════════════════════════════════════════════
                MACHINE LIST for intent 'machine'
                ══════════════════════════════════════════════════════════ -->
-          <ng-container *ngIf="message.sender === 'bot' && message.tableData && isMachineListMessage(message)">
+          <ng-container *ngIf="message.sender === 'bot' && isMachineListMessage(message)">
             <div class="chatbot-widget__ranking-text">
+              <p class="chatbot-widget__ranking-header">
+                {{ message.content }}
+              </p>
               <ng-container *ngIf="getTableMachineListItems(message).length > 0; else noMachineListItems">
                 <table>
                   <thead>
@@ -390,7 +393,7 @@
           <!-- ══════════════════════════════════════════════════════════
                MACHINE TABLE for non-ranking machine responses (states, pannes, all machines)
                ══════════════════════════════════════════════════════════ -->
-          <ng-container *ngIf="message.sender === 'bot' && (message.tableData) && isMachineTableMessage(message) && !isMachineListMessage(message)">
+          <ng-container *ngIf="message.sender === 'bot' && isMachineTableMessage(message) && !isMachineListMessage(message)">
             <div class="chatbot-widget__ranking-text">
               <table>
                 <thead>

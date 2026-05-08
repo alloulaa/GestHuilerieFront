@@ -1083,8 +1083,18 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   public isMachineListMessage(message: ChatMessage): boolean {
     const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.rankingIntent;
-    if (!intent) return false;
-    return String(intent).toLowerCase() === 'machine';
+    const content = String(message.content ?? '').toLowerCase();
+    if (!intent) {
+      return content.includes('machines de l') || content.includes('machine');
+    }
+
+    const normalized = String(intent).toLowerCase();
+    return (
+      normalized === 'machine' ||
+      normalized === 'machines' ||
+      normalized === 'machine_list' ||
+      content.includes('machines de l')
+    );
   }
 
   public getTableMachineListItems(message: ChatMessage): MachineListItem[] {
@@ -1475,7 +1485,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
           (botMessage as any).tableData = null;
         } else {
           botMessage.content = 'Machines de l\'huilerie';
-          (botMessage as any).tableData = { machineList };
+          (botMessage as any).tableData = response.data;
         }
       } else {
         const machineRows = this.extractMachineTableRows(response.data);

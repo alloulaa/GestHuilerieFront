@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
-import { environment } from '../../../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 export type ChatbotResponseType = 'text' | 'choice' | 'chart';
 export type ChatbotChartType = 'bar' | 'line' | 'pie';
