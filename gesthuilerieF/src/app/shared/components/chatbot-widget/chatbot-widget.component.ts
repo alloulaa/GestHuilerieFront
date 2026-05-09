@@ -167,6 +167,9 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   isMobile = window.innerWidth <= 640;
   showPredictionModal = false;
   showLabAnalysisFields = false;
+  // When true, frontend will always prompt user to choose 'texte' or 'graphique'
+  // for ranking responses, ignoring the backend `pending_choice` hint.
+  private alwaysPromptRankingChoice = true;
   predictionFormData: Record<string, unknown> = this.initPredictionFormData();
   predictionFormErrors: string[] = [];
   backendPredictionError: string | null = null;
@@ -1395,11 +1398,13 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       isRanking &&
       rankingData &&
       messageType !== 'choice' &&
-      response.pending_choice !== false &&
+      (response.pending_choice !== false || this.alwaysPromptRankingChoice) &&
       !response.selected_option
     ) {
       // Backend a renvoyé directement text/chart avec les données
-      // → on intercepte et on crée le message choice
+      // → on intercepte et on crée le message choice. The
+      // `alwaysPromptRankingChoice` flag allows the frontend to
+      // override the backend hint and always prompt the user.
       pendingRankingData = rankingData;
       messageType = 'choice';
     } else if (isRanking && messageType === 'choice') {

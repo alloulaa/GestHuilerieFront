@@ -417,7 +417,7 @@
                GENERIC PLAIN TEXT message  (non-ranking, non-choice)
                ══════════════════════════════════════════════════════════ -->
           <ng-container *ngIf="message.sender === 'bot' && !isChoiceMessage(message) && !isRankingMessage(message) && !(message.tableData && isMachineTableMessage(message))">
-            <p>{{ message.content }}</p>
+            <p class="chatbot-widget__choice-prompt">{{ message.content }}</p>
           </ng-container>
 
           <!-- User bubble -->
