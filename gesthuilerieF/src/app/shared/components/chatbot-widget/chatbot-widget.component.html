@@ -86,20 +86,20 @@
           <!-- ══════════════════════════════════════════════════════════
                RANKING RESULT  — text table OR chart with metric tabs
                ══════════════════════════════════════════════════════════ -->
-          <ng-container *ngIf="message.sender === 'bot' && isRankingMessage(message)">
+          <ng-container *ngIf="message.sender === 'bot' && message.type === 'ranking'">
 
             <!-- Result header -->
             <p class="chatbot-widget__ranking-header">
               {{ message.content }}
             </p>
 
-            <div class="chatbot-widget__ranking" [attr.data-intent]="message.rankingIntent">
+            <div class="chatbot-widget__ranking" [attr.data-intent]="message.intent">
 
               <!-- ── TEXT TABLE VIEW ─────────────────────────────── -->
               <ng-container *ngIf="message.rankingViewMode === 'text'">
 
                 <!-- Fournisseur table -->
-                <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
+                <ng-container *ngIf="message.intent === 'fournisseur'">
                   <div class="chatbot-widget__ranking-text">
                     <table>
                       <thead>
@@ -134,7 +134,7 @@
                 </ng-container>
 
                 <!-- Machines table -->
-                <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
+                <ng-container *ngIf="message.intent === 'machines_utilisees'">
                   <div class="chatbot-widget__ranking-text">
                     <table>
                       <thead>
@@ -161,7 +161,7 @@
                 </ng-container>
 
                 <!-- Lots table -->
-                <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
+                <ng-container *ngIf="message.intent === 'lot_liste'"> 
                   <div class="chatbot-widget__ranking-text">
                     <table>
                       <thead>
@@ -189,7 +189,7 @@
                 </ng-container>
 
                 <!-- Analyses table -->
-                <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
+                <ng-container *ngIf="message.intent === 'analyse_labo'"> 
                   <div class="chatbot-widget__ranking-text">
                     <table>
                       <thead>
@@ -223,7 +223,7 @@
                 </ng-container>
 
                 <!-- Stock table -->
-                <ng-container *ngIf="message.rankingIntent === 'stock'">
+                <ng-container *ngIf="message.intent === 'stock'"> 
                   <div class="chatbot-widget__ranking-text">
                     <table>
                       <thead>
@@ -258,7 +258,7 @@
               <ng-container *ngIf="message.rankingViewMode === 'chart'">
 
                 <!-- Metric toggle buttons — fournisseur -->
-                <ng-container *ngIf="message.rankingIntent === 'fournisseur'">
+                <ng-container *ngIf="message.intent === 'fournisseur'">
                   <div class="chatbot-widget__metric-toggle">
                     <button type="button"
                       [class.is-active]="getRankingMetric(message) === 'kg'"
@@ -279,7 +279,7 @@
                 </ng-container>
 
                 <!-- Metric toggle buttons — machines -->
-                <ng-container *ngIf="message.rankingIntent === 'machines_utilisees'">
+                <ng-container *ngIf="message.intent === 'machines_utilisees'">
                   <div class="chatbot-widget__metric-toggle">
                     <button type="button"
                       [class.is-active]="getRankingMetric(message) === 'executions'"
@@ -300,7 +300,7 @@
                 </ng-container>
 
                 <!-- Metric toggle buttons — lots -->
-                <ng-container *ngIf="message.rankingIntent === 'lot_liste'">
+                <ng-container *ngIf="message.intent === 'lot_liste'">
                   <div class="chatbot-widget__metric-toggle">
                     <button type="button"
                       [class.is-active]="getRankingMetric(message) === 'quantite'"
@@ -311,7 +311,7 @@
                 </ng-container>
 
                 <!-- Metric toggle buttons — analyse labo -->
-                <ng-container *ngIf="message.rankingIntent === 'analyse_labo'">
+                <ng-container *ngIf="message.intent === 'analyse_labo'">
                   <div class="chatbot-widget__metric-toggle">
                     <button type="button"
                       [class.is-active]="getRankingMetric(message) === 'acidite'"
@@ -332,7 +332,7 @@
                 </ng-container>
 
                 <!-- Metric toggle buttons — stock -->
-                <ng-container *ngIf="message.rankingIntent === 'stock'">
+                <ng-container *ngIf="message.intent === 'stock'">
                   <div class="chatbot-widget__metric-toggle">
                     <button type="button"
                       [class.is-active]="getRankingMetric(message) === 'quantite'"

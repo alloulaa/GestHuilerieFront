@@ -6,12 +6,14 @@ import { Chart, ChartConfiguration, ChartDataset, ChartType, registerables, Tool
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
-import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService, PredictionPayload, RankingIntent, FournisseurItem, MachineItem, LotItem, AnalysisItem } from '../../../core/services/chatbot.service';
+import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService, PredictionPayload } from '../../../core/services/chatbot.service';
 
 Chart.register(...registerables);
 
 const CHART_COLORS = ['#6f8d3a', '#9bb85a', '#d8c65a', '#7e9fcb', '#f3a15f', '#c96c6c'];
-const RANKING_INTENTS: RankingIntent[] = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock'];
+const RANKING_INTENTS = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock', 'production', 'rendement', 'qualite', 'campagne', 'reception', 'diagnostic', 'comparaison', 'mouvement_stock'] as const;
+
+type RankingIntent = typeof RANKING_INTENTS[number];
 
 const SUPPLIER_ACIDITY_RANGE = { min: 0.2, max: 1.5 };
 const SUPPLIER_RENDEMENT_RANGE = { min: 10, max: 30 };
@@ -129,18 +131,18 @@ interface ChatMessage {
   sender: 'user' | 'bot';
   content: string;
   timestamp: Date;
-  type: ChatbotResponseType;
+  turnId?: number;
+  type: 'text' | 'choice' | 'chart' | 'ranking';
+  intent: string | null;
   options: string[];
-  chartType: ChatbotChartType | null;
-  chartData: ChatbotChartPayload | null;
-  rankingData: RankingPayload;
-  rankingIntent: RankingIntent | null;
-  rankingViewMode: RankingViewMode;
-  rankingMetric?: string;
-  debug: ChatDebugInfo | null;
-  // For non-ranking tabular responses (e.g., machine states, machines en panne)
-  tableData?: unknown;
-  tableIntent?: string | null;
+  pendingItems?: any[];          // Stores ranking data when type='choice', used after user picks
+  rankingItems?: any[];          // Normalized rows for text table (unified across all ranking types)
+  chartData?: ChatbotChartPayload;
+  chartType?: ChatbotChartType | null;
+  rankingMetric?: string;        // Currently selected metric for chart display
+  rankingViewMode?: RankingViewMode;
+  debug?: ChatDebugInfo | null;
+  tableData?: any;               // Machine table data (legacy, for non-ranking machine messages)
 }
 
 @Component({
@@ -169,11 +171,13 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   showLabAnalysisFields = false;
   // When true, frontend will always prompt user to choose 'texte' or 'graphique'
   // for ranking responses, ignoring the backend `pending_choice` hint.
+  // Frontend always prompts user to choose 'texte' or 'graphique' for ranking responses
   private alwaysPromptRankingChoice = true;
   predictionFormData: Record<string, unknown> = this.initPredictionFormData();
   predictionFormErrors: string[] = [];
   backendPredictionError: string | null = null;
   private messageIdSequence = 0;
+  private conversationTurnSequence = 0;
   private chartInstances = new Map<number, Chart>();
   private chartCanvasSubscription?: Subscription;
   private panelResizeObserver?: ResizeObserver;
@@ -186,13 +190,8 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       content: 'Bonjour, je suis votre assistant Huilerie. Comment puis-je vous aider aujourd\'hui ?',
       timestamp: new Date(),
       type: 'text',
+      intent: null,
       options: [],
-      chartType: null,
-      chartData: null,
-      rankingData: null,
-      rankingIntent: null,
-      rankingViewMode: 'chart',
-      debug: null,
     },
   ];
 
@@ -400,44 +399,39 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     if (this.isLoading) return;
 
     const selection = option.toLowerCase() === 'graphique' ? 'graphique' : 'texte';
+    const turnId = this.nextConversationTurnId();
 
-    // Trouver le dernier message choice avec données en attente
+    // Find last choice message with pending ranking data
     const choiceMessage = [...this.messages]
       .reverse()
       .find(m =>
         m.sender === 'bot' &&
         m.type === 'choice' &&
-        !!(m as any)._pendingRankingData &&
-        !!(m as any)._pendingRankingIntent,
+        !!m.pendingItems
       );
 
-    const pendingRankingData  = choiceMessage ? (choiceMessage as any)._pendingRankingData  : null;
-    const pendingRankingIntent = choiceMessage ? (choiceMessage as any)._pendingRankingIntent : null;
+    const pendingItems = choiceMessage?.pendingItems;
+    const pendingIntent = choiceMessage?.intent;
 
-    if (pendingRankingData && pendingRankingIntent) {
-      // Set loading state to prevent double-clicks while displaying local data
+    if (pendingItems && pendingIntent) {
       this.isLoading = true;
 
-      // Message utilisateur (bulle de droite)
+      // User message
       this.messages.push({
         id: this.nextMessageId(),
         sender: 'user',
         content: selection === 'graphique' ? 'Graphique' : 'Texte',
         timestamp: new Date(),
+        turnId,
         type: 'text',
+        intent: null,
         options: [],
-        chartType: null,
-        chartData: null,
-        rankingData: null,
-        rankingIntent: null,
-        rankingViewMode: 'chart',
-        debug: null,
       });
 
-      // Construire le chartData avec la métrique par défaut de cet intent
-      const defaultMetric = this.defaultMetricForIntent(pendingRankingIntent);
+      // Build chart data with default metric for this intent
+      const defaultMetric = this.defaultMetricForIntent(pendingIntent);
       const chartData = selection === 'graphique'
-        ? this.buildRankingChartPayload(pendingRankingData, pendingRankingIntent, defaultMetric)
+        ? this.buildChartPayload(pendingItems, pendingIntent, defaultMetric)
         : null;
 
       const botResponse: ChatMessage = {
@@ -447,15 +441,15 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
           ? 'Voici les résultats en mode graphique...'
           : 'Voici les résultats en mode texte...',
         timestamp: new Date(),
-        type: selection === 'graphique' ? 'chart' : 'text',
+        turnId,
+        type: selection === 'graphique' ? 'ranking' : 'ranking',
+        intent: pendingIntent,
         options: [],
-        chartType: selection === 'graphique' ? 'bar' : null,
-        chartData,
-        rankingData: pendingRankingData,
-        rankingIntent: pendingRankingIntent,
+        chartType: selection === 'graphique' ? 'bar' : undefined,
+        chartData: chartData || undefined,
+        rankingItems: pendingItems,
         rankingViewMode: selection === 'graphique' ? 'chart' : 'text',
         rankingMetric: defaultMetric,
-        debug: null,
       };
 
       this.messages.push(botResponse);
@@ -474,13 +468,14 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Fallback: send to backend (sendMessage will handle user message, isLoading, and HTTP request)
+    // Fallback: send to backend
     this.sendMessage(option, selection as 'texte' | 'graphique');
   }
 
   sendMessage(messageOverride?: string, selection?: 'texte' | 'graphique'): void {
     const message = (messageOverride ?? this.draftMessage).trim();
     if (!message || this.isLoading) return;
+    const turnId = this.nextConversationTurnId();
 
     const normalizedMessage = message
       .toLowerCase()
@@ -510,14 +505,10 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       sender: 'user',
       content: message,
       timestamp: new Date(),
+      turnId,
       type: 'text',
+      intent: null,
       options: [],
-      chartType: null,
-      chartData: null,
-      rankingData: null,
-      rankingIntent: null,
-      rankingViewMode: 'chart',
-      debug: null,
     });
     this.hasSentUserMessage = true;
     this.draftMessage = '';
@@ -547,7 +538,6 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       )
       .subscribe((response: ChatbotResponse) => {
         console.log('[Chatbot Widget] Response received:', response);
-        // IMMEDIATE: Reset loading flag right away so UI is responsive
         this.isLoading = false;
         this.cdr.detectChanges();
 
@@ -555,20 +545,20 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
           try {
             const botMessage = this.createBotMessage(response);
 
-            // Skip if message creation returned null (e.g., empty duplicate response)
             if (!botMessage) {
               console.log('[Chatbot Widget] Skipping null message');
               return;
             }
 
-            // Deduplication: skip if we already have a message with same type, content, and rankingIntent
-            // (ignore rankingData since backend might send it differently in duplicate responses)
+            botMessage.turnId = turnId;
+
+            // Deduplication
             const isDuplicate = this.messages.some(msg => 
               msg.sender === 'bot' && 
+              msg.turnId === botMessage.turnId &&
               msg.type === botMessage.type &&
               msg.content === botMessage.content &&
-              msg.rankingIntent === botMessage.rankingIntent &&
-              msg.rankingIntent !== null  // Only dedupe ranking messages
+              msg.intent === botMessage.intent
             );
 
             if (isDuplicate) {
@@ -694,6 +684,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     if (this.isLoading) return;
 
     const message = this.draftMessage.trim() || 'prediction';
+    const turnId = this.nextConversationTurnId();
 
     // Build and validate payload
     const payload = this.buildPredictionPayload();
@@ -701,24 +692,19 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     this.predictionFormErrors = errors;
     this.backendPredictionError = null;
     if (errors.length > 0) {
-      // keep modal open to allow corrections
       return;
     }
 
-    // Push user message (same behaviour as normal send)
+    // Push user message
     this.messages.push({
       id: this.nextMessageId(),
       sender: 'user',
       content: message,
       timestamp: new Date(),
+      turnId,
       type: 'text',
+      intent: null,
       options: [],
-      chartType: null,
-      chartData: null,
-      rankingData: null,
-      rankingIntent: null,
-      rankingViewMode: 'chart',
-      debug: null,
     });
 
     this.hasSentUserMessage = true;
@@ -736,13 +722,14 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
           console.log('[Chatbot Widget] Prediction response received:', response);
           const botMessage = this.createBotMessage(response);
           if (!botMessage) return;
+          botMessage.turnId = turnId;
 
           const isDuplicate = this.messages.some((msg) =>
             msg.sender === 'bot' &&
+            msg.turnId === botMessage.turnId &&
             msg.type === botMessage.type &&
             msg.content === botMessage.content &&
-            msg.rankingIntent === botMessage.rankingIntent &&
-            msg.rankingIntent !== null
+            msg.intent === botMessage.intent
           );
 
           if (!isDuplicate) {
@@ -758,7 +745,6 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
         error: (err: any) => {
           console.error('[Chatbot Widget] Prediction error:', err);
           if (err && err.status === 422 && err.error) {
-            // Prefer structured backend validation messages
             try {
               const backend = err.error;
               if (typeof backend === 'string') {
@@ -776,7 +762,6 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
           } else {
             this.backendPredictionError = 'Erreur lors de l\'appel au serveur. Vérifiez la connexion.';
           }
-          // keep modal open so user can correct
           this.showPredictionModal = true;
         }
       });
@@ -935,12 +920,12 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   isChartMessage(message: ChatMessage): boolean {
-    return message.sender === 'bot' && message.type === 'chart' && (this.hasChartData(message) || !!message.rankingData);
+    return message.sender === 'bot' && message.type === 'chart' && !!message.chartData;
   }
 
   isRankingMessage(message: ChatMessage): boolean {
-    // Show ranking view only when bot returned ranking data and NOT during choice prompt
-    return message.sender === 'bot' && message.type !== 'choice' && !!message.rankingData && !!message.rankingIntent;
+    // Show ranking view when type='ranking'
+    return message.sender === 'bot' && message.type === 'ranking' && !!message.rankingItems;
   }
 
   isChoiceMessage(message: ChatMessage): boolean {
@@ -977,23 +962,20 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   getRankingMetric(message: ChatMessage): string {
     if (message.rankingMetric) return message.rankingMetric;
-    return this.defaultMetricForIntent(message.rankingIntent);
+    return this.defaultMetricForIntent(message.intent);
   }
 
   setRankingMetric(message: ChatMessage, metric: string): void {
     message.rankingMetric = metric;
     // Rebuild chart data with new metric for ranking types that support it
-    if (message.rankingData && message.rankingIntent && ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock'].includes(message.rankingIntent)) {
-      message.chartData = this.buildRankingChartPayload(message.rankingData, message.rankingIntent, metric);
+    if (message.rankingItems && message.intent && RANKING_INTENTS.includes(message.intent as any)) {
+      message.chartData = this.buildChartPayload(message.rankingItems, message.intent, metric);
     }
     setTimeout(() => this.renderCharts());
   }
 
   getRankingItems(message: ChatMessage): unknown[] {
-    if (!message.rankingData || !('items' in message.rankingData)) {
-      return [];
-    }
-    return message.rankingData.items as unknown[];
+    return message.rankingItems ?? [];
   }
 
   public getTableMachineItems(message: ChatMessage): MachineTableItem[] {
@@ -1071,14 +1053,14 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   public isMachineTableMessage(message: ChatMessage): boolean {
-    const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.rankingIntent;
+    const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.intent;
     if (!intent) return false;
     const s = String(intent).toLowerCase();
     return s.includes('machine') || s.includes('panne') || s.includes('etat') || s.includes('tous');
   }
 
   public isMachineListMessage(message: ChatMessage): boolean {
-    const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.rankingIntent;
+    const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.intent;
     if (!intent) return false;
     return String(intent).toLowerCase() === 'machine';
   }
@@ -1299,279 +1281,219 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     return this.messageIdSequence;
   }
 
+  private nextConversationTurnId(): number {
+    this.conversationTurnSequence += 1;
+    return this.conversationTurnSequence;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Private — message creation
   // ─────────────────────────────────────────────────────────────────────────────
 
   private createBotMessage(response: ChatbotResponse): ChatMessage | null {
-    let intent = (response.intent ?? null) as RankingIntent | string | null;
-    const payloadIntent = response.data ? this.inferRankingIntentFromPayload(response.data) : null;
-    // Preserve explicit backend intent 'machine' — do not override it with ranking inference.
-    const explicitIntent = response.intent ? String(response.intent).toLowerCase() : null;
-    if (payloadIntent && (!explicitIntent || ['inconnu', 'unknown'].includes(explicitIntent))) {
-      intent = payloadIntent;
-    }
-    const isRankingIntent = RANKING_INTENTS.includes(intent as RankingIntent);
+    const intent = this.resolveIntent(response);
+    const messageType = this.resolveMessageType(response, intent);
 
-    // ── 1. Détection automatique de l'intent depuis le texte si inconnu ──────
-    if (
-      (!intent || ['inconnu', 'unknown'].includes(String(intent).toLowerCase())) &&
-      response.data
-    ) {
-      const textContent = (response.message || response.response || '').toLowerCase();
-      if (textContent.includes('stock')) {
-        intent = 'stock';
-      } else if (textContent.includes('fournisseur') || textContent.includes('supplier')) {
-        intent = 'fournisseur';
-      } else if (
-        textContent.includes('panne') ||
-        textContent.includes('en panne') ||
-        textContent.includes('défaill') ||
-        textContent.includes('defaill') ||
-        textContent.includes('incident machine')
-      ) {
-        intent = 'machines_pannes';
-      } else if (
-        textContent.includes('qualité') ||
-        textContent.includes('qualite') ||
-        textContent.includes('type de machine') ||
-        textContent.includes('machines de huilerie') ||
-        textContent.includes('huilerie')
-      ) {
-        intent = 'machines_huilerie';
-      } else if (textContent.includes('machine') || textContent.includes('execution')) {
-        intent = 'machines_utilisees';
-      } else if (textContent.includes('lot') && textContent.includes('référence')) {
-        intent = 'lot_liste';
-      } else if (textContent.includes('analyse') || textContent.includes('acidité')) {
-        intent = 'analyse_labo';
-      }
-    }
-
-    // ── 2. Si backend envoie type='choice' SANS données de ranking → ignorer ─
-    //    C'est le doublon parasite qu'on veut éliminer.
-    if (
-      response.type === 'choice' &&
-      isRankingIntent &&
-      !response.data
-    ) {
-      console.log('[Chatbot Widget] Skipping empty choice message (no data)');
-      return null;
-    }
-
-    // ── 3. Si intent inconnu ET aucune donnée → ignorer ──────────────────────
-    if (
-      (!intent || ['inconnu', 'unknown'].includes(String(intent).toLowerCase())) &&
-      !response.data
-    ) {
+    if (!intent && messageType === 'text' && !response.data) {
       console.log('[Chatbot Widget] Skipping empty response with no data and unknown intent');
       return null;
     }
 
-    const isRanking = RANKING_INTENTS.includes(intent as RankingIntent);
+    const isRanking = RANKING_INTENTS.includes(intent as any);
+    const rankingItems = isRanking ? this.resolveRankingItems(response.data, intent) : undefined;
+    const chartData = this.resolveChartData(response, rankingItems, intent);
 
-    // ── 4. Normaliser les données de ranking ─────────────────────────────────
-    let rankingData: RankingPayload = null;
-    let chartData: ChatbotChartPayload | null = null;
-
-    if (isRanking && response.type !== 'choice') {
-      rankingData = this.normalizeRankingData(response.data, intent as RankingIntent);
-      if (rankingData) {
-        chartData = this.buildRankingChartPayload(
-          rankingData,
-          intent as RankingIntent,
-          this.defaultMetricForIntent(intent as RankingIntent),
-        );
-      }
-    }
-
-    // Fallback chart générique
-    if (!chartData && response.type === 'chart') {
-      chartData = this.normalizeChartData(response.data);
-    }
-
-    // ── 5. Décider le type de message final ──────────────────────────────────
-    let messageType = response.type ?? 'text';
-    let pendingRankingData: RankingPayload = null;
+    // Determine if this should be a choice prompt (all ranking intents, always prompt)
+    let finalType = messageType as any;
+    let pendingItems: any[] | undefined;
 
     if (
       isRanking &&
-      rankingData &&
+      rankingItems &&
       messageType !== 'choice' &&
-      (response.pending_choice !== false || this.alwaysPromptRankingChoice) &&
-      !response.selected_option
+      !response.selected_option &&
+      this.alwaysPromptRankingChoice
     ) {
-      // Backend a renvoyé directement text/chart avec les données
-      // → on intercepte et on crée le message choice. The
-      // `alwaysPromptRankingChoice` flag allows the frontend to
-      // override the backend hint and always prompt the user.
-      pendingRankingData = rankingData;
-      messageType = 'choice';
-    } else if (isRanking && messageType === 'choice') {
-      // Backend a envoyé type='choice' avec données → stocker pour après
-      rankingData = this.normalizeRankingData(response.data, intent as RankingIntent);
-      if (rankingData) {
-        chartData = this.buildRankingChartPayload(
-          rankingData,
-          intent as RankingIntent,
-          this.defaultMetricForIntent(intent as RankingIntent),
-        );
-        pendingRankingData = rankingData;
-      }
+      finalType = 'choice';
+      pendingItems = rankingItems;
     }
-
-    // Si on vient de sendChoice (selected_option), on affiche le résultat
-    if (response.selected_option) {
-      messageType = response.selected_option === 'graphique' ? 'chart' : 'text';
-    }
-
-    const shouldAttachRanking =
-      messageType !== 'choice' && isRanking && !!rankingData;
-
-    const viewMode: RankingViewMode =
-      response.selected_option === 'texte' ? 'text' : 'chart';
 
     const botMessage: ChatMessage = {
       id: this.nextMessageId(),
       sender: 'bot',
       content: response.message || response.response || 'Réponse reçue.',
       timestamp: new Date(),
-      type: messageType,
-      options: messageType === 'choice' ? ['graphique', 'texte'] : [],
-      chartType: messageType === 'chart' ? (response.chart_type ?? 'bar') : null,
-      chartData: messageType === 'chart' ? chartData : null,
-      rankingData: shouldAttachRanking ? rankingData : null,
-      rankingIntent: shouldAttachRanking ? (intent as RankingIntent) : null,
-      rankingViewMode: viewMode,
-      rankingMetric: this.defaultMetricForIntent(intent as RankingIntent),
-      debug: response.intent || response.confidence !== null || response.applied_scope
-        ? {
-            intent: response.intent,
-            confidence: response.confidence,
-            appliedScope: response.applied_scope,
-          }
-        : null,
+      type: finalType === 'chart' && isRanking ? 'ranking' : (finalType === 'choice' ? 'choice' : 'text'),
+      intent: intent || null,
+      options: finalType === 'choice' ? ['graphique', 'texte'] : [],
+      chartType: finalType === 'chart' ? (response.chart_type ?? 'bar') : undefined,
+      chartData: finalType === 'chart' ? chartData : undefined,
+      rankingItems,
+      rankingViewMode: response.selected_option === 'texte' ? 'text' : 'chart',
+      rankingMetric: this.defaultMetricForIntent(intent),
+      pendingItems,
     };
-
-    // Stocker les données en attente sur le message choice
-    if (messageType === 'choice' && pendingRankingData) {
-      (botMessage as any)._pendingRankingData = pendingRankingData;
-      (botMessage as any)._pendingRankingIntent = intent as RankingIntent;
-    }
-
-    // If backend sent a 'choice' or structured data for a non-ranking machine intent,
-    // convert to a direct text/table message and attach raw tableData for template rendering.
-    if (!isRanking && response.data) {
-      const tableIntent = response.intent ?? intent ?? null;
-      (botMessage as any).tableIntent = tableIntent;
-
-      if (tableIntent === 'machine') {
-        const machineList = this.extractMachineList(response.data);
-        if (machineList.length === 0) {
-          botMessage.content = 'Aucune machine trouvée.';
-          botMessage.type = 'text';
-          (botMessage as any).tableData = null;
-        } else {
-          botMessage.content = 'Machines de l\'huilerie';
-          (botMessage as any).tableData = { machineList };
-        }
-      } else {
-        const machineRows = this.extractMachineTableRows(response.data);
-        (botMessage as any).tableData = { machines: machineRows };
-      }
-
-      if (botMessage.type === 'choice') {
-        botMessage.type = 'text';
-        botMessage.options = [];
-      }
-    }
 
     return botMessage;
   }
 
-  private normalizeOptions(options: string[]): string[] {
-    const fallback = ['texte', 'graphique'];
-    const normalized = options
-      .map((o) => o.trim())
-      .filter((o) => o.length > 0)
-      .map((o) => o.toLowerCase());
-    return normalized.length >= 2 ? normalized : fallback;
+  private resolveIntent(response: ChatbotResponse): string | null {
+    if (response.intent) {
+      return String(response.intent).toLowerCase();
+    }
+    // Try to infer from payload structure
+    if (response.data) {
+      return this.inferIntentFromPayload(response.data);
+    }
+    return null;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Private — unified ranking normalization
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  private normalizeRankingData(data: unknown, intent: RankingIntent | null): RankingPayload {
-    if (!data) return null;
-
-    switch (intent) {
-      case 'fournisseur':
-        return this.normalizeFournisseurData(data);
-      case 'machines_utilisees':
-        return this.normalizeMachinesData(data);
-      case 'lot_liste':
-        return this.normalizeLotsData(data);
-      case 'analyse_labo':
-        return this.normalizeAnalysesData(data);
-      case 'stock':
-        return this.normalizeStockData(data);
-      default:
-        return null;
+  private resolveMessageType(response: ChatbotResponse, intent: string | null): 'text' | 'choice' | 'chart' {
+    if (response.type === 'choice' || response.type === 'chart') {
+      return response.type;
     }
+    if (response.type === 'text' || !response.type) {
+      return 'text';
+    }
+    return 'text';
   }
 
-  private inferRankingIntentFromPayload(data: unknown): RankingIntent | null {
-    if (!data) return null;
+  private resolveRankingItems(data: unknown, intent: string | null): any[] | undefined {
+    if (!data) return undefined;
+    if (!intent || !RANKING_INTENTS.includes(intent as any)) return undefined;
 
-    const hasArray = (key: string): boolean =>
-      data && typeof data === 'object' && Array.isArray((data as any)[key]);
+    const items = this.extractItemsFromPayload(data);
+    if (!Array.isArray(items) || items.length === 0) return undefined;
 
-    if (hasArray('stocks')) {
-      return 'stock';
-    }
-    if (hasArray('suppliers') || hasArray('fournisseurs')) {
-      return 'fournisseur';
-    }
-    if (hasArray('machines') || hasArray('machinesUtilisees')) {
-      return 'machines_utilisees';
-    }
-    if (hasArray('lots')) {
-      return 'lot_liste';
-    }
-    if (hasArray('analyses')) {
-      return 'analyse_labo';
-    }
+    return items;
+  }
 
-    const arrayPayload = Array.isArray(data) ? data : this.extractArrayData(data, ['stocks', 'suppliers', 'fournisseurs', 'machines', 'machinesUtilisees', 'lots', 'analyses', 'items', 'data', 'value']);
-    if (!Array.isArray(arrayPayload) || arrayPayload.length === 0) {
-      return null;
+  private resolveChartData(response: ChatbotResponse, rankingItems: any[] | undefined, intent: string | null): ChatbotChartPayload | undefined {
+    if (rankingItems && intent) {
+      return this.buildChartPayload(rankingItems, intent);
     }
+    if (response.type === 'chart' && response.data) {
+      return this.normalizeChartDataFromBackend(response.data);
+    }
+    return undefined;
+  }
 
-    const first = arrayPayload[0];
-    if (!first || typeof first !== 'object') {
-      return null;
-    }
+  private inferIntentFromPayload(data: unknown): string | null {
+    if (!data || typeof data !== 'object') return null;
 
-    const record = first as Record<string, unknown>;
-    if ('reference_stock' in record || 'quantite_disponible' in record || 'type_stock' in record || 'lot_reference' in record) {
-      return 'stock';
-    }
-    if ('fournisseur_nom' in record || 'kg' in record || 'rendement' in record || 'acidity' in record) {
-      return 'fournisseur';
-    }
-    if ('nbExecutions' in record || 'nomMachine' in record || 'machineRef' in record) {
-      return 'machines_utilisees';
-    }
-    if ('reference' in record && 'qualite_huile' in record) {
-      return 'lot_liste';
-    }
-    if ('lot_ref' in record || 'k270' in record || 'acidite_huile_pourcent' in record) {
-      return 'analyse_labo';
-    }
+    const record = data as Record<string, unknown>;
+    const hasKey = (key: string) => key in record && Array.isArray(record[key]);
+
+    if (hasKey('stocks')) return 'stock';
+    if (hasKey('suppliers') || hasKey('fournisseurs')) return 'fournisseur';
+    if (hasKey('machines')) return 'machines_utilisees';
+    if (hasKey('lots')) return 'lot_liste';
+    if (hasKey('analyses')) return 'analyse_labo';
+
+    // Check array items
+    const items = this.extractItemsFromPayload(data);
+    if (!Array.isArray(items) || items.length === 0) return null;
+
+    const first = items[0];
+    if (!first || typeof first !== 'object') return null;
+
+    const firstRecord = first as Record<string, unknown>;
+    if ('reference_stock' in firstRecord || 'quantite_disponible' in firstRecord) return 'stock';
+    if ('kg' in firstRecord || 'rendement' in firstRecord) return 'fournisseur';
+    if ('nbExecutions' in firstRecord) return 'machines_utilisees';
+    if ('reference' in firstRecord && 'qualite_huile' in firstRecord) return 'lot_liste';
+    if ('lot_ref' in firstRecord || 'k270' in firstRecord) return 'analyse_labo';
 
     return null;
   }
+
+  private extractItemsFromPayload(data: unknown): unknown[] {
+    if (Array.isArray(data)) return data;
+    if (!data || typeof data !== 'object') return [];
+
+    const record = data as Record<string, unknown>;
+    for (const key of ['items', 'data', 'value', 'stocks', 'suppliers', 'machines', 'lots', 'analyses']) {
+      if (Array.isArray(record[key])) return record[key] as unknown[];
+    }
+    return [];
+  }
+
+  private buildChartPayload(items: any[], intent: string, metric?: string): ChatbotChartPayload | undefined {
+    if (!Array.isArray(items) || items.length === 0) return undefined;
+
+    const firstItem = items[0];
+    if (!firstItem || typeof firstItem !== 'object') return undefined;
+
+    const defaultMetric = metric || this.defaultMetricForIntent(intent);
+
+    // Unify all items to have common properties
+    const rows: any[] = items.map((item, idx) => ({
+      name: item.name || item.reference || item.nom || `Item ${idx + 1}`,
+      ...item,
+    }));
+
+    // Build datasets based on intent
+    let labels: string[] = [];
+    let datasets: ChatbotChartPayload['datasets'] = [];
+
+    if (intent === 'fournisseur') {
+      labels = rows.map(r => r.name);
+      if (defaultMetric === 'kg') {
+        datasets = [{ label: 'Quantité (kg)', data: rows.map(r => this.normalizeNumber(r.kg)) }];
+      } else if (defaultMetric === 'rendement') {
+        datasets = [{ label: 'Rendement (%)', data: rows.map(r => this.normalizeNumber(r.rendement)) }];
+      } else {
+        datasets = [{ label: 'Acidité (%)', data: rows.map(r => this.normalizeNumber(r.acidity || r.acidite)) }];
+      }
+    } else if (intent === 'machines_utilisees') {
+      labels = rows.map(r => r.name);
+      if (defaultMetric === 'executions') {
+        datasets = [{ label: 'Exécutions', data: rows.map(r => this.normalizeNumber(r.nbExecutions)) }];
+      } else if (defaultMetric === 'rendement') {
+        datasets = [{ label: 'Rendement (%)', data: rows.map(r => this.normalizeNumber(r.rendementMoyen)) }];
+      } else {
+        datasets = [{ label: 'Production (L)', data: rows.map(r => this.normalizeNumber(r.totalProduit)) }];
+      }
+    } else if (intent === 'lot_liste') {
+      labels = rows.map(r => r.reference || r.name);
+      datasets = [{ label: 'Quantité (kg)', data: rows.map(r => this.normalizeNumber(r.quantite_initiale)) }];
+    } else if (intent === 'analyse_labo') {
+      labels = rows.map(r => r.lot_ref || r.name);
+      if (defaultMetric === 'acidite') {
+        datasets = [{ label: 'Acidité (%)', data: rows.map(r => this.normalizeNumber(r.acidite_huile_pourcent)) }];
+      } else if (defaultMetric === 'peroxyde') {
+        datasets = [{ label: 'Peroxyde (meq)', data: rows.map(r => this.normalizeNumber(r.indice_peroxyde_meq_o2_kg)) }];
+      } else {
+        datasets = [{ label: 'K270', data: rows.map(r => this.normalizeNumber(r.k270)) }];
+      }
+    } else if (intent === 'stock') {
+      labels = rows.map(r => `${r.reference_stock || r.name} (${r.variete})`);
+      datasets = [{ label: 'Quantité (kg)', data: rows.map(r => this.normalizeNumber(r.quantite_disponible)) }];
+    }
+
+    return labels.length > 0 && datasets.length > 0 ? { labels, datasets } : undefined;
+  }
+
+  private normalizeChartDataFromBackend(data: unknown): ChatbotChartPayload | undefined {
+    if (!data || typeof data !== 'object') return undefined;
+    if (!('labels' in data) || !('datasets' in data)) return undefined;
+
+    const payload = data as any;
+    return {
+      labels: Array.isArray(payload.labels) ? payload.labels.map((l: any) => String(l)) : [],
+      datasets: Array.isArray(payload.datasets) ? payload.datasets.map((ds: any) => ({
+        label: String(ds.label || 'Série'),
+        data: Array.isArray(ds.data) ? ds.data.map((v: any) => this.normalizeNumber(v)) : [],
+      })) : [],
+    };
+  }
+
+  private normalizeNumber(value: unknown): number {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  // Removed old duplicate normalization methods - refactored into resolveXxx methods above
 
   private normalizeFournisseurData(data: unknown): SupplierRankingPayload | null {
     let suppliers: unknown[] = [];
@@ -2150,7 +2072,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
         canvas.style.display = 'block';
         canvas.style.width = '100%';
         // give ranking charts more vertical space
-        if (message.rankingData) {
+        if (message.rankingItems) {
           canvas.style.height = '420px';
         } else {
           canvas.style.height = '320px';
@@ -2237,8 +2159,15 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     const chartType: ChartType = message.chartType ?? 'bar';
 
     // Handle unified ranking data
-    if (message.rankingData && message.rankingIntent) {
-      return this.buildUnifiedRankingChartConfiguration(message);
+    if (message.rankingItems && message.intent && message.chartData) {
+      return {
+        type: chartType,
+        data: {
+          labels: message.chartData.labels || [],
+          datasets: this.buildRankingChartDatasets(message.chartData?.datasets || []),
+        },
+        options: this.getChartOptions(chartType),
+      };
     }
 
     const payload = message.chartData;
@@ -2294,80 +2223,21 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     return { type: chartType, data: { labels, datasets }, options: this.getChartOptions(chartType) };
   }
 
-  private buildUnifiedRankingChartConfiguration(message: ChatMessage): ChartConfiguration {
-    const { rankingData, rankingIntent, rankingMetric } = message;
-    const payload = message.chartData;
-
-    if (!payload) {
-      return { type: 'bar', data: { labels: [], datasets: [] }, options: this.getChartOptions('bar') };
-    }
-
-    const labels = payload.labels;
-    const datasetMaxes = payload.datasets.map((ds) =>
-      ds.data?.length ? Math.max(...ds.data.map((v) => Number(v) || 0)) : 0
-    );
-    const overallMax = Math.max(...datasetMaxes, 0);
-    const hasSingleDataset = payload.datasets.length === 1;
-
-    const datasets: ChartDataset<'bar' | 'line', number[]>[] = payload.datasets.map((ds, i) => {
-      const color = CHART_COLORS[i % CHART_COLORS.length];
-      const maxVal = datasetMaxes[i] ?? 0;
-      // Only use y1 axis if we have multiple datasets
-      const yAxisID = !hasSingleDataset && overallMax > 0 && maxVal < overallMax / 10 ? 'y1' : 'y';
-      const dsType = (ds as { type?: string }).type || 'bar';
-      const isBar = dsType === 'bar';
-
-      return {
-        label: ds.label,
-        data: ds.data,
-        type: dsType as any,
-        borderColor: color,
-        backgroundColor: isBar ? this.withAlpha(color, 0.6) : color,
-        borderWidth: isBar ? 1 : 2,
-        fill: false,
-        tension: !isBar ? 0.35 : 0,
-        yAxisID,
-        maxBarThickness: isBar ? 42 : undefined,
-      } as ChartDataset<'bar' | 'line', number[]>;
-    });
-
-    return {
-      type: 'bar',
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'x',
-        plugins: {
-          legend: { display: true, position: 'top' },
-          tooltip: {
-            callbacks: {
-              title: (ctx: TooltipItem<any>[]) => ctx[0]?.label ?? 'Item',
-              afterBody: () => this.getTooltipContext(rankingData, rankingIntent),
-            },
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            type: 'linear',
-          },
-          ...(hasSingleDataset ? {} : {
-            y1: {
-              type: 'linear',
-              position: 'right',
-              beginAtZero: true,
-            },
-          }),
-        },
-      } as any,
-    };
+  private buildRankingChartDatasets(datasets: any[]): ChartDataset<'bar' | 'line', number[]>[] {
+    return datasets.map((ds: any, index: number) => ({
+      label: ds.label ?? `Série ${index + 1}`,
+      data: Array.isArray(ds.data) ? ds.data.map((v: any) => this.normalizeNumber(v)) : [],
+      backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+      borderColor: CHART_COLORS[index % CHART_COLORS.length],
+      fill: false,
+      tension: 0.35,
+    }));
   }
 
-  private getTooltipContext(rankingData: RankingPayload, intent: RankingIntent | null): string[] {
-    if (!rankingData || !('items' in rankingData) || !rankingData.items) return [];
+  private getTooltipContext(rankingItems: any[] | undefined, intent: string | null): string[] {
+    if (!rankingItems || rankingItems.length === 0) return [];
 
-    const items = rankingData.items as any[];
+    const items = rankingItems;
     if (!items.length) return [];
 
     if (intent === 'fournisseur') {
@@ -2470,30 +2340,6 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     const g = parseInt(full.slice(2, 4), 16);
     const b = parseInt(full.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  private normalizeNumber(value: unknown): number {
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : 0;
-    }
-
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (!trimmed) return 0;
-
-      // Accept common API formats such as "1 522 kg", "0,12 %", "1.522,4".
-      const cleaned = trimmed
-        .replace(/\s+/g, '')
-        .replace(/%|kg/gi, '')
-        .replace(',', '.');
-
-      const numericToken = cleaned.match(/-?\d+(?:\.\d+)?/);
-      const n = numericToken ? Number(numericToken[0]) : Number(cleaned);
-      return Number.isFinite(n) ? n : 0;
-    }
-
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
   }
 
   private destroyAllCharts(): void {

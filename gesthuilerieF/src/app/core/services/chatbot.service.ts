@@ -286,16 +286,15 @@ export class ChatbotService {
     const resolvedMessage = message || 'Réponse reçue.';
     const options = Array.isArray(response?.options) ? response.options.filter((option: unknown) => typeof option === 'string') : [];
     const chartType = this.normalizeChartType(response?.chart_type);
-    const normalizedChartData = this.normalizeChartData(response?.data);
 
     return {
       type,
       message: resolvedMessage,
       options,
       chart_type: chartType,
-      // Keep raw backend payload first to preserve supplier fields
-      // such as acidite/rendement/nb_lots used by chatbot widget ranking view.
-      data: response?.data ?? normalizedChartData ?? null,
+      // Always pass raw backend data as-is; component decides how to use it
+      // This preserves all fields needed for ranking, charts, and custom processing
+      data: response?.data ?? null,
       selected_option: typeof response?.selected_option === 'string' ? response.selected_option : null,
       pending_choice: !!response?.pending_choice,
       intent: this.normalizeIntent(response?.intent),
