@@ -169,10 +169,6 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   isMobile = window.innerWidth <= 640;
   showPredictionModal = false;
   showLabAnalysisFields = false;
-  // When true, frontend will always prompt user to choose 'texte' or 'graphique'
-  // for ranking responses, ignoring the backend `pending_choice` hint.
-  // Frontend always prompts user to choose 'texte' or 'graphique' for ranking responses
-  private alwaysPromptRankingChoice = true;
   predictionFormData: Record<string, unknown> = this.initPredictionFormData();
   predictionFormErrors: string[] = [];
   backendPredictionError: string | null = null;
@@ -397,79 +393,9 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   sendChoice(option: string): void {
     if (this.isLoading) return;
-
-    const selection = option.toLowerCase() === 'graphique' ? 'graphique' : 'texte';
-    const turnId = this.nextConversationTurnId();
-
-    // Find last choice message with pending ranking data
-    const choiceMessage = [...this.messages]
-      .reverse()
-      .find(m =>
-        m.sender === 'bot' &&
-        m.type === 'choice' &&
-        !!m.pendingItems
-      );
-
-    const pendingItems = choiceMessage?.pendingItems;
-    const pendingIntent = choiceMessage?.intent;
-
-    if (pendingItems && pendingIntent) {
-      this.isLoading = true;
-
-      // User message
-      this.messages.push({
-        id: this.nextMessageId(),
-        sender: 'user',
-        content: selection === 'graphique' ? 'Graphique' : 'Texte',
-        timestamp: new Date(),
-        turnId,
-        type: 'text',
-        intent: null,
-        options: [],
-      });
-
-      // Build chart data with default metric for this intent
-      const defaultMetric = this.defaultMetricForIntent(pendingIntent);
-      const chartData = selection === 'graphique'
-        ? this.buildChartPayload(pendingItems, pendingIntent, defaultMetric)
-        : null;
-
-      const botResponse: ChatMessage = {
-        id: this.nextMessageId(),
-        sender: 'bot',
-        content: selection === 'graphique'
-          ? 'Voici les résultats en mode graphique...'
-          : 'Voici les résultats en mode texte...',
-        timestamp: new Date(),
-        turnId,
-        type: selection === 'graphique' ? 'ranking' : 'ranking',
-        intent: pendingIntent,
-        options: [],
-        chartType: selection === 'graphique' ? 'bar' : undefined,
-        chartData: chartData || undefined,
-        rankingItems: pendingItems,
-        rankingViewMode: selection === 'graphique' ? 'chart' : 'text',
-        rankingMetric: defaultMetric,
-      };
-
-      this.messages.push(botResponse);
-      this.scrollToBottom();
-      const safeTimeoutId = setTimeout(() => {
-        if (this.isLoading) {
-          console.warn('[Chatbot Widget] Force resetting isLoading in sendChoice (timeout)');
-          this.isLoading = false;
-        }
-      }, 5000);
-      setTimeout(() => {
-        clearTimeout(safeTimeoutId);
-        this.renderCharts();
-        this.isLoading = false;
-      }, 0);
-      return;
-    }
-
-    // Fallback: send to backend
-    this.sendMessage(option, selection as 'texte' | 'graphique');
+    // Send the choice to the backend as a normal message.
+    // The backend resolves the pending visualization in session.
+    this.sendMessage(option.toLowerCase());
   }
 
   sendMessage(messageOverride?: string, selection?: 'texte' | 'graphique'): void {
@@ -477,22 +403,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     if (!message || this.isLoading) return;
     const turnId = this.nextConversationTurnId();
 
-    const normalizedMessage = message
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-
-    const isMachineListQuery =
-      normalizedMessage.includes('machine') &&
-      (
-        normalizedMessage.includes('liste') ||
-        normalizedMessage.includes('quelles sont') ||
-        normalizedMessage.includes('quels sont') ||
-        normalizedMessage.includes('machines de') ||
-        normalizedMessage.includes('machine de')
-      );
-
-    const resolvedSelection = selection ?? (isMachineListQuery ? 'texte' : undefined);
+    const resolvedSelection = selection;
 
     if (this.isMessageAboutPrediction(message)) {
       this.draftMessage = message;
@@ -1310,33 +1221,27 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     const rankingItems = isRanking ? this.resolveRankingItems(response.data, intent) : undefined;
     const chartData = this.resolveChartData(response, rankingItems, intent);
 
-    // Determine if this should be a choice prompt (all ranking intents, always prompt)
-    let finalType = messageType as any;
-    let pendingItems: any[] | undefined;
-
-    if (
-      isRanking &&
-      rankingItems &&
-      messageType !== 'choice' &&
-      !response.selected_option &&
-      this.alwaysPromptRankingChoice
-    ) {
-      finalType = 'choice';
-      pendingItems = rankingItems;
-    }
+    const finalType = messageType;
+    const pendingItems = finalType === 'choice' ? rankingItems : undefined;
+    const rankingViewMode: RankingViewMode = finalType === 'chart'
+      ? 'chart'
+      : (isRanking && finalType === 'text' && rankingItems?.length ? 'text' : (response.selected_option === 'texte' ? 'text' : 'chart'));
+    const botType: 'text' | 'choice' | 'chart' | 'ranking' = isRanking && finalType === 'text' && rankingItems?.length
+      ? 'ranking'
+      : (finalType === 'chart' && isRanking ? 'ranking' : finalType);
 
     const botMessage: ChatMessage = {
       id: this.nextMessageId(),
       sender: 'bot',
       content: response.message || response.response || 'Réponse reçue.',
       timestamp: new Date(),
-      type: finalType === 'chart' && isRanking ? 'ranking' : (finalType === 'choice' ? 'choice' : 'text'),
+      type: botType as any,
       intent: intent || null,
-      options: finalType === 'choice' ? ['graphique', 'texte'] : [],
+      options: response.options ?? [],
       chartType: finalType === 'chart' ? (response.chart_type ?? 'bar') : undefined,
       chartData: finalType === 'chart' ? chartData : undefined,
-      rankingItems,
-      rankingViewMode: response.selected_option === 'texte' ? 'text' : 'chart',
+      rankingItems: botType === 'ranking' || botType === 'chart' ? rankingItems : undefined,
+      rankingViewMode,
       rankingMetric: this.defaultMetricForIntent(intent),
       pendingItems,
     };
@@ -1356,12 +1261,8 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private resolveMessageType(response: ChatbotResponse, intent: string | null): 'text' | 'choice' | 'chart' {
-    if (response.type === 'choice' || response.type === 'chart') {
-      return response.type;
-    }
-    if (response.type === 'text' || !response.type) {
-      return 'text';
-    }
+    if (response.type === 'choice') return 'choice';
+    if (response.type === 'chart') return 'chart';
     return 'text';
   }
 
