@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
 import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService, PredictionPayload } from '../../../core/services/chatbot.service';
+import { getParameterStandard } from '../../constants/lab-analysis-standards';
 
 Chart.register(...registerables);
 
@@ -83,6 +84,25 @@ interface AnalysisRankingItem {
   k270OutOfRange: boolean;
 }
 
+interface ComparaisonRankingItem {
+  reference?: string;
+  annee?: string;
+  date_debut?: string;
+  date_fin?: string;
+  huilerie_nom?: string;
+  nb_lots?: number;
+  total_olives_kg?: number;
+  huilerie?: string;
+  value?: number;
+  metric?: string;
+  label?: string;
+  unit?: string;
+  start?: string;
+  end?: string;
+}
+
+type ComparaisonKind = 'campaign' | 'huilerie' | 'period';
+
 interface MachineTableItem {
   name?: string;
   machine?: string;
@@ -143,6 +163,7 @@ interface ChatMessage {
   rankingViewMode?: RankingViewMode;
   debug?: ChatDebugInfo | null;
   tableData?: any;               // Machine table data (legacy, for non-ranking machine messages)
+  data?: any;                    // Structured data from backend (lot_cycle_vie: {lot, steps, ...})
 }
 
 @Component({
@@ -269,6 +290,101 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
    *             1. ordered list item
    *             \n line breaks
    */
+  /**
+   * Get emoji for timeline step type.
+   */
+  getEmojiForEtape(etape: string): string {
+    const emojiMap: { [key: string]: string } = {
+      'reception': '🟢',
+      'production': '⚙️',
+      'analyse_labo': '🧪',
+      'stock': '📦',
+    };
+    return emojiMap[etape] || '🔵';
+  }
+
+  /**
+   * Get label for timeline step type.
+   */
+  getEtapeLabel(etape: string): string {
+    const labelMap: { [key: string]: string } = {
+      'reception': 'Réception',
+      'production': 'Production',
+      'analyse_labo': 'Analyse Labo',
+      'stock': 'Stock',
+    };
+    return labelMap[etape] || etape;
+  }
+
+  /**
+   * Check lab analysis step values against standards. Returns true if all available params are within range.
+   */
+  isLabAnalysisInRange(step: any): boolean {
+    if (!step) return true;
+    const params = [
+      { key: 'acidite_huile_pourcent', value: step.acidite_huile_pourcent ?? step.acidite ?? step.acidite_huile },
+      { key: 'indice_peroxyde_meq_o2_kg', value: step.indice_peroxyde_meq_o2_kg ?? step.indice_peroxyde ?? step.peroxyde },
+      { key: 'k270', value: step.k270 ?? step.k_270 ?? step.k270_value },
+    ];
+    for (const p of params) {
+      if (p.value === undefined || p.value === null) continue; // missing value treated as OK
+      const std = getParameterStandard(p.key);
+      if (!std) continue;
+      if (typeof p.value === 'string') {
+        const n = Number(p.value.replace(',', '.'));
+        if (!isNaN(n)) {
+          if (n < std.min || n > std.max) return false;
+        }
+      } else if (typeof p.value === 'number') {
+        if (p.value < std.min || p.value > std.max) return false;
+      }
+    }
+    return true;
+  }
+
+  getLabStatusEmoji(step: any): string {
+    if (!step) return '';
+    if (step.etape !== 'analyse_labo' && !step.acidite_huile_pourcent && !step.indice_peroxyde_meq_o2_kg && !step.k270) return '';
+    return this.isLabAnalysisInRange(step) ? '✅' : '⚠️';
+  }
+
+  renderCycleVie(content: string): SafeHtml {
+    const lines = content.split('\n');
+    let html = '';
+    let inStep = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        if (inStep) { html += '</div>'; inStep = false; }
+        continue;
+      }
+      // Premiere ligne = titre
+      if (!inStep && !trimmed.startsWith('🟢') && !trimmed.startsWith('⚙️') && !trimmed.startsWith('📦') && !trimmed.startsWith('🧪') && !trimmed.startsWith('🫙') && !trimmed.startsWith('🔵') && !html.includes('cvl-title')) {
+        html += `<div class="cvl-title">${this.inlineMarkdown(trimmed)}</div>`;
+        continue;
+      }
+      // Ligne etape (emoji en tete)
+      if (/^[🟢⚙️📦🧪🫙🔵🔮]/.test(trimmed)) {
+        if (inStep) html += '</div>';
+        html += `<div class="cvl-step"><div class="cvl-step-header">${this.inlineMarkdown(trimmed)}</div>`;
+        inStep = true;
+        continue;
+      }
+      // Ligne date (📅)
+      if (trimmed.startsWith('📅')) {
+        html += `<div class="cvl-step-date">${trimmed}</div>`;
+        continue;
+      }
+      // Ligne description
+      if (inStep) {
+        html += `<div class="cvl-step-desc">${this.inlineMarkdown(trimmed)}</div>`;
+      }
+    }
+    if (inStep) html += '</div>';
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
   renderMarkdown(text: string): SafeHtml {
     const html = this.markdownToHtml(text);
     return this.sanitizer.bypassSecurityTrustHtml(html);
@@ -867,6 +983,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       case 'lot_liste':          return 'quantite';
       case 'analyse_labo':       return 'acidite';
       case 'stock':              return 'quantite';
+      case 'comparaison':        return 'olives';
       default:                   return 'kg';
     }
   }
@@ -1016,6 +1133,26 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   getStockItems(message: ChatMessage): StockRankingItem[] {
     return this.getRankingItems(message) as StockRankingItem[];
+  }
+
+  getComparaisonItems(message: ChatMessage): ComparaisonRankingItem[] {
+    return this.getRankingItems(message) as ComparaisonRankingItem[];
+  }
+
+  getComparaisonKind(message: ChatMessage): ComparaisonKind {
+    const items = this.getRankingItems(message) as any[];
+    const first = items[0] as any;
+    if (!first) return 'campaign';
+
+    if ('huilerie' in first && ('value' in first || 'metric' in first) && !('reference' in first && 'annee' in first)) {
+      return 'huilerie';
+    }
+
+    if (('start' in first || 'end' in first) && !('reference' in first)) {
+      return 'period';
+    }
+
+    return 'campaign';
   }
 
   getDisplayedItems<T>(items: T[], limit: number = 8): T[] {
@@ -1259,6 +1396,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       rankingViewMode,
       rankingMetric: this.defaultMetricForIntent(intent),
       pendingItems,
+      data: response.data,
     };
     return botMessage;
   }
@@ -1392,6 +1530,15 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     } else if (intent === 'stock') {
       labels = rows.map(r => `${r.reference_stock || r.name} (${r.variete})`);
       datasets = [{ label: 'Quantité (kg)', data: rows.map(r => this.normalizeNumber(r.quantite_disponible)) }];
+    } else if (intent === 'comparaison') {
+      const hasHuilerieComparison = rows.some(r => r.huilerie !== undefined || r.value !== undefined || r.metric !== undefined);
+      if (hasHuilerieComparison) {
+        labels = rows.map(r => String(r.huilerie || r.reference || r.name || 'Huilerie'));
+        datasets = [{ label: 'Comparaison', data: rows.map(r => this.normalizeNumber(r.value ?? r.total_olives_kg)) }];
+      } else {
+        labels = rows.map(r => `${r.reference || r.name} (${r.annee})`);
+        datasets = [{ label: 'Olives reçues (kg)', data: rows.map(r => this.normalizeNumber(r.total_olives_kg)) }];
+      }
     }
 
     return labels.length > 0 && datasets.length > 0 ? { labels, datasets } : undefined;
@@ -2140,8 +2287,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
     const datasets: ChartDataset<'bar' | 'line', number[]>[] = payload.datasets.map((ds, i) => {
       const color = CHART_COLORS[i % CHART_COLORS.length];
-      const maxVal = datasetMaxes[i] ?? 0;
-      const yAxisID = overallMax > 0 && maxVal < overallMax / 10 ? 'y1' : 'y';
+      const yAxisID = 'y';
       const dsType = (ds as { type?: string }).type;
       const isBarDataset = (chartType === 'bar' && !dsType) || dsType === 'bar';
       return {
@@ -2241,17 +2387,6 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
               beginAtZero: true,
               ticks: { color: '#6f7d90', callback: (v) => Number(v).toLocaleString('fr-FR') },
               grid: { color: 'rgba(127,142,163,0.18)' },
-            },
-            y1: {
-              position: 'right',
-              beginAtZero: true,
-              min: compactSecondaryAxis ? 0 : undefined,
-              max: compactSecondaryAxis ? 100 : undefined,
-              grid: { drawOnChartArea: false, color: 'rgba(127,142,163,0.08)' },
-              ticks: {
-                color: '#6f7d90',
-                callback: (v) => compactSecondaryAxis ? `${Number(v).toLocaleString('fr-FR')}%` : Number(v).toLocaleString('fr-FR'),
-              },
             },
           },
     };

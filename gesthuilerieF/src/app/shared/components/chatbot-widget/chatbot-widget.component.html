@@ -89,7 +89,7 @@
           <ng-container *ngIf="message.sender === 'bot' && message.type === 'ranking'">
 
             <!-- Result header -->
-            <p class="chatbot-widget__ranking-header">
+            <p class="chatbot-widget__ranking-header" *ngIf="message.rankingViewMode !== 'text'">
               {{ message.content }}
             </p>
 
@@ -212,9 +212,15 @@
                           <td [class.is-alert]="item.peroxideOutOfRange">{{ item.indice_peroxyde_meq_o2_kg | number:'1.0-1' }}</td>
                           <td [class.is-alert]="item.k270OutOfRange">{{ item.k270 | number:'1.0-3' }}</td>
                           <td>
-                            <span *ngIf="item.acidityOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 Acidité</span>
-                            <span *ngIf="item.peroxideOutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 Peroxyde</span>
-                            <span *ngIf="item.k270OutOfRange" class="chatbot-widget__status-chip chatbot-widget__status-chip--warning">🚨 K270</span>
+                            <span
+                              *ngIf="item.acidityOutOfRange || item.peroxideOutOfRange || item.k270OutOfRange; else analysisStatusOk"
+                              class="chatbot-widget__status-chip chatbot-widget__status-chip--warning"
+                            >
+                              🚨 Urgence
+                            </span>
+                            <ng-template #analysisStatusOk>
+                              <span class="chatbot-widget__status-chip chatbot-widget__status-chip--best">✅ OK</span>
+                            </ng-template>
                           </td>
                         </tr>
                       </tbody>
@@ -248,6 +254,86 @@
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                </ng-container>
+
+                <!-- Comparaison table -->
+                <ng-container *ngIf="message.intent === 'comparaison'">
+                  <div class="chatbot-widget__ranking-text">
+
+                    <ng-container *ngIf="getComparaisonKind(message) === 'campaign'">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Campagne</th>
+                            <th>Année</th>
+                            <th>Huilerie</th>
+                            <th>Olives reçues (kg)</th>
+                            <th>Lots</th>
+                            <th>Période</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let item of getComparaisonItems(message); let idx = index"
+                              [class.is-best]="idx === 0">
+                            <td>{{ idx + 1 }}</td>
+                            <td><strong>{{ item.reference }}</strong></td>
+                            <td>{{ item.annee }}</td>
+                            <td>{{ item.huilerie_nom }}</td>
+                            <td><strong>{{ item.total_olives_kg | number:'1.0-0' }}</strong></td>
+                            <td>{{ item.nb_lots }}</td>
+                            <td>{{ item.date_debut }} → {{ item.date_fin }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </ng-container>
+
+                    <ng-container *ngIf="getComparaisonKind(message) === 'huilerie'">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Huilerie</th>
+                            <th>Valeur</th>
+                            <th>Métrique</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let item of getComparaisonItems(message); let idx = index"
+                              [class.is-best]="idx === 0">
+                            <td>{{ idx + 1 }}</td>
+                            <td><strong>{{ item.huilerie }}</strong></td>
+                            <td><strong>{{ item.value | number:'1.0-0' }}</strong></td>
+                            <td>{{ item.metric }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </ng-container>
+
+                    <ng-container *ngIf="getComparaisonKind(message) === 'period'">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Période</th>
+                            <th>Valeur</th>
+                            <th>Du</th>
+                            <th>Au</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let item of getComparaisonItems(message); let idx = index"
+                              [class.is-best]="idx === 0">
+                            <td>{{ idx + 1 }}</td>
+                            <td><strong>{{ item.label }}</strong></td>
+                            <td><strong>{{ item.value | number:'1.0-0' }} {{ item.unit }}</strong></td>
+                            <td>{{ item.start }}</td>
+                            <td>{{ item.end }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </ng-container>
                   </div>
                 </ng-container>
 
@@ -417,9 +503,49 @@
           </ng-container>
 
           <!-- ══════════════════════════════════════════════════════════
-               GENERIC PLAIN TEXT message  (non-ranking, non-choice)
+               LOT_CYCLE_VIE: Timeline visualization from structured data
                ══════════════════════════════════════════════════════════ -->
-          <ng-container *ngIf="message.sender === 'bot' && !isChoiceMessage(message) && !isRankingMessage(message) && !isMachineListMessage(message) && !(message.tableData && isMachineTableMessage(message))">
+          <ng-container *ngIf="message.sender === 'bot' && message.intent === 'lot_cycle_vie' && message.data?.steps?.length">
+            <div class="cvl-wrapper">
+              <div class="cvl-title" *ngIf="message.data?.lot?.reference">
+                Cycle de vie du lot <strong>{{ message.data.lot.reference }}</strong>
+              </div>
+              <div class="cvl-step" *ngFor="let step of message.data.steps">
+                <div class="cvl-step-header">
+                  {{ getEmojiForEtape(step.etape) }} {{ getEtapeLabel(step.etape) }}
+                  <span class="cvl-status" *ngIf="getLabStatusEmoji(step)"> {{ getLabStatusEmoji(step) }} </span>
+                </div>
+                <div class="cvl-step-date" *ngIf="step.date">
+                  📅 {{ step.date }}
+                </div>
+                <div class="cvl-step-desc" *ngIf="step.details">
+                  {{ step.details }}
+                </div>
+
+                <!-- Prediction / Analyse / Produit final extra details -->
+                <div class="cvl-step-desc" *ngIf="step.qualite">
+                  <strong>Qualité:</strong> {{ step.qualite }}
+                </div>
+                <div class="cvl-step-desc" *ngIf="step.probabilite !== undefined">
+                  <strong>Probabilité:</strong> {{ step.probabilite | percent:'1.0-2' }}
+                </div>
+                <div class="cvl-step-desc" *ngIf="step.rendement !== undefined">
+                  <strong>Rendement:</strong> {{ step.rendement }}%
+                </div>
+                <div class="cvl-step-desc" *ngIf="step.quantite_l !== undefined">
+                  <strong>Quantité (L):</strong> {{ step.quantite_l }}
+                </div>
+                <div class="cvl-step-desc" *ngIf="step.quantite !== undefined && !step.quantite_l">
+                  <strong>Quantité:</strong> {{ step.quantite }}
+                </div>
+                <div class="cvl-step-desc" *ngIf="step.reference">
+                  <strong>Réf:</strong> {{ step.reference }}
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="message.sender === 'bot' && message.intent !== 'lot_cycle_vie' && !isChoiceMessage(message) && !isRankingMessage(message) && !isMachineListMessage(message) && !(message.tableData && isMachineTableMessage(message))">
             <p class="chatbot-widget__choice-prompt">{{ message.content }}</p>
           </ng-container>
 
