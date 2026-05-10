@@ -11,7 +11,7 @@ import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponse
 Chart.register(...registerables);
 
 const CHART_COLORS = ['#6f8d3a', '#9bb85a', '#d8c65a', '#7e9fcb', '#f3a15f', '#c96c6c'];
-const RANKING_INTENTS = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock', 'production', 'rendement', 'qualite', 'campagne', 'reception', 'diagnostic', 'comparaison', 'mouvement_stock'] as const;
+const RANKING_INTENTS = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock', 'production', 'rendement', 'qualite', 'campagne', 'reception', 'diagnostic', 'comparaison', 'mouvement_stock', 'machine'] as const;
 
 type RankingIntent = typeof RANKING_INTENTS[number];
 
@@ -974,26 +974,26 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.intent;
     if (!intent) return false;
     const s = String(intent).toLowerCase();
-    return s.includes('machine') || s.includes('panne') || s.includes('etat') || s.includes('tous');
+    if (s === 'machines_utilisees') return false;
+    if (s !== 'machine') return false;
+    // Machines en panne = pas de rankingItems, juste texte
+    return !(message.rankingItems?.length);
   }
 
   public isMachineListMessage(message: ChatMessage): boolean {
     const intent = (message as any).tableIntent ?? message.debug?.intent ?? message.intent;
     if (!intent) return false;
-    return String(intent).toLowerCase() === 'machine';
+    if (String(intent).toLowerCase() !== 'machine') return false;
+    // Seulement si on a des données à afficher en tableau
+    return !!(message.rankingItems?.length);
   }
 
   public getTableMachineListItems(message: ChatMessage): MachineListItem[] {
-    const data: any = (message as any).tableData;
-    if (!data) return [];
-
-    const rawItems = Array.isArray(data.machineList)
-      ? data.machineList
-      : Array.isArray(data.machines)
-        ? data.machines
-        : Array.isArray(data.items)
-          ? data.items
-          : [];
+    const rawItems: any[] = message.rankingItems
+      ?? (message as any).tableData?.machineList
+      ?? (message as any).tableData?.machines
+      ?? (message as any).tableData?.items
+      ?? [];
 
     return rawItems.map((item: any) => this.normalizeMachine(item));
   }
@@ -1211,25 +1211,36 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   private createBotMessage(response: ChatbotResponse): ChatMessage | null {
     const intent = this.resolveIntent(response);
     const messageType = this.resolveMessageType(response, intent);
-
-    if (!intent && messageType === 'text' && !response.data) {
-      console.log('[Chatbot Widget] Skipping empty response with no data and unknown intent');
-      return null;
-    }
-
+    if (!intent && messageType === 'text' && !response.data) return null;
     const isRanking = RANKING_INTENTS.includes(intent as any);
-    const rankingItems = isRanking ? this.resolveRankingItems(response.data, intent) : undefined;
-    const chartData = this.resolveChartData(response, rankingItems, intent);
-
-    const finalType = messageType;
-    const pendingItems = finalType === 'choice' ? rankingItems : undefined;
-    const rankingViewMode: RankingViewMode = finalType === 'chart'
-      ? 'chart'
-      : (isRanking && finalType === 'text' && rankingItems?.length ? 'text' : (response.selected_option === 'texte' ? 'text' : 'chart'));
-    const botType: 'text' | 'choice' | 'chart' | 'ranking' = isRanking && finalType === 'text' && rankingItems?.length
-      ? 'ranking'
-      : (finalType === 'chart' && isRanking ? 'ranking' : finalType);
-
+    const shouldExtractRanking = isRanking && (
+      messageType === 'choice' ||
+      response.selected_option === 'texte' ||
+      response.selected_option === 'graphique'
+    );
+    const rankingItems = shouldExtractRanking ? this.resolveRankingItems(response.data, intent) : undefined;
+    let chartData = this.resolveChartData(response, rankingItems, intent);
+    // If graphique requested but no chartData yet, try normalizing backend data
+    if (response.selected_option === 'graphique' && !chartData && response.data) {
+      chartData = this.normalizeChartDataFromBackend(response.data);
+    }
+    let botType: 'text' | 'choice' | 'chart' | 'ranking';
+    if (messageType === 'choice') {
+      botType = 'choice';
+    } else if (response.selected_option === 'texte' && isRanking && rankingItems?.length) {
+      botType = 'ranking';
+    } else if (response.selected_option === 'graphique' && isRanking && rankingItems?.length) {
+      botType = 'ranking';
+    } else if (isRanking && messageType === 'text' && rankingItems?.length) {
+      botType = 'ranking';
+    } else {
+      botType = messageType as any;
+    }
+    const rankingViewMode: RankingViewMode =
+      response.selected_option === 'texte' ? 'text' :
+      response.selected_option === 'graphique' ? 'chart' :
+      (botType === 'ranking' ? 'text' : 'chart');
+    const pendingItems = botType === 'choice' ? rankingItems : undefined;
     const botMessage: ChatMessage = {
       id: this.nextMessageId(),
       sender: 'bot',
@@ -1238,14 +1249,17 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       type: botType as any,
       intent: intent || null,
       options: response.options ?? [],
-      chartType: finalType === 'chart' ? (response.chart_type ?? 'bar') : undefined,
-      chartData: finalType === 'chart' ? chartData : undefined,
-      rankingItems: botType === 'ranking' || botType === 'chart' ? rankingItems : undefined,
+      chartType: botType === 'ranking' && rankingViewMode === 'chart' ? (response.chart_type ?? 'bar') : botType === 'chart' ? (response.chart_type ?? 'bar') : undefined,
+      chartData: botType === 'ranking' && rankingViewMode === 'chart'
+        ? (chartData || (rankingItems && intent ? this.buildChartPayload(rankingItems, intent, undefined) : undefined))
+        : botType === 'chart'
+        ? chartData
+        : undefined,
+      rankingItems: botType === 'ranking' ? rankingItems : undefined,
       rankingViewMode,
       rankingMetric: this.defaultMetricForIntent(intent),
       pendingItems,
     };
-
     return botMessage;
   }
 
@@ -1263,6 +1277,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   private resolveMessageType(response: ChatbotResponse, intent: string | null): 'text' | 'choice' | 'chart' {
     if (response.type === 'choice') return 'choice';
     if (response.type === 'chart') return 'chart';
+    if (response.selected_option === 'texte' && intent && RANKING_INTENTS.includes(intent as any)) return 'text';
     return 'text';
   }
 
@@ -1963,8 +1978,11 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private renderCharts(): void {
+    // Include both regular chart messages AND ranking messages in chart view mode
     const chartMessages = this.messages.filter(
-      (m) => this.isChartMessage(m) && m.rankingViewMode === 'chart'
+      (m) =>
+        (this.isChartMessage(m)) ||
+        (m.sender === 'bot' && m.type === 'ranking' && m.rankingViewMode === 'chart' && !!m.rankingItems)
     );
     const canvases = this.chartCanvasRefs ? this.chartCanvasRefs.toArray().map((r) => r.nativeElement) : [];
 
@@ -1973,6 +1991,18 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     chartMessages.forEach((message) => {
       const canvas = canvases.find((c) => c.dataset['messageId'] === String(message.id));
       if (!canvas) return;
+
+      // Ensure chartData is populated for ranking messages
+      if (!message.chartData && message.rankingItems && message.intent) {
+        message.chartData = this.buildChartPayload(
+          message.rankingItems,
+          message.intent,
+          message.rankingMetric
+        );
+      }
+
+      if (!message.chartData) return;
+
       // Ensure the canvas and its message container occupy the full available
       // horizontal space before Chart.js measures it. We apply inline styles
       // to override any CSS that keeps the bubble narrow.
