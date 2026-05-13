@@ -126,6 +126,7 @@ export interface PredictionPayload {
   type_malaxeur: string;
   type_nettoyage: string;
   type_separation: string;
+  type_extracteur: string;
   controle_temperature: string;
   poids_olives_kg: number;
   maturite_niveau_1_5: number;

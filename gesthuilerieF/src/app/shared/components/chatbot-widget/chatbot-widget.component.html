@@ -633,10 +633,9 @@
             (ngModelChange)="updatePredictionField('variete', $event)"
             name="variete"
           >
-            <option value="Chemlali">Chemlali</option>
-            <option value="Koroneiki">Koroneiki</option>
-            <option value="Arbequina">Arbequina</option>
-            <option value="Frantoio">Frantoio</option>
+            <option *ngFor="let option of getVarieteOptions()" [value]="option">
+              {{ option }}
+            </option>
           </select>
         </div>
 
@@ -648,10 +647,9 @@
             (ngModelChange)="updatePredictionField('region', $event)"
             name="region"
           >
-            <option value="Mahdia">Mahdia</option>
-            <option value="Kairouan">Kairouan</option>
-            <option value="Sfax">Sfax</option>
-            <option value="Sousse">Sousse</option>
+            <option *ngFor="let option of getRegionOptions()" [value]="option">
+              {{ option }}
+            </option>
           </select>
         </div>
 
@@ -663,8 +661,9 @@
             (ngModelChange)="updatePredictionField('methode_recolte', $event)"
             name="methode_recolte"
           >
-            <option value="manuelle">Manuelle</option>
-            <option value="mecanique">Mécanique</option>
+            <option *ngFor="let option of getMethodeRecolteOptions()" [value]="option">
+              {{ option }}
+            </option>
           </select>
         </div>
 
@@ -676,9 +675,9 @@
             (ngModelChange)="updatePredictionField('type_sol', $event)"
             name="type_sol"
           >
-            <option value="calcaire">Calcaire</option>
-            <option value="argile">Argile</option>
-            <option value="sable">Sable</option>
+            <option *ngFor="let option of getTypeSolOptions()" [value]="option">
+              {{ option }}
+            </option>
           </select>
         </div>
 
@@ -743,8 +742,8 @@
             [ngModel]="predictionNumber('temperature_malaxage_c')"
             (ngModelChange)="updatePredictionField('temperature_malaxage_c', $event)"
             name="temperature_malaxage_c"
-            min="20"
-            max="35"
+            min="24"
+            max="27"
             step="0.5"
           >
         </div>
@@ -757,8 +756,8 @@
             [ngModel]="predictionNumber('duree_malaxage_min')"
             (ngModelChange)="updatePredictionField('duree_malaxage_min', $event)"
             name="duree_malaxage_min"
-            min="20"
-            max="60"
+            min="25"
+            max="40"
           >
         </div>
 
@@ -770,8 +769,8 @@
             [ngModel]="predictionNumber('vitesse_decanteur_tr_min')"
             (ngModelChange)="updatePredictionField('vitesse_decanteur_tr_min', $event)"
             name="vitesse_decanteur_tr_min"
-            min="1000"
-            max="4000"
+            min="3000"
+            max="3400"
             required
           >
         </div>
@@ -784,8 +783,8 @@
             [ngModel]="predictionNumber('humidite_pourcent')"
             (ngModelChange)="updatePredictionField('humidite_pourcent', $event)"
             name="humidite_pourcent"
-            min="0"
-            max="100"
+            min="10"
+            max="30"
             step="0.1"
           >
         </div>
@@ -798,8 +797,8 @@
             [ngModel]="predictionNumber('acidite_olives_pourcent')"
             (ngModelChange)="updatePredictionField('acidite_olives_pourcent', $event)"
             name="acidite_olives_pourcent"
-            min="0"
-            max="10"
+            min="0.5"
+            max="2.5"
             step="0.1"
           >
         </div>
@@ -839,61 +838,90 @@
             (ngModelChange)="updatePredictionField('type_machine', $event)"
             name="type_machine"
           >
-            <option value="3_phase">3 Phase</option>
-            <option value="2_phase">2 Phase</option>
+            <option value="2_phase">2 Phases</option>
+            <option value="3_phase">3 Phases</option>
+            <option value="presse">Presse</option>
           </select>
         </div>
 
         <div class="chatbot-widget__form-group">
           <label for="prediction_broyeur">Type de broyeur</label>
-          <input
-            type="text"
+          <select
             id="prediction_broyeur"
             [ngModel]="predictionField('type_broyeur')"
             (ngModelChange)="updatePredictionField('type_broyeur', $event)"
             name="type_broyeur"
-            placeholder="Ex: meules"
             required
           >
+            <option value="">-- Sélectionner un type --</option>
+            <option *ngFor="let option of getBroyeurOptions()" [value]="option">
+              {{ option }}
+            </option>
+          </select>
         </div>
 
         <div class="chatbot-widget__form-group">
           <label for="prediction_malaxeur">Type de malaxeur</label>
-          <input
-            type="text"
+          <select
             id="prediction_malaxeur"
             [ngModel]="predictionField('type_malaxeur')"
             (ngModelChange)="updatePredictionField('type_malaxeur', $event)"
             name="type_malaxeur"
-            placeholder="Ex: horizontal"
             required
           >
+            <option value="">-- Sélectionner un type --</option>
+            <option *ngFor="let option of getMalaxeurOptions()" [value]="option">
+              {{ option }}
+            </option>
+          </select>
         </div>
 
         <div class="chatbot-widget__form-group">
           <label for="prediction_nettoyage">Type de nettoyage</label>
-          <input
-            type="text"
+          <select
             id="prediction_nettoyage"
             [ngModel]="predictionField('type_nettoyage')"
             (ngModelChange)="updatePredictionField('type_nettoyage', $event)"
             name="type_nettoyage"
-            placeholder="Ex: lavage_eau"
             required
           >
+            <option value="">-- Sélectionner un type --</option>
+            <option *ngFor="let option of getNettoyageOptions()" [value]="option">
+              {{ option }}
+            </option>
+          </select>
         </div>
 
         <div class="chatbot-widget__form-group">
           <label for="prediction_separation">Type de séparation</label>
-          <input
-            type="text"
+          <select
             id="prediction_separation"
             [ngModel]="predictionField('type_separation')"
             (ngModelChange)="updatePredictionField('type_separation', $event)"
             name="type_separation"
-            placeholder="Ex: centrifugation"
             required
           >
+            <option value="">-- Sélectionner un type --</option>
+            <option *ngFor="let option of getSeparationOptions()" [value]="option">
+              {{ option }}
+            </option>
+          </select>
+        </div>
+
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_extracteur">Type d'extracteur</label>
+          <select
+            id="prediction_extracteur"
+            [ngModel]="predictionField('type_extracteur')"
+            (ngModelChange)="updatePredictionField('type_extracteur', $event)"
+            name="type_extracteur"
+            required
+          >
+            <option value="">-- Sélectionner un type --</option>
+            <option *ngFor="let option of getExtracteurOptions()" [value]="option">
+              {{ option }}
+            </option>
+          </select>
         </div>
 
         <div class="chatbot-widget__form-group">

@@ -22,6 +22,35 @@ const ANALYSIS_ACIDITY_RANGE = { min: 0.1, max: 5 };
 const ANALYSIS_PEROXIDE_RANGE = { min: 5, max: 40 };
 const ANALYSIS_K270_RANGE = { min: 0.1, max: 0.5 };
 
+// Configuration des types de machines par procédé
+interface MachineTypeOptions {
+  broyeur: string[];
+  malaxeur: string[];
+  nettoyage: string[];
+  separation: string[];
+}
+
+const MACHINE_TYPES_CONFIG: Record<string, MachineTypeOptions> = {
+  '2_phase': {
+    broyeur: ['marteaux', 'meule', 'disque'],
+    malaxeur: ['horizontal', 'vertical', 'malaxeur double cuve'],
+    nettoyage: ['laveuse_eau', 'separateur_feuilles', 'soufflerie'],
+    separation: ['decanteur_2_phases', 'decantation_naturelle'],
+  },
+  '3_phase': {
+    broyeur: ['marteaux', 'meule', 'disque'],
+    malaxeur: ['horizontal', 'vertical', 'malaxeur double cuve'],
+    nettoyage: ['laveuse_eau', 'separateur_feuilles', 'soufflerie'],
+    separation: ['decanteur_3_phases', 'decantation_naturelle'],
+  },
+  'presse': {
+    broyeur: ['meule'],
+    malaxeur: ['horizontal', 'vertical', 'malaxeur double cuve'],
+    nettoyage: ['laveuse_eau', 'separateur_feuilles', 'soufflerie'],
+    separation: ['presse_hydraulique', 'decantation_naturelle'],
+  },
+};
+
 interface ChatDebugInfo {
   intent: string | null;
   confidence: number | null;
@@ -618,15 +647,16 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   private initPredictionFormData(): Record<string, unknown> {
     return {
       variete: 'Chemlali',
-      region: 'Sfax',
+      region: 'Nord',
       methode_recolte: 'manuelle',
-      type_sol: 'argile',
+      type_sol: 'argileux',
       lavage_effectue: 'oui',
-      type_machine: 'moderne_2_phases',
-      type_broyeur: 'standard',
-      type_malaxeur: 'standard',
-      type_nettoyage: 'standard',
-      type_separation: 'standard',
+      type_machine: '2_phase',
+      type_broyeur: 'meule',
+      type_malaxeur: 'horizontal',
+      type_nettoyage: 'laveuse_eau',
+      type_separation: 'decanteur_2_phases',
+      type_extracteur: 'centrifugation_2_phases',
       controle_temperature: 'oui',
       poids_olives_kg: 7200,
       maturite_niveau_1_5: 3,
@@ -636,7 +666,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       duree_malaxage_min: 32,
       vitesse_decanteur_tr_min: 3200,
       humidite_pourcent: 18,
-      acidite_olives_pourcent: 0.35,
+      acidite_olives_pourcent: 1.5,
       taux_feuilles_pourcent: 0.9,
       pression_extraction_bar: 95,
       nombre_etapes: 6,
@@ -838,6 +868,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       type_malaxeur: String(pd['type_malaxeur'] ?? ''),
       type_nettoyage: String(pd['type_nettoyage'] ?? ''),
       type_separation: String(pd['type_separation'] ?? ''),
+      type_extracteur: String(pd['type_extracteur'] ?? ''),
       controle_temperature: String(pd['controle_temperature'] ?? ''),
       poids_olives_kg: toNum('poids_olives_kg'),
       maturite_niveau_1_5: toNum('maturite_niveau_1_5'),
@@ -887,6 +918,7 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       'type_malaxeur',
       'type_nettoyage',
       'type_separation',
+      'type_extracteur',
       'controle_temperature',
     ];
     requiredTextFields.forEach((key) => {
@@ -948,6 +980,71 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
 
   isChartMessage(message: ChatMessage): boolean {
     return message.sender === 'bot' && message.type === 'chart' && !!message.chartData;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Machine type options helpers
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  getMachineTypes(): string[] {
+    return ['2_phase', '3_phase', 'presse'];
+  }
+
+  getVarieteOptions(): string[] {
+    return ['Arbequina', 'Chemlali', 'Chetoui'];
+  }
+
+  getRegionOptions(): string[] {
+    return ['Centre', 'Nord', 'Sud'];
+  }
+
+  getMethodeRecolteOptions(): string[] {
+    return ['manuelle', 'mecanique', 'semi-mecanique'];
+  }
+
+  getTypeSolOptions(): string[] {
+    return ['argileux', 'calcaire', 'sableux'];
+  }
+
+  getLavageOptions(): string[] {
+    return ['oui', 'non'];
+  }
+
+  getControleTemperatureOptions(): string[] {
+    return ['oui', 'non'];
+  }
+
+  getBroyeurOptions(): string[] {
+    const machineType = String(this.predictionFormData['type_machine'] ?? '2_phase');
+    return MACHINE_TYPES_CONFIG[machineType]?.broyeur || [];
+  }
+
+  getMalaxeurOptions(): string[] {
+    const machineType = String(this.predictionFormData['type_machine'] ?? '2_phase');
+    return MACHINE_TYPES_CONFIG[machineType]?.malaxeur || [];
+  }
+
+  getNettoyageOptions(): string[] {
+    const machineType = String(this.predictionFormData['type_machine'] ?? '2_phase');
+    return MACHINE_TYPES_CONFIG[machineType]?.nettoyage || [];
+  }
+
+  getSeparationOptions(): string[] {
+    const machineType = String(this.predictionFormData['type_machine'] ?? '2_phase');
+    return MACHINE_TYPES_CONFIG[machineType]?.separation || [];
+  }
+
+  getExtracteurOptions(): string[] {
+    return ['centrifugation_3_phases', 'centrifugation_2_phases', 'presse_hydraulique'];
+  }
+
+  getMachineTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      '2_phase': '2 Phases',
+      '3_phase': '3 Phases',
+      'presse': 'Presse',
+    };
+    return labels[type] || type;
   }
 
   isRankingMessage(message: ChatMessage): boolean {
