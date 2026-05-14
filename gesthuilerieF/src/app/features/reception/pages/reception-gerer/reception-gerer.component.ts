@@ -99,7 +99,6 @@ export class ReceptionGererComponent implements OnInit {
       maturite: [''],
       dateRecolte: [new Date().toISOString().slice(0, 10)],
       dateReception: [new Date().toISOString().slice(0, 10)],
-      dureeStockageAvantBroyage: [1],
       matierePremiereId: [null as number | null],
       campagneId: [null as string | null],
       huilerieId: [1, [Validators.required, Validators.min(1)]],
@@ -301,7 +300,6 @@ export class ReceptionGererComponent implements OnInit {
       maturite: String(raw.maturite ?? ''),
       dateRecolte: String(raw.dateRecolte ?? ''),
       dateReception: String(raw.dateReception ?? ''),
-      dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage ?? 0),
       matierePremiereReference: String(selectedMatiere?.reference ?? selectedMatiereId),
       campagneReference: this.resolveCampaignSeason(
         String(raw.campagneId ?? ''),
@@ -613,7 +611,6 @@ export class ReceptionGererComponent implements OnInit {
       maturite: '',
       dateRecolte: new Date().toISOString().slice(0, 10),
       dateReception: new Date().toISOString().slice(0, 10),
-      dureeStockageAvantBroyage: 1,
       matierePremiereId:
         this.matieresPremieres.map((item) => this.resolveMatierePremiereId(item)).find((id) => id != null)
         ?? 1,
@@ -651,7 +648,6 @@ export class ReceptionGererComponent implements OnInit {
       'maturite',
       'dateRecolte',
       'dateReception',
-      'dureeStockageAvantBroyage',
       'matierePremiereId',
       'campagneId',
     ];
@@ -670,7 +666,6 @@ export class ReceptionGererComponent implements OnInit {
       this.form.get('maturite')?.setValidators([Validators.required]);
       this.form.get('dateRecolte')?.setValidators([Validators.required]);
       this.form.get('dateReception')?.setValidators([Validators.required]);
-      this.form.get('dureeStockageAvantBroyage')?.setValidators([Validators.required, Validators.min(0)]);
       this.form.get('matierePremiereId')?.setValidators([Validators.required, Validators.min(1)]);
       this.form.get('campagneId')?.setValidators([Validators.required]);
 

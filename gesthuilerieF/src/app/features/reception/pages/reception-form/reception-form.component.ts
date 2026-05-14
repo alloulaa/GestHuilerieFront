@@ -101,7 +101,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             aciditeOlivesPourcent: [0, [Validators.min(0), Validators.max(100)]],
             tauxFeuillesPourcent: [0, [Validators.min(0), Validators.max(100)]],
             lavageEffectue: [''],
-            dureeStockageAvantBroyage: [1],
             matierePremiereId: [null as number | null],
             campagneId: [null as string | null],
             huilerieId: [1, [Validators.required, Validators.min(1)]],
@@ -311,7 +310,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             aciditeOlivesPourcent: Number(raw.aciditeOlivesPourcent ?? 0),
             tauxFeuillesPourcent: Number(raw.tauxFeuillesPourcent ?? 0),
             lavageEffectue: String(raw.lavageEffectue ?? '').trim() || undefined,
-            dureeStockageAvantBroyage: Number(raw.dureeStockageAvantBroyage),
             matierePremiereReference: matiere?.reference ?? '',
             campagneReference: campagne?.reference ?? '',
         };
@@ -388,7 +386,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             aciditeOlivesPourcent: 0,
             tauxFeuillesPourcent: 0,
             lavageEffectue: '',
-            dureeStockageAvantBroyage: 1,
             matierePremiereId: this.matieresPremieres[0]?.idMatierePremiere ?? null,
             campagneId: null,
             huilerieId: defaultHuilerieId,
@@ -434,7 +431,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             'maturite',
             'dateRecolte',
             'dateReception',
-            'dureeStockageAvantBroyage',
             'matierePremiereId',
             'campagneId',
         ];
@@ -451,7 +447,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             this.form.get('maturite')?.setValidators([Validators.required]);
             this.form.get('dateRecolte')?.setValidators([Validators.required]);
             this.form.get('dateReception')?.setValidators([Validators.required]);
-            this.form.get('dureeStockageAvantBroyage')?.setValidators([Validators.required, Validators.min(0)]);
             const matiereControl = this.form.get('matierePremiereId');
             const campagneControl = this.form.get('campagneId');
             matiereControl?.setValidators([Validators.required, Validators.min(1)]);
@@ -582,7 +577,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             aciditeOlivesPourcent: Number(lot?.aciditeOlivesPourcent ?? this.form.get('aciditeOlivesPourcent')?.value ?? 0),
             tauxFeuillesPourcent: Number(lot?.tauxFeuillesPourcent ?? this.form.get('tauxFeuillesPourcent')?.value ?? 0),
             lavageEffectue: String(lot?.lavageEffectue ?? this.form.get('lavageEffectue')?.value ?? ''),
-            dureeStockageAvantBroyage: Number(lot?.dureeStockageAvantBroyage ?? this.form.get('dureeStockageAvantBroyage')?.value ?? 1),
             fournisseurNom: lot?.fournisseurNom ?? this.form.get('fournisseurNom')?.value ?? null,
             fournisseurCIN: lot?.fournisseurCIN ?? this.form.get('fournisseurCIN')?.value ?? null,
             matierePremiereId: matiereId,

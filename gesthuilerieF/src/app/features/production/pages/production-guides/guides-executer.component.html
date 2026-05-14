@@ -20,6 +20,11 @@
         </label>
 
         <label class="field">
+          <span>Durée stockage avant broyage (jours)</span>
+          <input nbInput fullWidth type="number" formControlName="dureeStockageAvantBroyage" readonly />
+        </label>
+
+        <label class="field">
           <span>Huilerie du guide</span>
           <input nbInput fullWidth [value]="selectedGuideHuilerieLabel" readonly />
         </label>
@@ -205,6 +210,12 @@
                 formControlName="produitFinalQuantiteProduite" placeholder="0" />
               <strong *ngIf="isExecutionTerminated(execution)">{{ execution.produitFinalQuantiteProduite ?? '-'
                 }}</strong>
+            </div>
+          </div>
+          <div class="execution-detail-item">
+            <span>Rendement réalisé (%)</span>
+            <div [formGroup]="executionForm">
+              <strong>{{ executionForm.get('produitFinalRendement')?.value ?? 0 }} %</strong>
             </div>
           </div>
         </div>

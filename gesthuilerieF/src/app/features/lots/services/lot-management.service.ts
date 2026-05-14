@@ -29,7 +29,6 @@ export interface CreatePeseeInput {
   aciditeOlivesPourcent?: number;
   tauxFeuillesPourcent?: number;
   lavageEffectue?: string;
-  dureeStockageAvantBroyage: number;
   matierePremiereReference: string;
   campagneReference: string;
 }
@@ -169,7 +168,6 @@ export class LotManagementService {
       acidite_olives_pourcent: input.aciditeOlivesPourcent != null ? Number(input.aciditeOlivesPourcent) : undefined,
       taux_feuilles_pourcent: input.tauxFeuillesPourcent != null ? Number(input.tauxFeuillesPourcent) : undefined,
       lavage_effectue: String(input.lavageEffectue ?? '').trim() || undefined,
-      duree_stockage_jours: Number(input.dureeStockageAvantBroyage),
       matierePremiereReference: String(input.matierePremiereReference ?? '').trim() || undefined,
       campagneReference: String(input.campagneReference ?? '').trim() || undefined,
     };
@@ -209,7 +207,6 @@ export class LotManagementService {
       acidite_olives_pourcent: input.aciditeOlivesPourcent != null ? Number(input.aciditeOlivesPourcent) : undefined,
       taux_feuilles_pourcent: input.tauxFeuillesPourcent != null ? Number(input.tauxFeuillesPourcent) : undefined,
       lavage_effectue: String(input.lavageEffectue ?? '').trim() || undefined,
-      duree_stockage_jours: Number(input.dureeStockageAvantBroyage),
       matierePremiereReference: String(input.matierePremiereReference ?? '').trim() || undefined,
       campagneReference: String(input.campagneReference ?? '').trim() || undefined,
     };

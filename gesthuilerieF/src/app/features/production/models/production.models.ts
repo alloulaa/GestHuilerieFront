@@ -101,7 +101,8 @@ export interface ExecutionProduction {
     produitFinalCode?: string;
     produitFinalNomProduit?: string;
     produitFinalQualite?: string;
-    produitFinalQuantiteProduite?: number;
+    produitFinalQuantiteProduite?: number | null;
+    produitFinalRendement?: number | null;
     valeursReelles?: ValeurReelleParametre[];
     predictions?: Prediction[];
     huilerieId?: number;

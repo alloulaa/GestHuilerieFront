@@ -33,6 +33,8 @@ interface ExecutionIntervalHelpRow {
   unit: string;
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 @Component({
   selector: 'app-guides-executer',
   standalone: true,
@@ -102,6 +104,7 @@ export class GuidesExecuterComponent implements OnInit {
   ) {
     this.executionForm = this.fb.group({
       dateDebut: [this.today(), [Validators.required]],
+      dureeStockageAvantBroyage: [{ value: 0, disabled: true }],
       dateFinPrevue: [this.tomorrow(), [Validators.required]],
       dateFinReelle: this.fb.control<string | null>(null),
       statut: ['EN_COURS', [Validators.required]],
@@ -110,12 +113,17 @@ export class GuidesExecuterComponent implements OnInit {
       controleTemperature: [false, [Validators.required]],
       produitFinalQualite: this.fb.control<string>(''),
       produitFinalQuantiteProduite: this.fb.control<number | null>(null),
+      produitFinalRendement: [{ value: 0, disabled: true }],
       guideProductionId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
       typeMachine: this.fb.control<string | null>(null),
       machineId: this.fb.control<number | null>(null),
       lotId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
       valeursReelles: this.fb.array([]),
     });
+
+    this.executionForm.get('dateDebut')?.valueChanges.subscribe(() => this.updateComputedStorageDuration());
+    this.executionForm.get('lotId')?.valueChanges.subscribe(() => this.updateComputedStorageDuration());
+    this.executionForm.get('produitFinalQuantiteProduite')?.valueChanges.subscribe(() => this.updateComputedRendement());
   }
 
   ngOnInit(): void {
@@ -253,6 +261,11 @@ export class GuidesExecuterComponent implements OnInit {
     return `${lotWithReference.reference ?? `LOT-${lot.idLot}`} - ${lot.varieteOlive}`;
   }
 
+  get selectedLotStorageDurationLabel(): string {
+    const duration = Number(this.executionForm.get('dureeStockageAvantBroyage')?.value ?? 0);
+    return Number.isFinite(duration) ? String(duration) : '-';
+  }
+
   onGuideSelectionChange(guideId: number | string | null): void {
     const numericGuideId = guideId === null ? null : Number(guideId);
 
@@ -272,6 +285,7 @@ export class GuidesExecuterComponent implements OnInit {
     });
     this.filteredMachines = [];
     this.refreshFilteredDataForSelectedGuide();
+    this.updateComputedStorageDuration();
   }
 
   onTypeMachineSelectionChange(typeMachine: string | null): void {
@@ -547,6 +561,7 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionForm.patchValue({
       produitFinalQualite: enriched.produitFinalQualite ?? '',
       produitFinalQuantiteProduite: enriched.produitFinalQuantiteProduite ?? null,
+      produitFinalRendement: enriched.produitFinalRendement ?? 0,
     });
     this.populateExecutionValuesFromGuideOrExecution(enriched);
   }
@@ -596,6 +611,7 @@ export class GuidesExecuterComponent implements OnInit {
 
     const produitFinalQualite = String(this.executionForm.get('produitFinalQualite')?.value ?? '').trim();
     const produitFinalQuantiteProduite = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
+    const produitFinalRendement = this.computeRendement();
     if (!produitFinalQualite || !Number.isFinite(produitFinalQuantiteProduite) || produitFinalQuantiteProduite <= 0) {
       this.toastService.error('Veuillez saisir la qualité et la quantité produite avant de terminer l\'exécution.');
       return;
@@ -631,6 +647,7 @@ export class GuidesExecuterComponent implements OnInit {
       switchMap(() => this.executionProductionService.createProduitFinal(executionToFinalize, {
         qualite: produitFinalQualite,
         quantiteProduite: produitFinalQuantiteProduite,
+        rendement: produitFinalRendement,
       })),
     ).subscribe({
       next: (executionWithProduct) => {
@@ -641,6 +658,7 @@ export class GuidesExecuterComponent implements OnInit {
           statut: executionWithProduct?.statut ?? executionToFinalize.statut,
           produitFinalQualite: produitFinalQualite,
           produitFinalQuantiteProduite: produitFinalQuantiteProduite,
+          produitFinalRendement: produitFinalRendement,
           valeursReelles: (executionWithProduct?.valeursReelles && executionWithProduct.valeursReelles.length > 0)
             ? executionWithProduct.valeursReelles
             : valeursPayload,
@@ -651,6 +669,7 @@ export class GuidesExecuterComponent implements OnInit {
         this.executionForm.patchValue({
           produitFinalQualite,
           produitFinalQuantiteProduite,
+          produitFinalRendement: produitFinalRendement ?? 0,
         });
         this.populateExecutionValuesFromGuideOrExecution(mergedExecution);
         this.executions = this.executions.map((item) =>
@@ -771,6 +790,8 @@ export class GuidesExecuterComponent implements OnInit {
 
       return this.availableLotIds.has(lotId);
     });
+    // Recompute storage duration when lot list changes (e.g. after execution creation)
+    this.updateComputedStorageDuration();
   }
 
   private updateAvailableLotIds(stocks: Array<{ referenceId?: number; quantiteDisponible?: number }>): void {
@@ -979,6 +1000,7 @@ export class GuidesExecuterComponent implements OnInit {
 
     this.executionForm.reset({
       dateDebut: this.today(),
+      dureeStockageAvantBroyage: 0,
       dateFinPrevue: this.tomorrow(),
       dateFinReelle: null,
       statut: 'EN_COURS',
@@ -987,6 +1009,7 @@ export class GuidesExecuterComponent implements OnInit {
       controleTemperature: false,
       produitFinalQualite: '',
       produitFinalQuantiteProduite: null,
+      produitFinalRendement: 0,
       guideProductionId,
       typeMachine: null,
       machineId: null,
@@ -996,6 +1019,70 @@ export class GuidesExecuterComponent implements OnInit {
     this.valeursReelles.clear();
     this.executionValueRows = [];
     this.executionIntervalHelpRows = [];
+    this.updateComputedStorageDuration();
+  }
+
+  private updateComputedStorageDuration(): void {
+    const duration = this.computeStorageDurationDays();
+    this.executionForm.get('dureeStockageAvantBroyage')?.setValue(duration ?? 0, { emitEvent: false });
+  }
+
+  private updateComputedRendement(): void {
+    const rendement = this.computeRendement();
+    this.executionForm.get('produitFinalRendement')?.setValue(rendement ?? 0, { emitEvent: false });
+  }
+
+  private computeRendement(): number | null {
+    const quantiteProduite = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
+
+    if (!Number.isFinite(quantiteProduite) || quantiteProduite <= 0) {
+      return null;
+    }
+
+    const quantitePredite = Number(this.getLatestPrediction(this.selectedExecution)?.quantiteHuileRecalculeeLitres ?? 0);
+    if (!Number.isFinite(quantitePredite) || quantitePredite <= 0) {
+      return null;
+    }
+
+    const rendement = (quantiteProduite / quantitePredite) * 100;
+    return Math.round(rendement * 100) / 100;
+  }
+
+  private computeStorageDurationDays(): number | null {
+    const lotId = Number(this.executionForm.get('lotId')?.value ?? 0);
+    const dateDebut = String(this.executionForm.get('dateDebut')?.value ?? '').trim();
+    if (!lotId || !dateDebut) {
+      return null;
+    }
+
+    const lot = this.lots.find((item) => item.idLot === lotId);
+    const dateReception = String(lot?.dateReception ?? '').trim();
+    if (!dateReception) {
+      return null;
+    }
+
+    const receptionTime = this.parseDateOnly(dateReception);
+    const debutTime = this.parseDateOnly(dateDebut);
+    if (receptionTime === null || debutTime === null) {
+      return null;
+    }
+
+    return Math.max(0, Math.floor((debutTime - receptionTime) / MS_PER_DAY));
+  }
+
+  private parseDateOnly(value: string): number | null {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const parts = normalized.slice(0, 10).split('-').map((part) => Number(part));
+    if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) {
+      return null;
+    }
+
+    const [year, month, day] = parts;
+    return Date.UTC(year, month - 1, day);
   }
 
   private attachPredictionToExecution(executionId: number, prediction: Prediction): void {

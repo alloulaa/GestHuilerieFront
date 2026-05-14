@@ -93,7 +93,7 @@ export class ExecutionProductionService {
 
     createProduitFinal(
         execution: ExecutionProduction,
-        produitFinal: { qualite: string; quantiteProduite: number },
+        produitFinal: { qualite: string; quantiteProduite: number | null; rendement?: number | null },
     ): Observable<ExecutionProductionDTO> {
         const dateProduction = String(execution?.dateFinReelle ?? '').trim() || new Date().toISOString().slice(0, 19);
         const produitNomFallback = String(execution?.lotVariete ?? '').trim();
@@ -102,6 +102,7 @@ export class ExecutionProductionService {
             nomProduit: produitNomFallback ? `Huile ${produitNomFallback}` : `Huile lot ${execution.reference ?? execution.idExecutionProduction}`,
             quantiteProduite: Number(produitFinal.quantiteProduite ?? 0),
             qualite: String(produitFinal.qualite ?? '').trim(),
+            rendement: Number(produitFinal.rendement ?? 0),
             dateProduction,
         };
 
