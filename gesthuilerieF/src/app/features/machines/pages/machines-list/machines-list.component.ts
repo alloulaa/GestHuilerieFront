@@ -17,8 +17,10 @@ import { MACHINE_TYPE_DATA, MachineTypeInfo } from '../../../../shared/constants
   imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule],
 })
 export class MachinesListComponent implements OnInit {
+  private allMachines: Machine[] = [];
   machines: Machine[] = [];
   selectedHuilerieNom = '';
+  selectedEtatMachine = '';
   aboutModalOpen = false;
   selectedTypeInfo: MachineTypeInfo | null = null;
 
@@ -36,19 +38,30 @@ export class MachinesListComponent implements OnInit {
   }
 
   applyAdminHuilerieFilter(): void {
-    this.loadMachines();
+    const huilerieQuery = String(this.selectedHuilerieNom ?? '').trim().toLowerCase();
+    const etatQuery = String(this.selectedEtatMachine ?? '').trim().toLowerCase();
+
+    if (!huilerieQuery && !etatQuery) {
+      this.machines = [...this.allMachines];
+      return;
+    }
+
+    this.machines = this.allMachines.filter((machine) =>
+      this.matchesFilter(machine, huilerieQuery, etatQuery),
+    );
   }
 
   resetAdminHuilerieFilter(): void {
     this.selectedHuilerieNom = '';
-    this.loadMachines();
+    this.selectedEtatMachine = '';
+    this.machines = [...this.allMachines];
   }
 
   private loadMachines(): void {
-    const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
-    console.log('[machines-list] loadMachines called', { huilerieNom, isAdmin: this.isAdmin });
-    this.machineService.getAll(huilerieNom).subscribe((data) => {
+    console.log('[machines-list] loadMachines called', { isAdmin: this.isAdmin });
+    this.machineService.getAll().subscribe((data) => {
       console.log('[machines-list] received machines from service', { count: data.length, machines: data });
+      this.allMachines = data;
       this.machines = data;
     });
   }
@@ -131,5 +144,15 @@ export class MachinesListComponent implements OnInit {
 
   formatEtape(etape: string): string {
     return String(etape ?? '').replace(/^\s*\d+\.\s*/, '').trim();
+  }
+
+  private matchesFilter(machine: Machine, huilerieQuery: string, etatQuery: string): boolean {
+    const huilerieNom = String(machine?.huilerieNom ?? '').toLowerCase();
+    const etatMachine = String(machine?.etatMachine ?? '').toLowerCase();
+
+    const matchesHuilerie = !huilerieQuery || huilerieNom.includes(huilerieQuery);
+    const matchesEtat = !etatQuery || etatMachine.includes(etatQuery);
+
+    return matchesHuilerie && matchesEtat;
   }
 }

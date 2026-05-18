@@ -2,18 +2,15 @@
   <mat-card-header class="page-head">
     <div class="title-wrap">
       <div class="title-line">
-        <p class="eyebrow">Pilotage</p>
-        <mat-card-title>Parc machines</mat-card-title>
+        <mat-card-title>LISTE DES MACHINES</mat-card-title>
       </div>
-      <p class="subtitle">Suivi en temps reel des etats et capacites de production.</p>
     </div>
-    <a mat-flat-button color="primary" class="filters-cta" [routerLink]="['/pages/machines/form']">Ouvrir les
-      filtres</a>
   </mat-card-header>
 
   <mat-card-content>
-    <div class="filter-bar" *ngIf="isAdmin">
+    <div class="filter-bar">
       <input [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom" placeholder="Filtrer par nom d'huilerie" />
+      <input [(ngModel)]="selectedEtatMachine" name="selectedEtatMachine" placeholder="Filtrer par état (EN_SERVICE, MAINTENANCE...)" />
       <button mat-raised-button color="primary" class="filter-btn" type="button"
         (click)="applyAdminHuilerieFilter()">Filtrer</button>
       <button mat-stroked-button type="button" (click)="resetAdminHuilerieFilter()">Réinitialiser</button>

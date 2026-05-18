@@ -1,180 +1,257 @@
 <mat-card class="olive-card reception-form-card">
-    <mat-card-header>
-        <div class="heading-wrap">
-            <mat-card-title>Réception - Nouvelle pesée</mat-card-title>
-            <p class="heading-subtitle">Enregistrez une réception rapidement avec toutes les informations de lot.</p>
-        </div>
-    </mat-card-header>
-    <mat-card-content>
-        <div class="stats-strip">
-            <article class="stat-pill">
-                <span class="stat-label">Matières premières</span>
-                <strong class="stat-value">{{ matieresPremieres.length }}</strong>
-            </article>
-            <article class="stat-pill">
-                <span class="stat-label">Campagnes actives</span>
-                <strong class="stat-value">{{ campagnes.length }}</strong>
-            </article>
-            <article class="stat-pill">
-                <span class="stat-label">Huileries</span>
-                <strong class="stat-value">{{ huileries.length }}</strong>
-            </article>
-        </div>
+  <mat-card-header>
+    <div class="heading-wrap">
+      <mat-card-title>Réception — Nouveau Lot</mat-card-title>
+    </div>
+  </mat-card-header>
 
-        <form class="reception-form-grid" [formGroup]="form" (ngSubmit)="submit()">
-            <ng-container *ngIf="showSaveSuccessPopup">
-                <div class="save-popup-backdrop">
-                    <div class="save-popup">
-                        <h3>Réception enregistrée</h3>
-                        <p>Le lot/arrivage a été ajouté avec succès.<br>Voulez-vous télécharger le bon de pesée&nbsp;?
-                        </p>
-                        <div class="popup-actions">
-                            <button mat-raised-button color="primary" type="button" (click)="onPopupGeneratePdf()">
-                                Télécharger le bon de pesée
-                            </button>
-                            <button mat-stroked-button type="button" (click)="onPopupSkipPdf()">Ignorer</button>
-                        </div>
-                    </div>
-                </div>
-            </ng-container>
+  <mat-card-content>
+    <!-- Stats strip -->
+    <div class="stats-strip">
+      <article class="stat-pill">
+        <span class="stat-label">Matières premières</span>
+        <strong class="stat-value">{{ matieresPremieres.length }}</strong>
+      </article>
+      <article class="stat-pill">
+        <span class="stat-label">Campagnes actives</span>
+        <strong class="stat-value">{{ campagnes.length }}</strong>
+      </article>
+      <article class="stat-pill">
+        <span class="stat-label">Huileries</span>
+        <strong class="stat-value">{{ huileries.length }}</strong>
+      </article>
+    </div>
 
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Date pesée</mat-label>
-                <input matInput type="datetime-local" formControlName="datePesee" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Matière première</mat-label>
-                <mat-select formControlName="matierePremiereId">
-                    <mat-option *ngFor="let mp of matieresPremieres" [value]="mp.idMatierePremiere">
-                        {{ mp.reference || ('#' + mp.idMatierePremiere) }} - {{ mp.nom }}
-                    </mat-option>
-                </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Pesée totale (kg)</mat-label>
-                <input matInput type="number" formControlName="poidsBrut" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Maturité</mat-label>
-                <input matInput type="number" min="1" max="5" step="1" formControlName="maturite" />
-                <mat-error *ngIf="getReceptionIntervalError('maturite') as maturiteError">{{ maturiteError
-                    }}</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Date récolte</mat-label>
-                <input matInput type="date" formControlName="dateRecolte" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Campagne</mat-label>
-                <mat-select formControlName="campagneId">
-                    <mat-option *ngFor="let campagne of campagnes" [value]="campagne.reference">
-                        {{ campagne.reference }}
-                    </mat-option>
-                </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Origine</mat-label>
-                <input matInput formControlName="origine" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Region</mat-label>
-                <mat-select formControlName="region">
-                    <mat-option *ngFor="let option of regionOptions" [value]="option">{{ option }}</mat-option>
-                </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Variété</mat-label>
-                <mat-select formControlName="varieteOlive">
-                    <mat-option *ngFor="let option of varieteOptions" [value]="option">{{ option }}</mat-option>
-                </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Methode de recolte</mat-label>
-                <mat-select formControlName="methodeRecolte">
-                    <mat-option *ngFor="let option of methodeRecolteOptions" [value]="option">{{ option }}</mat-option>
-                </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Type de sol</mat-label>
-                <mat-select formControlName="typeSol">
-                    <mat-option *ngFor="let option of typeSolOptions" [value]="option">{{ option }}</mat-option>
-                </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Temps depuis recolte (heures)</mat-label>
-                <input matInput type="number" min="0" formControlName="tempsDepuisRecolteHeures" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Humidité (%)</mat-label>
-                <input matInput type="number" min="10" max="30" formControlName="humiditePourcent" />
-                <mat-error *ngIf="getReceptionIntervalError('humiditePourcent') as humiditeError">{{ humiditeError
-                    }}</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Acidité des olives (%)</mat-label>
-                <input matInput type="number" min="0.1" max="2.5" step="0.1" formControlName="aciditeOlivesPourcent" />
-                <mat-error *ngIf="getReceptionIntervalError('aciditeOlivesPourcent') as aciditeError">{{ aciditeError
-                    }}</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Taux de feuilles (%)</mat-label>
-                <input matInput type="number" min="0" max="5" step="0.1" formControlName="tauxFeuillesPourcent" />
-                <mat-error *ngIf="getReceptionIntervalError('tauxFeuillesPourcent') as feuillesError">{{ feuillesError
-                    }}</mat-error>
-            </mat-form-field>
-            <div class="form-field wash-field">
-                <span class="field-label">Lavage effectué</span>
-                <div class="radio-group" role="radiogroup" aria-label="Lavage effectué">
-                    <label class="radio-label">
-                        <input type="radio" value="Oui" formControlName="lavageEffectue" /> Oui
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" value="Non" formControlName="lavageEffectue" /> Non
-                    </label>
-                </div>
+    <form class="reception-form-grid" [formGroup]="form" (ngSubmit)="submit()">
+
+      <!-- Popup succès -->
+      <ng-container *ngIf="showSaveSuccessPopup">
+        <div class="save-popup-backdrop">
+          <div class="save-popup">
+            <div class="popup-success-badge">✓ Enregistrement réussi</div>
+            <h3>Réception enregistrée</h3>
+            <p>Le lot a été ajouté avec succès.<br>Voulez-vous télécharger le bon de pesée&nbsp;?</p>
+            <div class="popup-actions">
+              <button mat-raised-button color="primary" type="button" (click)="onPopupGeneratePdf()">
+                Télécharger le bon de pesée
+              </button>
+              <button mat-stroked-button type="button" (click)="onPopupSkipPdf()">Ignorer</button>
             </div>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Fournisseur (nom)</mat-label>
-                <input matInput type="text" formControlName="fournisseurNom" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>CIN fournisseur</mat-label>
-                <input matInput type="text" formControlName="fournisseurCIN" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Huilerie</mat-label>
-                <mat-select formControlName="huilerieId">
-                    <mat-option *ngFor="let h of huileries" [value]="h.idHuilerie">
-                        {{ h.nom }}
-                    </mat-option>
-                </mat-select>
-            </mat-form-field>
+          </div>
+        </div>
+      </ng-container>
 
-            <div class="footer-row">
-                <div class="interval-help-panel">
-                    <div class="interval-help-panel__header">
-                        <span>Intervalles de saisie</span>
-                        <small>Les champs hors plage passent en rouge automatiquement.</small>
-                    </div>
-                    <div class="interval-help-panel__chips">
-                        <span class="interval-chip" *ngFor="let rule of receptionIntervalRules">
-                            <strong>{{ rule.label }}</strong>
-                            <em>{{ rule.min }} à {{ rule.max }}{{ rule.unit }}</em>
-                        </span>
-                    </div>
-                </div>
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 1 — Informations générales      -->
+      <!-- ═══════════════════════════════════════ -->
+      <div class="form-section">
+        <div class="section-header">
+          <div class="section-icon">
+            <span style="color:#fff;font-size:1rem;line-height:1;">📋</span>
+          </div>
+          <div class="section-title-wrap">
+            <h4 class="section-title">Informations générales</h4>
+            <p class="section-subtitle">Date, matière première, campagne et huilerie</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Date pesée</mat-label>
+            <input matInput type="datetime-local" formControlName="datePesee" />
+          </mat-form-field>
 
-                <div class="actions">
-                    <button mat-raised-button color="primary" type="submit">{{ isEditMode ? 'Mettre à jour' :
-                        'Enregistrer'
-                        }}</button>
-                    <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">Annuler
-                        édition</button>
-                    <a mat-stroked-button [routerLink]="['/pages/reception']">Retour liste</a>
-                </div>
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Matière première</mat-label>
+            <mat-select formControlName="matierePremiereId">
+              <mat-option *ngFor="let mp of matieresPremieres" [value]="mp.idMatierePremiere">
+                {{ mp.reference || ('#' + mp.idMatierePremiere) }} – {{ mp.nom }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Campagne</mat-label>
+            <mat-select formControlName="campagneId">
+              <mat-option *ngFor="let campagne of campagnes" [value]="campagne.reference">
+                {{ campagne.reference }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Huilerie</mat-label>
+            <mat-select formControlName="huilerieId">
+              <mat-option *ngFor="let h of huileries" [value]="h.idHuilerie">
+                {{ h.nom }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Pesée totale (kg)</mat-label>
+            <input matInput type="number" formControlName="poidsBrut" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Région</mat-label>
+            <mat-select formControlName="region">
+              <mat-option *ngFor="let option of regionOptions" [value]="option">{{ option }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Origine</mat-label>
+            <input matInput formControlName="origine" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Maturité</mat-label>
+            <input matInput type="number" min="1" max="5" step="1" formControlName="maturite" />
+            <mat-error *ngIf="getReceptionIntervalError('maturite') as maturiteError">{{ maturiteError }}</mat-error>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 2 — Récolte & Qualité           -->
+      <!-- ═══════════════════════════════════════ -->
+      <div class="form-section">
+        <div class="section-header">
+          <div class="section-icon">
+            <span style="color:#fff;font-size:1rem;line-height:1;">🌿</span>
+          </div>
+          <div class="section-title-wrap">
+            <h4 class="section-title">Récolte &amp; Qualité</h4>
+            <p class="section-subtitle">Variété, méthode de récolte, sol et indicateurs qualité</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Date récolte</mat-label>
+            <input matInput type="date" formControlName="dateRecolte" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Variété</mat-label>
+            <mat-select formControlName="varieteOlive">
+              <mat-option *ngFor="let option of varieteOptions" [value]="option">{{ option }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Méthode de récolte</mat-label>
+            <mat-select formControlName="methodeRecolte">
+              <mat-option *ngFor="let option of methodeRecolteOptions" [value]="option">{{ option }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Type de sol</mat-label>
+            <mat-select formControlName="typeSol">
+              <mat-option *ngFor="let option of typeSolOptions" [value]="option">{{ option }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Temps depuis récolte (h)</mat-label>
+            <input matInput type="number" min="0" formControlName="tempsDepuisRecolteHeures" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Humidité (%)</mat-label>
+            <input matInput type="number" min="10" max="30" formControlName="humiditePourcent" />
+            <mat-error *ngIf="getReceptionIntervalError('humiditePourcent') as humiditeError">{{ humiditeError }}</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Acidité des olives (%)</mat-label>
+            <input matInput type="number" min="0.1" max="2.5" step="0.1" formControlName="aciditeOlivesPourcent" />
+            <mat-error *ngIf="getReceptionIntervalError('aciditeOlivesPourcent') as aciditeError">{{ aciditeError }}</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Taux de feuilles (%)</mat-label>
+            <input matInput type="number" min="0" max="5" step="0.1" formControlName="tauxFeuillesPourcent" />
+            <mat-error *ngIf="getReceptionIntervalError('tauxFeuillesPourcent') as feuillesError">{{ feuillesError }}</mat-error>
+          </mat-form-field>
+
+          <div class="wash-field">
+            <span class="field-label">Lavage effectué</span>
+            <div class="radio-group" role="radiogroup" aria-label="Lavage effectué">
+              <label class="radio-label">
+                <input type="radio" value="Oui" formControlName="lavageEffectue" /> Oui
+              </label>
+              <label class="radio-label">
+                <input type="radio" value="Non" formControlName="lavageEffectue" /> Non
+              </label>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
-        </form>
-    </mat-card-content>
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 3 — Fournisseur                 -->
+      <!-- ═══════════════════════════════════════ -->
+      <div class="form-section">
+        <div class="section-header">
+          <div class="section-icon">
+            <span style="color:#fff;font-size:1rem;line-height:1;">👤</span>
+          </div>
+          <div class="section-title-wrap">
+            <h4 class="section-title">Fournisseur</h4>
+            <p class="section-subtitle">Identité et identifiant légal du fournisseur</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <mat-form-field appearance="outline" class="form-field-half">
+            <mat-label>Nom du fournisseur</mat-label>
+            <input matInput type="text" formControlName="fournisseurNom" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field-half">
+            <mat-label>CIN fournisseur</mat-label>
+            <input matInput type="text" formControlName="fournisseurCIN" />
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 4 — Intervalles de saisie        -->
+      <!-- ═══════════════════════════════════════ -->
+      <div class="form-section">
+        <div class="section-body" style="padding-top:0.85rem;">
+          <div class="interval-help-panel form-field-full">
+            <div class="interval-help-panel__header">
+              <div class="interval-info-dot">i</div>
+              <span>Intervalles de saisie</span>
+              <small>Les champs hors plage passent en rouge automatiquement.</small>
+            </div>
+            <div class="interval-help-panel__chips">
+              <span class="interval-chip" *ngFor="let rule of receptionIntervalRules">
+                <strong>{{ rule.label }}</strong>
+                <em>{{ rule.min }} – {{ rule.max }}{{ rule.unit }}</em>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- ACTIONS                                  -->
+      <!-- ═══════════════════════════════════════ -->
+      <div class="footer-row">
+        <div class="actions">
+          <button mat-raised-button color="primary" type="submit">
+            {{ isEditMode ? 'Mettre à jour' : 'Enregistrer' }}
+          </button>
+          <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">
+            Annuler édition
+          </button>
+          <a mat-stroked-button [routerLink]="['/pages/reception']">Retour liste</a>
+        </div>
+      </div>
+
+      <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+    </form>
+  </mat-card-content>
 </mat-card>

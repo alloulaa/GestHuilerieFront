@@ -1,28 +1,28 @@
 <mat-card class="olive-card">
   <mat-card-header>
-    <mat-card-title>Lots - Nouveau mouvement</mat-card-title>
+    <mat-card-title>NOUVEAU MOUVEMENT</mat-card-title>
   </mat-card-header>
   <mat-card-content>
-    <div class="intro">
-      <p class="eyebrow">Saisie</p>
-      <h3>Enregistrement d'un mouvement de lots</h3>
-      <p>Saisissez les informations du mouvement pour mettre a jour le stock et l'historique.</p>
-    </div>
+
+    
 
     <form class="grid" [formGroup]="form" (ngSubmit)="submit()">
+
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>Type mouvement</mat-label>
         <mat-select formControlName="typeMouvement">
+          <mat-option value="ENTREE">Entrée</mat-option>
           <mat-option value="TRANSFERT">Transfert</mat-option>
           <mat-option value="AJUSTEMENT">Ajustement</mat-option>
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field">
-        <mat-label>Reference lot</mat-label>
+        <mat-label>Référence lot</mat-label>
         <mat-select formControlName="lotId">
-          <mat-option *ngFor="let lot of selectableLots" [value]="lot.idLot">{{ lot.reference || ('LO-' + lot.idLot)
-            }}</mat-option>
+          <mat-option *ngFor="let lot of selectableLots" [value]="lot.idLot">
+            {{ lot.reference || ('LO-' + lot.idLot) }}
+          </mat-option>
         </mat-select>
       </mat-form-field>
 
@@ -31,35 +31,45 @@
         <input matInput type="datetime-local" formControlName="dateMouvement" />
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="form-field wide">
+      <mat-form-field appearance="outline" class="form-field compact">
+        <mat-label>Huilerie</mat-label>
+        <mat-select formControlName="huilerieId">
+          <mat-option *ngFor="let huilerie of huileries" [value]="huilerie.idHuilerie">
+            {{ huilerie.nom }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="form-field wide" style="grid-column: span 8;">
         <mat-label>Commentaire</mat-label>
         <input matInput formControlName="commentaire" />
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="form-field compact">
-        <mat-label>Huilerie </mat-label>
-        <mat-select formControlName="huilerieId">
-          <mat-option *ngFor="let huilerie of huileries" [value]="huilerie.idHuilerie">{{ huilerie.nom
-            }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-
       <div class="actions">
-        <button mat-raised-button color="primary" class="save-btn" type="submit">{{ isEditMode ? 'Modifier' :
-          'Enregistrer' }}</button>
-        <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">Annuler modification</button>
+        <button mat-raised-button color="primary" class="save-btn" type="submit">
+          {{ isEditMode ? 'Modifier' : 'Enregistrer' }}
+        </button>
+        <button *ngIf="isEditMode" mat-stroked-button type="button" (click)="cancelEdit()">
+          Annuler modification
+        </button>
         <a mat-stroked-button [routerLink]="['/pages/lots/movements/history']">Retour liste</a>
       </div>
 
     </form>
 
+    <!-- Label section tableau -->
+    <div class="table-section-label">
+      Historique des mouvements
+      <span class="count">{{ movements.length }}</span>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Reference mouvement</th>
+            <th>Référence mouvement</th>
             <th>Type</th>
-            <th>Reference lot</th>
+            <th>Référence lot</th>
             <th>Date</th>
             <th>Commentaire</th>
             <th>Action</th>
@@ -67,20 +77,24 @@
         </thead>
         <tbody>
           <tr *ngIf="movements.length === 0">
-            <td colspan="7" class="empty-row">Aucun mouvement a afficher.</td>
+            <td colspan="6" class="empty-row">Aucun mouvement à afficher.</td>
           </tr>
           <tr *ngFor="let m of movements" class="row-hover">
-            <td>{{ movementReference(m) }}</td>
-            <td>{{ movementLabel(m.typeMouvement) }}</td>
-            <td>{{ lotReference(m) }}</td>
+            <td><span class="ref-badge">{{ movementReference(m) }}</span></td>
+            <td>
+              <span class="type-badge" [ngClass]="(m.typeMouvement || '').toLowerCase()">
+                {{ movementLabel(m.typeMouvement) }}
+              </span>
+            </td>
+            <td><span class="lot-ref">{{ lotReference(m) }}</span></td>
             <td>{{ m.dateMouvement }}</td>
-            <td>{{ m.commentaire }}</td>
+            <td class="comment-cell">{{ m.commentaire }}</td>
             <td class="row-actions">
               <button class="btn-icon action-edit" type="button" title="Modifier" [disabled]="!canUpdateStockMovement()"
                 (click)="startEdit(m)">
-                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M3 17.25V21h3.75L19.81 7.94l-3.75-3.75L3 17.25z" />
-                  <path d="M14.06 4.19l3.75 3.75" />
+                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
+                  <path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                 </svg>
               </button>
             </td>
@@ -88,5 +102,6 @@
         </tbody>
       </table>
     </div>
+
   </mat-card-content>
 </mat-card>

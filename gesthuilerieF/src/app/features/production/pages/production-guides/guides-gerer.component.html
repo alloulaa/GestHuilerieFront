@@ -4,15 +4,13 @@
   <div class="section-wrapper">
     <div class="section-header">
       <div class="header-content">
-        <h1>Gérer les Guides de Production</h1>
-        <p>Créez et gérez les guides avec leurs étapes et paramètres</p>
+        <h1>NOUVEAU GUIDE DE PRODUCTION</h1>
       </div>
     </div>
 
     <!-- CREATE/EDIT GUIDE FORM -->
     <div class="form-panel">
       <div class="form-header">
-        <h2>{{ guideEditingId ? 'Modifier le Guide' : 'Créer un Nouveau Guide' }}</h2>
         <button class="close-form-btn" *ngIf="guideEditingId" (click)="resetGuideForm()" type="button">×</button>
       </div>
       <div class="form-content">

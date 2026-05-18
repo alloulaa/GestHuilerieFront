@@ -15,6 +15,7 @@ import { RawMaterialService } from '../../../matieres-premieres/services/raw-mat
 import { ExecutionProduction, ExecutionProductionCreate, GuideProduction, Prediction } from '../../models/production.models';
 import { ExecutionProductionService } from '../../services/execution-production.service';
 import { GuideProductionService } from '../../services/guide-production.service';
+import { ProductionDashboardService } from '../../../dashboard/services/production-dashboard.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -87,6 +88,8 @@ export class GuidesExecuterComponent implements OnInit {
     private guideProductionService: GuideProductionService,
     @Inject(forwardRef(() => ExecutionProductionService))
     private executionProductionService: ExecutionProductionService,
+    @Inject(forwardRef(() => ProductionDashboardService))
+    private productionDashboardService: ProductionDashboardService,
     @Inject(forwardRef(() => MachineService))
     private machineService: MachineService,
     @Inject(forwardRef(() => LotOlivesService))
@@ -617,7 +620,7 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
-    const dateFinReelle = this.today();
+    const dateFinReelle = this.nowDateTimeLocal();
 
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Terminer l\'exécution',
@@ -677,6 +680,16 @@ export class GuidesExecuterComponent implements OnInit {
         );
         this.saveExecutionCache(this.executions);
         this.toastService.success('Exécution terminée avec succès.');
+        // Notify dashboard to append this produced quantity to the hourly curve
+        try {
+          const dateIso = mergedExecution.dateFinReelle ?? dateFinReelle;
+          const qty = Number(produitFinalQuantiteProduite ?? 0);
+          if (dateIso && Number.isFinite(qty) && qty > 0) {
+            this.productionDashboardService.notifyProductionAdded(dateIso, qty);
+          }
+        } catch (e) {
+          // ignore notification errors
+        }
       },
       error: (error) => {
         this.executionError = this.readHttpError(error, 'Impossible de terminer l’exécution.');
@@ -1120,6 +1133,17 @@ export class GuidesExecuterComponent implements OnInit {
 
   private today(): string {
     return new Date().toISOString().split('T')[0];
+  }
+
+  private nowDateTimeLocal(): string {
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
   }
 
   private tomorrow(): string {

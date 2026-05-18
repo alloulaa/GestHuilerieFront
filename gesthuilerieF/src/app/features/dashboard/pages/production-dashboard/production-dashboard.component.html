@@ -1,87 +1,115 @@
 <nb-card class="hero-card">
   <nb-card-body>
-    <div class="hero-content">
-      <div>
-        <p class="hero-subtitle">Responsable Production</p>
-        <h2>Pilotage de l'extraction en temps réel</h2>
-        <p>Suivi des lots, performance machines et préparation des données pour le module IA.</p>
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Responsable Production
       </div>
-      <div class="hero-indicator">
-        <span>Préparation Data IA</span>
-        <strong>{{ aiReadiness }}%</strong>
+      <div class="hero-body">
+        <div class="hero-text">
+          <h1 class="hero-title">Pilotage de l'extraction</h1>
+          <p class="hero-desc">Suivi les lots, les états des machines et les qualités des produits finaux. </p>
+        </div>
+
       </div>
     </div>
-    <nb-progress-bar [value]="aiReadiness" status="primary"></nb-progress-bar>
   </nb-card-body>
 </nb-card>
 
-<div class="dashboard-grid kpi-grid">
-  <nb-card *ngFor="let item of productionCards" class="kpi-card">
-    <nb-card-body>
+<nb-card *ngIf="loading" class="ops-card">
+  <nb-card-body>Chargement des données du dashboard...</nb-card-body>
+</nb-card>
+
+<nb-card *ngIf="!loading && errorMessage" class="ops-card">
+  <nb-card-body>{{ errorMessage }}</nb-card-body>
+</nb-card>
+
+<div class="kpi-row" *ngIf="!loading && productionCards.length > 0">
+  <div class="kpi-card" *ngFor="let item of productionCards; let i = index">
+    <div class="kpi-accent" [class]="'accent-' + i"></div>
+    <div class="kpi-body">
       <div class="kpi-label">{{ item.label }}</div>
       <div class="kpi-value">{{ item.value }}</div>
       <div class="kpi-extra">{{ item.extra }}</div>
-    </nb-card-body>
-  </nb-card>
+    </div>
+  </div>
 </div>
 
-<div class="dashboard-grid two-columns">
-  <nb-card>
-    <nb-card-header>Extraction horaire (tonnes)</nb-card-header>
+<div class="split-grid" *ngIf="!loading && hasProductionProcess">
+  <nb-card class="chart-card">
+    <nb-card-header>
+      <span class="card-header-icon">📈</span>
+      Pressurage horaire
+      <div class="card-header-actions">
+        <button type="button" class="quality-filter-btn" [class.active]="filterMode === 'day'"
+          (click)="setExtractionFilter('day')">
+          Jour
+        </button>
+        <button type="button" class="quality-filter-btn" [class.active]="filterMode === 'week'"
+          (click)="setExtractionFilter('week')">
+          Semaine
+        </button>
+      </div>
+    </nb-card-header>
     <nb-card-body>
       <div echarts [options]="hourlyExtractionOptions" class="chart-host"></div>
     </nb-card-body>
   </nb-card>
 
-  <nb-card>
-    <nb-card-header>Performance par étape</nb-card-header>
+  <nb-card class="chart-card">
+    <nb-card-header>
+      <span class="card-header-icon">⚙️</span>
+      Répartition réelle par qualité
+      <div class="card-header-actions">
+        <button type="button" class="quality-filter-btn" [class.active]="qualityPerformanceFilterMode === 'day'"
+          (click)="setQualityPerformanceFilter('day')">
+          Jour
+        </button>
+        <button type="button" class="quality-filter-btn" [class.active]="qualityPerformanceFilterMode === 'week'"
+          (click)="setQualityPerformanceFilter('week')">
+          Semaine
+        </button>
+      </div>
+    </nb-card-header>
     <nb-card-body>
       <div echarts [options]="processPerformanceOptions" class="chart-host"></div>
     </nb-card-body>
   </nb-card>
 </div>
 
-<div class="dashboard-grid two-columns">
-  <nb-card>
-    <nb-card-header>Opérations en cours</nb-card-header>
+<div class="split-grid" *ngIf="!loading && (hasProductionProcess || hasMachines)">
+  <nb-card class="quality-card" *ngIf="hasQuality">
+    <nb-card-header>
+      <span class="card-header-icon">🧪</span>
+      Paramètres qualité chimique
+    </nb-card-header>
     <nb-card-body>
-      <div class="ops-list">
-        <div class="op-row" *ngFor="let op of operations">
-          <div>
-            <div class="op-name">{{ op.name }}</div>
-            <div class="op-line">{{ op.line }}</div>
-          </div>
-          <span class="status" [ngClass]="getStatusClass(op.status)">{{ op.status }}</span>
+      <div class="quality-grid">
+        <div class="quality-item" *ngFor="let q of qualityParams">
+          <div class="q-icon">◈</div>
+          <div class="q-label">{{ q.label }}</div>
+          <div class="q-value">{{ q.value }}</div>
         </div>
       </div>
     </nb-card-body>
   </nb-card>
 
-  <nb-card>
-    <nb-card-header>Charge machines</nb-card-header>
+  <nb-card class="machine-card" *ngIf="hasMachines">
+    <nb-card-header>
+      <span class="card-header-icon">🏭</span>
+      Répartition des machines par état
+    </nb-card-header>
     <nb-card-body>
-      <div class="progress-list">
-        <div class="progress-item" *ngFor="let m of machineLoad">
-          <div class="progress-top">
-            <span>{{ m.machine }}</span>
-            <strong>{{ m.load }}%</strong>
+      <div class="machine-list">
+        <div class="machine-item machine-state-item" *ngFor="let group of machineStateGroups">
+          <div class="machine-top machine-state-top">
+            <span class="machine-name machine-state-label">{{ group.label }}</span>
           </div>
-          <nb-progress-bar [value]="m.load" status="primary"></nb-progress-bar>
+          <div class="machine-state-names" [class.machine-state-empty]="group.machines.length === 0">
+            {{ group.machines.length > 0 ? group.machines.join(', ') : 'Aucune machine' }}
+          </div>
         </div>
       </div>
     </nb-card-body>
   </nb-card>
 </div>
-
-<nb-card>
-  <nb-card-header>Paramètres qualité chimique</nb-card-header>
-  <nb-card-body>
-    <div class="quality-grid">
-      <div class="quality-item" *ngFor="let q of qualityParams">
-        <div class="q-label">{{ q.label }}</div>
-        <div class="q-value">{{ q.value }}</div>
-        <div class="q-target">Cible: {{ q.target }}</div>
-      </div>
-    </div>
-  </nb-card-body>
-</nb-card>

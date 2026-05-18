@@ -1,241 +1,368 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// LOT TRACEABILITY — Refined Olive Industry UI
+// Theme: Natural luxury · Warm olive greens · Editorial clarity
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Local design tokens
+$olive-900: #2a3318;
+$olive-800: #374521;
+$olive-700: #4a5c2b;
+$olive-600: #5e7535;
+$olive-500: #768457; // primary brand
+$olive-400: #96a673;
+$olive-300: #b8c89a;
+$olive-200: #d8e4c0;
+$olive-100: #eef4e4;
+$olive-50:  #f7faf0;
+
+$gold-400: #c9a84c;
+$gold-300: #dfc07a;
+$gold-100: #fdf5e0;
+
+$ink:       #1c2110;
+$ink-soft:  #3d4a28;
+$muted:     #7a8b68;
+$separator: rgba(118, 132, 87, 0.18);
+
+$radius-card:  1.2rem;
+$radius-inner: 0.85rem;
+$radius-chip:  999px;
+
+$shadow-card: 0 4px 6px rgba(42, 51, 24, 0.04), 0 12px 32px rgba(42, 51, 24, 0.09);
+$shadow-row:  0 2px 12px rgba(42, 51, 24, 0.07);
+$shadow-btn:  0 2px 8px rgba(94, 117, 53, 0.28);
+
+$font-display: 'Georgia', 'Cambria', serif;
+$transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+// ─── Card Shell ──────────────────────────────────────────────────────────────
+
 .trace-card {
-  border-top: 4px solid var(--color-primary-500);
-  box-shadow: 0 14px 30px rgba(16, 24, 40, 0.08);
+  border: 1px solid $olive-200;
+  border-top: 3px solid $olive-500;
+  border-radius: $radius-card !important;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  background: #ffffff;
+
+  nb-card-header {
+    background:
+      radial-gradient(ellipse 80% 60% at 95% 0%, rgba(198, 220, 155, 0.22) 0%, transparent 65%),
+      linear-gradient(160deg, $olive-50 0%, #ffffff 100%);
+    border-bottom: 1px solid $separator;
+    padding: 1.5rem 1.75rem 1.25rem;
+  }
+
+  nb-card-body {
+    padding: 1.5rem 1.75rem;
+    background: #ffffff;
+  }
 }
+
+// ─── Header ──────────────────────────────────────────────────────────────────
 
 .head-wrap {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.8rem;
+  align-items: center;
+  gap: 1rem;
   width: 100%;
 }
 
 .eyebrow {
-  margin: 0 0 0.15rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
+  margin: 0 0 0.2rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--color-primary-700);
+  color: $olive-500;
 }
 
 .head-wrap h3 {
-  margin: 0;
-  color: var(--color-primary-900);
-  font-size: 1.14rem;
+  margin: 0 0 0.15rem;
+  font-family: $font-display;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: $olive-900;
+  letter-spacing: -0.01em;
 }
 
 .subtitle {
-  margin: 0.25rem 0 0;
-  color: var(--color-basic-700);
-  font-size: 0.88rem;
+  margin: 0;
+  color: $muted;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
+
+// ─── Count Chip ──────────────────────────────────────────────────────────────
 
 .count-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.28rem 0.62rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-primary-200);
-  background: color-mix(in srgb, var(--color-primary-100) 55%, #ffffff);
-  color: var(--color-primary-800);
-  font-size: 0.8rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: $radius-chip;
+  border: 1px solid $olive-300;
+  background: linear-gradient(135deg, $olive-100, $olive-50);
+  color: $olive-700;
+  font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
 }
 
-.lots-panel {
-  border: 1px solid var(--color-primary-200);
-  border-radius: 0.95rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-100) 70%, transparent), transparent 58%),
-    linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--color-primary-100) 24%, #ffffff));
-}
+// ─── Filter Row ──────────────────────────────────────────────────────────────
 
 .search-row {
   display: grid;
-  gap: 0.3rem;
-  margin-bottom: 0.8rem;
+  gap: 0.4rem;
+  margin-bottom: 1.1rem;
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $muted;
 }
 
 .unified-filter-row {
-  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid $olive-200;
+  border-radius: $radius-inner;
+  background: linear-gradient(160deg, $olive-50 0%, rgba(255,255,255,0.6) 100%);
+  margin-bottom: 1.25rem;
 }
 
 .filter-grid {
   display: grid;
-  gap: 0.6rem;
-  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr) auto;
+  gap: 0.65rem;
+  grid-template-columns: minmax(200px, 1fr) minmax(240px, 1.3fr) auto;
   align-items: center;
+
+  // Nebular input overrides
+  nb-input,
+  input[nbinput] {
+    border-color: $olive-300 !important;
+    border-radius: 0.6rem !important;
+    background: #fff !important;
+    font-size: 0.88rem !important;
+    transition: $transition;
+
+    &:focus {
+      border-color: $olive-500 !important;
+      box-shadow: 0 0 0 3px rgba(118, 132, 87, 0.15) !important;
+    }
+  }
 }
 
 .filter-actions {
   display: inline-flex;
   gap: 0.5rem;
   align-items: center;
+
+  // Primary filter button
+  [nbbutton][status="primary"] {
+    background: linear-gradient(135deg, $olive-600, $olive-700) !important;
+    border-color: $olive-700 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    font-size: 0.84rem !important;
+    border-radius: 0.55rem !important;
+    padding: 0 1.1rem !important;
+    height: 2.15rem !important;
+    box-shadow: $shadow-btn !important;
+    transition: $transition;
+
+    &:hover {
+      background: linear-gradient(135deg, $olive-700, $olive-800) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(94, 117, 53, 0.38) !important;
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  // Outline reset button
+  [nbbutton][status="basic"] {
+    border-color: $olive-300 !important;
+    color: $olive-700 !important;
+    font-weight: 600 !important;
+    font-size: 0.84rem !important;
+    border-radius: 0.55rem !important;
+    padding: 0 1rem !important;
+    height: 2.15rem !important;
+    background: transparent !important;
+    transition: $transition;
+
+    &:hover {
+      background: $olive-50 !important;
+      border-color: $olive-400 !important;
+    }
+  }
 }
+
+// ─── Lots Panel ──────────────────────────────────────────────────────────────
+
+.lots-panel {
+  border: 1px solid $olive-200;
+  border-radius: $radius-inner;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(42, 51, 24, 0.04), 0 4px 16px rgba(42, 51, 24, 0.05);
+}
+
+// ─── Table ───────────────────────────────────────────────────────────────────
 
 .table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--separator);
-  border-radius: 0.9rem;
-  background: var(--color-basic-100);
+  background: #ffffff;
 }
 
-.history-table {
+.history-table,
+.lots-table {
   width: 100%;
   border-collapse: collapse;
 
-  th,
-  td {
-    text-align: left;
-    padding: 0.74rem 0.6rem;
-    border-bottom: 1px solid var(--separator);
+  th {
+    padding: 0.75rem 0.9rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 800;
+    color: $olive-700;
+    background: linear-gradient(180deg, $olive-50 0%, rgba(238, 244, 228, 0.5) 100%);
+    border-bottom: 2px solid $olive-200;
     white-space: nowrap;
-    vertical-align: top;
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 
-  th {
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #5e6c44;
-    background: rgba(118, 132, 87, 0.08);
-    font-weight: 700;
+  td {
+    padding: 0.72rem 0.9rem;
+    border-bottom: 1px solid $separator;
+    white-space: nowrap;
+    font-size: 0.88rem;
+    color: $ink;
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
   }
 }
+
+// ─── Row Hover ───────────────────────────────────────────────────────────────
 
 .row-hover {
-  transition: background-color 0.18s ease;
+  transition: background-color 0.16s ease;
+
+  &:hover {
+    background: linear-gradient(90deg, rgba(118, 132, 87, 0.055) 0%, transparent 100%);
+
+    td:first-child {
+      font-weight: 700;
+      color: $olive-700;
+    }
+  }
 }
 
-.row-hover:hover {
-  background: rgba(118, 132, 87, 0.06);
-}
-
-.timeline-cell {
-  min-width: 320px;
-}
-
-.timeline {
-  position: relative;
-  padding-left: 1rem;
-}
-
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 0.28rem;
-  top: 0.2rem;
-  bottom: 0.2rem;
-  width: 2px;
-  background: color-mix(in srgb, var(--color-primary-300) 70%, transparent);
-}
-
-.timeline-item {
-  position: relative;
-  margin-bottom: 0.62rem;
-}
-
-.timeline-item:last-child {
-  margin-bottom: 0;
-}
-
-.timeline-dot {
-  position: absolute;
-  left: -0.86rem;
-  top: 0.32rem;
-  width: 0.52rem;
-  height: 0.52rem;
-  border-radius: 50%;
-  background: var(--color-primary-500);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-100) 78%, transparent);
-}
-
-.timeline-content {
-  display: grid;
-  gap: 0.08rem;
-}
-
-.timeline-step {
-  margin: 0;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-  color: var(--color-primary-800);
-}
-
-.timeline-desc {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--color-basic-800);
-}
-
-.timeline-date {
-  margin: 0;
-  font-size: 0.74rem;
-  color: var(--color-basic-600);
-}
+// ─── Final Product Badge ─────────────────────────────────────────────────────
 
 .final-product {
-  margin-bottom: 0.35rem;
-  padding: 0.25rem 0.45rem;
-  border-left: 3px solid var(--color-primary-300);
-  background: color-mix(in srgb, var(--color-primary-100) 35%, #ffffff);
-  border-radius: 0.3rem;
-}
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+  padding: 0.22rem 0.55rem 0.22rem 0.45rem;
+  border-left: 3px solid $olive-400;
+  background: linear-gradient(90deg, rgba(184, 200, 154, 0.2), rgba(184, 200, 154, 0.04));
+  border-radius: 0 0.35rem 0.35rem 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $olive-800;
+  transition: $transition;
 
-.final-product:last-child {
-  margin-bottom: 0;
+  &::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: $olive-400;
+    flex-shrink: 0;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &:hover {
+    background: linear-gradient(90deg, rgba(184, 200, 154, 0.32), rgba(184, 200, 154, 0.08));
+    border-left-color: $olive-600;
+  }
 }
 
 .empty-mini {
-  color: var(--color-basic-600);
+  color: $muted;
   font-style: italic;
+  font-size: 0.82rem;
 }
+
+// ─── Action Button ───────────────────────────────────────────────────────────
+
+.lot-details-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.3rem !important;
+  background: linear-gradient(135deg, $olive-600, $olive-700) !important;
+  border-color: $olive-700 !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  border-radius: 0.5rem !important;
+  padding: 0 0.9rem !important;
+  height: 1.9rem !important;
+  box-shadow: 0 1px 4px rgba(94, 117, 53, 0.3) !important;
+  transition: $transition !important;
+  text-decoration: none !important;
+
+  &:hover {
+    background: linear-gradient(135deg, $olive-700, $olive-800) !important;
+    box-shadow: 0 3px 10px rgba(94, 117, 53, 0.38) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  &:active {
+    transform: translateY(0) !important;
+  }
+}
+
+// ─── Empty State ─────────────────────────────────────────────────────────────
 
 .empty-state {
   text-align: center;
   font-weight: 600;
-  color: var(--color-basic-700);
-  padding: 1rem 0.7rem;
+  color: $muted;
+  padding: 2.5rem 1rem;
+  font-size: 0.9rem;
 }
 
-.lots-table {
-  th {
-    color: var(--color-primary-800);
-  }
-}
-
-.form-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  opacity: 0.85;
-}
-
-.lot-details-btn {
-  --button-filled-primary-background-color: var(--color-primary-500);
-  --button-filled-primary-border-color: var(--color-primary-500);
-  --button-filled-primary-hover-background-color: var(--color-primary-600);
-  --button-filled-primary-hover-border-color: var(--color-primary-600);
-  --button-filled-primary-text-color: #fff;
-
-  background-color: var(--color-primary-500) !important;
-  border-color: var(--color-primary-500) !important;
-  color: #fff !important;
-}
-
-.lot-details-btn:hover {
-  background-color: var(--color-primary-600) !important;
-  border-color: var(--color-primary-600) !important;
-}
+// ─── Responsive ──────────────────────────────────────────────────────────────
 
 @media (max-width: 980px) {
+  .trace-card nb-card-header,
+  .trace-card nb-card-body {
+    padding: 1.1rem 1.1rem;
+  }
+
   .head-wrap {
-    display: grid;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
   }
 
   .filter-grid {
@@ -247,10 +374,6 @@
   }
 
   .count-chip {
-    justify-self: start;
-  }
-
-  .timeline-cell {
-    min-width: 270px;
+    align-self: flex-start;
   }
 }

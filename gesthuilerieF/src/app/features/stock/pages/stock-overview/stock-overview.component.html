@@ -1,45 +1,60 @@
 <mat-card class="olive-card">
-    <mat-card-header>
-        <mat-card-title>Stock </mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-        <div *ngIf="isAdmin" class="filter-bar">
-            <input [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom"
-                placeholder="Filtrer par nom d'huilerie" />
-            <button mat-raised-button color="primary" class="filter-btn" type="button"
-                (click)="applyAdminHuilerieFilter()">Filtrer
-                huilerie</button>
-            <button mat-stroked-button type="button" (click)="resetAdminHuilerieFilter()">Réinitialiser</button>
-        </div>
+  <mat-card-header>
+    <mat-card-title>STOCK</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
 
-        <div class="stats">
-            <span class="chip">Total: {{ stocks.length }}</span>
-        </div>
+    <div *ngIf="isAdmin" class="filter-bar">
+      <input
+        [(ngModel)]="selectedHuilerieNom"
+        name="selectedHuilerieNom"
+        placeholder="Filtrer par nom d'huilerie" />
+      <button mat-raised-button color="primary" class="filter-btn" type="button"
+        (click)="applyAdminHuilerieFilter()">Filtrer huilerie</button>
+      <button mat-stroked-button type="button" (click)="resetAdminHuilerieFilter()">Réinitialiser</button>
+    </div>
 
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>REFERENCE STOCK</th>
-                        <th>VARIETE</th>
-                        <th>QUANTITE DISPONIBLE</th>
-                        <th>TYPE STOCK</th>
-                        <th>REFERENCES LOTS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngIf="stocks.length === 0">
-                        <td colspan="6" class="empty-row">Aucune donnee de stock a afficher.</td>
-                    </tr>
-                    <tr *ngFor="let stock of stocks" class="row-hover">
-                        <td>{{ stockReference(stock) }}</td>
-                        <td>{{ varieteLabel(stock) }}</td>
-                        <td>{{ stock.quantiteDisponible }}</td>
-                        <td>{{ stock.typeStock }}</td>
-                        <td class="lot-references-cell">{{ lotReferencesLabel(stock) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </mat-card-content>
+    <div class="stats">
+      <span class="chip">Total : {{ stocks.length }}</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Référence stock</th>
+            <th>Variété</th>
+            <th>Quantité disponible</th>
+            <th>Type stock</th>
+            <th>Références lots</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="stocks.length === 0">
+            <td colspan="5" class="empty-row">Aucune donnée de stock à afficher.</td>
+          </tr>
+          <tr *ngFor="let stock of stocks" class="row-hover">
+            <td><span class="stock-ref-badge">{{ stockReference(stock) }}</span></td>
+            <td><span class="variete-badge">{{ varieteLabel(stock) }}</span></td>
+            <td>
+              <span class="quantite-value">
+                {{ stock.quantiteDisponible | number }}
+                <span class="quantite-unit">kg</span>
+              </span>
+            </td>
+            <td><span class="type-stock-badge">{{ stock.typeStock }}</span></td>
+            <td class="lot-references-cell">
+              <div class="lot-tags">
+                <span class="lot-tag"
+                  *ngFor="let ref of (stock.lotReferences?.length ? stock.lotReferences : [lotReference(stock)])">
+                  {{ ref }}
+                </span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </mat-card-content>
 </mat-card>

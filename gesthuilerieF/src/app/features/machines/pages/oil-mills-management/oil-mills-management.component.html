@@ -1,9 +1,7 @@
 <nb-card class="section-card polished-card">
   <nb-card-header>
     <div class="section-heading">
-      <p class="eyebrow">Pilotage</p>
-      <h3>Gestion des Machines</h3>
-      <p class="subhead">Suivez l'etat des equipements et rattachez-les rapidement a chaque huilerie.</p>
+      <h3>NOUVELLE MACHINE</h3>
     </div>
   </nb-card-header>
   <nb-card-body>
@@ -68,12 +66,6 @@
             <strong>{{ selectedTypeInfo.label }}</strong>
           </div>
           <p class="type-info-desc">{{ selectedTypeInfo.description }}</p>
-          <details class="type-info-details">
-            <summary>Étapes prédéfinies de processus</summary>
-            <ol class="type-info-steps">
-              <li *ngFor="let etape of selectedTypeInfo.etapes">{{ etape }}</li>
-            </ol>
-          </details>
         </div>
 
         <div class="form-actions">
