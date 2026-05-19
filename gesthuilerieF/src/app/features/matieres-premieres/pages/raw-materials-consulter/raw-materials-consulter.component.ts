@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbInputModule } from '@nebular/theme';
 import { MatierePremiere } from '../../models/raw-material.models';
 import { RawMaterialService } from '../../services/raw-material.service';
+import { MatCardModule } from '@angular/material/card';
 
 @Component({
   selector: 'app-raw-materials-consulter',
@@ -17,6 +18,7 @@ import { RawMaterialService } from '../../services/raw-material.service';
     NbButtonModule,
     CommonModule,
     FormsModule,
+    MatCardModule
   ],
 })
 export class RawMaterialsConsulterComponent implements OnInit {

@@ -274,9 +274,17 @@ export class AdminService {
 
   // Legacy aliases used by existing admin components
   getUtilisateurs(): Observable<any> {
+    const canonicalUrl = `${API_URL}/api/admin/utilisateurs`;
     const legacyUrl = `${API_URL}/api/admin/utilisateurs`;
     const adminsUrl = `${API_URL}/api/administrateurs`;
     const employesUrl = `${API_URL}/api/employes`;
+
+    const canonicalUsers$ = this.http
+      .get<ApiResponseDTO<any[]>>(canonicalUrl)
+      .pipe(
+        map((response) => this.extractArrayPayload(response)),
+        catchError(() => of([])),
+      );
 
     const typedUsers$ = forkJoin([
       this.http.get<any>(adminsUrl).pipe(
@@ -296,10 +304,13 @@ export class AdminService {
         catchError(() => of([])),
       );
 
-    return forkJoin([legacyUsers$, typedUsers$]).pipe(
-      map(([legacyUsers, typedUsers]) => ({
-        data: this.mergeUsersByIdentity(legacyUsers, typedUsers),
-      })),
+    return forkJoin([canonicalUsers$, legacyUsers$, typedUsers$]).pipe(
+      map(([canonicalUsers, legacyUsers, typedUsers]) => {
+        const mergedUsers = this.mergeUsersByIdentity(canonicalUsers, legacyUsers);
+        return {
+          data: this.mergeUsersByIdentity(mergedUsers, typedUsers),
+        };
+      }),
     );
   }
 

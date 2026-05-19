@@ -1,0 +1,14 @@
+<div class="selector-shell">
+    <div class="selector-label">
+        <nb-icon icon="pin-outline"></nb-icon>
+        <span>{{ label }}</span>
+    </div>
+
+    <nb-select [selected]="selectedValue" [disabled]="loading || !options.length"
+        (selectedChange)="onSelectionChange($event)" placeholder="Sélectionner une huilerie">
+        <nb-option value="all">Toutes les huileries</nb-option>
+        <nb-option *ngFor="let option of options; trackBy: trackById" [value]="option.idHuilerie">
+            {{ option.nom }}
+        </nb-option>
+    </nb-select>
+</div>

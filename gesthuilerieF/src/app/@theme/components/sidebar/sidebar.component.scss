@@ -1,20 +1,274 @@
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+$green-50:  #EAF3DE;
+$green-100: #C0DD97;
+$green-200: #97C459;
+$green-400: #639922;
+$green-600: #3B6D11;
+$green-800: #27500A;
+$green-900: #173404;
+$green-500: mix($green-400, $green-600, 50%);
+
+$gray-400:  #888780;
+$gray-600:  #5F5E5A;
+
+$border-subtle: rgba($green-200, 0.28);
+
+// ─── Host ─────────────────────────────────────────────────────────────────────
 :host {
   display: block;
 }
 
-::ng-deep router-outlet+* {
-  display: block;
-  animation: fade-in 0.45s ease;
+// ─── Force icon visibility ────────────────────────────────────────────────────
+::ng-deep nb-menu .menu-item > a .menu-icon,
+::ng-deep nb-menu .menu-item > a.active .menu-icon {
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
+// ─── Menu wrapper ─────────────────────────────────────────────────────────────
+::ng-deep nb-menu {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  padding: 0.35rem 0.75rem;
+
+  ul.menu-items {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+}
+
+// ─── Every menu item ──────────────────────────────────────────────────────────
+::ng-deep nb-menu .menu-item {
+  margin-bottom: 1px;
+  border-radius: 0;
+  overflow: visible;
+
+  // ── Top-level link ────────────────────────────────────────────────────────
+  > a {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.58rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $gray-600 !important;
+    text-decoration: none;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    position: relative;
+    transition: color 0.14s ease, background 0.14s ease;
+
+    // ── Hover ──────────────────────────────────────────────────────────────
+    &:hover {
+      background: rgba($green-400, 0.08) !important;
+      color: $green-800 !important;
+
+      .menu-icon {
+        color: $green-500 !important;
+        opacity: 1 !important;
+      }
+    }
+
+    // ── Active ─────────────────────────────────────────────────────────────
+    &.active {
+      background: transparent !important;
+      color: $green-600 !important;
+      font-weight: 700;
+      box-shadow: none !important;
+
+      // Accent dot left
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 60%;
+        border-radius: 0 3px 3px 0;
+        background: $green-600;
+      }
+
+      .menu-icon {
+        color: $green-600 !important;
+        opacity: 1 !important;
+      }
+    }
   }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  // ── Icon ──────────────────────────────────────────────────────────────────
+  .menu-icon {
+    font-size: 1.1rem !important;
+    width: 1.1rem !important;
+    height: 1.1rem !important;
+    color: $gray-400 !important;
+    flex-shrink: 0;
+    transition: color 0.14s ease;
+  }
+
+  // ── Title ─────────────────────────────────────────────────────────────────
+  .menu-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.005em;
+  }
+
+  // ── Chevron ───────────────────────────────────────────────────────────────
+  .expand-state {
+    color: $gray-400 !important;
+    font-size: 0.72rem !important;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, color 0.14s ease;
+    margin-right: 0.1rem;
+  }
+
+  &.expanded > a .expand-state {
+    transform: rotate(90deg);
+    color: $green-600 !important;
+  }
+
+  // ── Sub-menu container ────────────────────────────────────────────────────
+  ul.menu-items {
+    padding: 0.1rem 0 0.25rem 1.55rem !important;
+    margin: 0 !important;
+    position: relative;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+
+    // Subtle vertical connector
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0.72rem;
+      top: 0.25rem;
+      bottom: 0.25rem;
+      width: 1px;
+      background: $border-subtle;
+      border-radius: 1px;
+    }
+
+    // ── Each child item ──────────────────────────────────────────────────────
+    .menu-item {
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-bottom: none !important;
+      border-top: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      list-style: none !important;
+
+      // Remove any Nebular default li separators
+      &::before,
+      &::after { display: none !important; }
+
+      > a {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        padding: 0.36rem 0.65rem !important;
+        margin: 1px 0 !important;
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+        color: $gray-600 !important;
+        border-radius: 8px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        text-decoration: none !important;
+        transition: color 0.14s ease, background 0.14s ease !important;
+
+        // Kill any Nebular pseudo borders
+        &::before,
+        &::after { display: none !important; }
+
+        &:hover {
+          background: rgba($green-400, 0.08) !important;
+          color: $green-800 !important;
+
+          .menu-icon { color: $green-500 !important; }
+        }
+
+        &.active {
+          background: transparent !important;
+          color: $green-600 !important;
+          font-weight: 700 !important;
+          box-shadow: none !important;
+          border: none !important;
+
+          .menu-icon { color: $green-600 !important; }
+        }
+      }
+
+      .menu-icon {
+        font-size: 0.85rem !important;
+        width: 0.85rem !important;
+        height: 0.85rem !important;
+        min-width: 0.85rem !important;
+        color: $gray-400 !important;
+        flex-shrink: 0 !important;
+        border: none !important;
+        background: none !important;
+        box-shadow: none !important;
+      }
+
+      .menu-title {
+        font-size: 0.8rem !important;
+        letter-spacing: 0.005em !important;
+      }
+    }
+  }
+}
+
+// ─── Nuclear override — strip ALL Nebular list borders globally in menu ────────
+::ng-deep nb-menu ul.menu-items li,
+::ng-deep nb-menu ul.menu-items li > a,
+::ng-deep nb-menu ul.menu-items .menu-item,
+::ng-deep nb-menu ul.menu-items .menu-item > a {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+::ng-deep nb-menu ul.menu-items {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+// ─── Group header ─────────────────────────────────────────────────────────────
+::ng-deep nb-menu .menu-group {
+  padding: 1.1rem 0.75rem 0.28rem;
+  font-size: 0.63rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: $gray-400;
+  user-select: none;
+}
+
+// ─── Scrollbar ────────────────────────────────────────────────────────────────
+::ng-deep nb-sidebar .scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba($green-200, 0.45) transparent;
+
+  &::-webkit-scrollbar       { width: 3px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba($green-200, 0.45);
+    border-radius: 999px;
   }
 }

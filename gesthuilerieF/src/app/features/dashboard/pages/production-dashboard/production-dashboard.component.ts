@@ -7,6 +7,7 @@ import { ProductionDashboardService } from '../../services/production-dashboard.
 import { MachineService } from '../../../machines/services/machine.service';
 import { ExecutionProductionService } from '../../../production/services/execution-production.service';
 import { Router } from '@angular/router';
+import { PermissionService } from '../../../../core/services/permission.service';
 import {
   MachineLoad,
   OperationStatus,
@@ -74,6 +75,7 @@ export class ProductionDashboardComponent implements OnInit {
     grid: { left: 40, right: 20, top: 24, bottom: 28 },
     xAxis: {
       type: 'category',
+      boundaryGap: false,
       data: [],
       ...this.axisStyle,
       axisLine: { lineStyle: { color: '#ede8dd' } },
@@ -87,21 +89,19 @@ export class ProductionDashboardComponent implements OnInit {
     },
     series: [
       {
-        type: 'bar',
+        type: 'line',
         data: [],
-        barMaxWidth: 36,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 7,
+        showSymbol: true,
+        lineStyle: { width: 3, color: '#7a9c3a' },
         itemStyle: {
-          borderRadius: [5, 5, 0, 0],
-          color: {
-            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: '#7a9c3a' },
-              { offset: 1, color: '#4a6520' },
-            ],
-          },
+          color: '#7a9c3a',
         },
+        areaStyle: { color: 'rgba(122, 156, 58, 0.12)' },
         emphasis: {
-          itemStyle: { color: '#c9a84c' },
+          focus: 'series',
         },
       },
     ],
@@ -165,6 +165,7 @@ export class ProductionDashboardComponent implements OnInit {
     private machineService: MachineService,
     private executionProductionService: ExecutionProductionService,
     private router: Router,
+    private permissionService: PermissionService,
   ) { }
 
   ngOnInit(): void {
@@ -209,27 +210,30 @@ export class ProductionDashboardComponent implements OnInit {
   }
 
   get hasGlobalIndicators(): boolean {
-    return !!this.summary?.globalIndicators;
+    // Backend requires both DASHBOARD and GUIDE_PRODUCTION to show global indicators
+    return !!this.summary?.globalIndicators
+      && this.permissionService.canRead('DASHBOARD')
+      && this.permissionService.canRead('GUIDE_PRODUCTION');
   }
 
   get hasReceptionLots(): boolean {
-    return !!this.summary?.receptionLots;
+    return !!this.summary?.receptionLots && this.permissionService.canRead('RECEPTION');
   }
 
   get hasProductionProcess(): boolean {
-    return !!this.summary?.productionProcess;
+    return !!this.summary?.productionProcess && this.permissionService.canRead('GUIDE_PRODUCTION');
   }
 
   get hasMachines(): boolean {
-    return this.machinesLoaded;
+    return this.machinesLoaded && this.permissionService.canRead('MACHINES');
   }
 
   get hasQuality(): boolean {
-    return !!this.summary?.quality;
+    return !!this.summary?.quality && this.permissionService.canRead('GUIDE_PRODUCTION');
   }
 
   get hasStockMovements(): boolean {
-    return !!this.summary?.stockMovements;
+    return !!this.summary?.stockMovements && this.permissionService.canRead('STOCK_MOUVEMENT');
   }
 
   get machineActivesVsInactives(): string {
@@ -360,8 +364,7 @@ export class ProductionDashboardComponent implements OnInit {
 
   private buildCards(summary: ProductionDashboardSummary): Array<{ label: string; value: string; extra: string }> {
     const cards: Array<{ label: string; value: string; extra: string }> = [];
-
-    if (summary.receptionLots) {
+    if (summary.receptionLots && this.permissionService.canRead('RECEPTION')) {
       cards.push({
         label: 'Quantités reçus',
         value: `${this.formatNumber(summary.receptionLots.stockUtilisable)} kg`,
@@ -369,7 +372,7 @@ export class ProductionDashboardComponent implements OnInit {
       });
     }
 
-    if (summary.globalIndicators) {
+    if (summary.globalIndicators && this.permissionService.canRead('DASHBOARD') && this.permissionService.canRead('GUIDE_PRODUCTION')) {
       const quantite = summary.globalIndicators.quantiteProduiteAujourdhui ?? summary.globalIndicators.quantiteProduitePeriode;
       const todayIso = this.toIsoDate(new Date());
       const daily = summary.globalIndicators.dailyRendements ?? [];
@@ -390,7 +393,7 @@ export class ProductionDashboardComponent implements OnInit {
       );
     }
 
-    if (summary.stockMovements) {
+    if (summary.stockMovements && this.permissionService.canRead('STOCK_MOUVEMENT')) {
       cards.push({
         label: 'Mouvements du jour',
         value: `${summary.stockMovements.entreesAujourdhui}/${summary.stockMovements.sortiesAujourdhui}/${summary.stockMovements.transfertsAujourdhui}`,
@@ -630,7 +633,9 @@ export class ProductionDashboardComponent implements OnInit {
   }
 
   private patchHourlyExtractionChart(summary: ProductionDashboardSummary): void {
-    const points = summary.productionProcess?.extractionHoraire ?? [];
+    const points = (summary.productionProcess?.extractionHoraire ?? []).slice();
+    // Ensure consistent ordering by hour label
+    points.sort((a, b) => String(a.heure ?? '').localeCompare(String(b.heure ?? '')));
     const isWeekMode = this.filterMode === 'week';
     const values = isWeekMode
       ? points.reduce<number[]>((accumulator, point) => {

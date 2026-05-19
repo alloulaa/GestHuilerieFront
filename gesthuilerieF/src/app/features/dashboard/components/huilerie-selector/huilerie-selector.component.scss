@@ -1,0 +1,24 @@
+:host {
+    display: block;
+}
+
+.selector-shell {
+    display: grid;
+    gap: 0.45rem;
+    min-width: min(100%, 320px);
+}
+
+.selector-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-hint-color);
+    font-weight: 700;
+}
+
+nb-select {
+    width: 100%;
+}

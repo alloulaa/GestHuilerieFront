@@ -2,6 +2,8 @@
 @use '@nebular/theme/styles/themes/default' as *;
 @use '@nebular/theme/styles/globals' as *;
 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+
 $nb-themes: nb-register-theme((color-primary-100: #eef4e2,
 			color-primary-200: #dce8c5,
 			color-primary-300: #c4d69e,
@@ -24,6 +26,7 @@ $nb-themes: nb-register-theme((color-primary-100: #eef4e2,
 html,
 body {
 	min-height: 100%;
+	font-family: var(--font-body) !important;
 }
 
 body {
@@ -32,6 +35,8 @@ body {
 }
 
 :root {
+	--font-display: 'DM Serif Display', Georgia, serif;
+	--font-body: 'DM Sans', system-ui, sans-serif;
 	--app-btn-green-100: #eef4e2;
 	--app-btn-green-300: #c4d69e;
 	--app-btn-green-600: #7e9440;
@@ -44,6 +49,37 @@ body {
 	--app-gray-500: #6b7280;
 	--app-gray-600: #4b5563;
 	--app-gray-700: #374151;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.page-title,
+.section-title,
+.card-title,
+.hero-title,
+.header-copy h2,
+.header-copy h3,
+nb-card-header {
+	font-family: var(--font-display) !important;
+}
+
+button,
+input,
+textarea,
+select,
+table,
+th,
+td,
+label,
+p,
+li,
+a,
+span {
+	font-family: var(--font-body);
 }
 
 /* Unified button style for the whole application */

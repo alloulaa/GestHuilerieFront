@@ -1,15 +1,42 @@
 <nb-card class="hero-card">
   <nb-card-body>
-    <div class="hero-content">
-      <div>
-        <p class="hero-subtitle">Tableau de bord Administrateur</p>
-        <h2>Supervision globale de la production</h2>
-        <p>Suivi multi-huileries, contrôle des accès et indicateurs de performance en temps réel.</p>
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Administrateur
       </div>
-      <div class="hero-chip">
-        <nb-icon icon="shield-outline"></nb-icon>
-        <span>Mode supervision</span>
+      <div class="hero-body hero-body-admin">
+        <div class="hero-text">
+          <h1 class="hero-title">Supervision globale de la production</h1>
+          <p class="hero-desc">Suivi multi-huileries, contrôle des accès et indicateurs de performance en temps réel.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <div class="selector-shell">
+            <div class="selector-label">
+              <nb-icon icon="pin-outline"></nb-icon>
+              <span>Périmètre</span>
+            </div>
+
+            <nb-select [selected]="selectedHuilerieId" [disabled]="loading || !huileries.length"
+              (selectedChange)="onSelectedHuilerieChange($event)" placeholder="Sélectionner une huilerie">
+              <nb-option *ngFor="let option of huileries; trackBy: trackByHuilerieId" [value]="option.idHuilerie">
+                {{ option.nom }}
+              </nb-option>
+            </nb-select>
+          </div>
+
+        </div>
       </div>
+    </div>
+  </nb-card-body>
+</nb-card>
+
+<nb-card *ngIf="errorMessage" class="status-card error-card">
+  <nb-card-body>
+    <div class="status-line">
+      <nb-icon icon="alert-triangle-outline"></nb-icon>
+      <span>{{ errorMessage }}</span>
     </div>
   </nb-card-body>
 </nb-card>
@@ -22,8 +49,8 @@
         <nb-icon [icon]="kpi.icon"></nb-icon>
       </div>
       <div class="kpi-value">{{ kpi.value }}</div>
-      <div class="kpi-trend" [class.positive]="kpi.trend.startsWith('+')" [class.negative]="kpi.trend.startsWith('-')">
-        {{ kpi.trend }} vs semaine passée
+      <div class="kpi-trend" [class.positive]="kpi.trend?.startsWith('+')"
+        [class.negative]="kpi.trend?.startsWith('-')">
       </div>
     </nb-card-body>
   </nb-card>
@@ -31,14 +58,26 @@
 
 <div class="dashboard-grid two-columns">
   <nb-card>
-    <nb-card-header>Trend rendement hebdomadaire</nb-card-header>
+    <nb-card-header>
+      <span class="card-header-icon">📈</span>
+      Rendement
+      <div class="card-header-actions">
+        <button type="button" class="quality-filter-btn" [class.active]="rendementFilterMode === 'day'"
+          (click)="setRendementFilter('day')">Jour</button>
+        <button type="button" class="quality-filter-btn" [class.active]="rendementFilterMode === 'week'"
+          (click)="setRendementFilter('week')">Semaine</button>
+      </div>
+    </nb-card-header>
     <nb-card-body>
       <div echarts [options]="rendementTrendOptions" class="chart-host"></div>
     </nb-card-body>
   </nb-card>
 
   <nb-card>
-    <nb-card-header>Distribution qualité lots</nb-card-header>
+    <nb-card-header>
+      <span class="card-header-icon">📊</span>
+      Distribution qualité lots
+    </nb-card-header>
     <nb-card-body>
       <div echarts [options]="qualityPieOptions" class="chart-host"></div>
     </nb-card-body>
@@ -47,46 +86,39 @@
 
 <div class="dashboard-grid two-columns">
   <nb-card>
-    <nb-card-header>Comparatif des huileries</nb-card-header>
+    <nb-card-header>
+      <span class="card-header-icon">🏭</span>
+      Répartition des machines par état
+    </nb-card-header>
     <nb-card-body>
-      <div class="table-like">
-        <div class="row header">
-          <span>Huilerie</span>
-          <span>Production</span>
-          <span>Rendement</span>
-          <span>Qualité</span>
-        </div>
-        <div class="row" *ngFor="let h of huileries">
-          <span>{{ h.name }}</span>
-          <span>{{ h.prod }}</span>
-          <span>{{ h.rendement }}</span>
-          <span class="badge">{{ h.qualite }}</span>
+      <div class="machine-list">
+        <div class="machine-item machine-state-item" *ngFor="let group of machineStateGroups">
+          <div class="machine-top machine-state-top">
+            <span class="machine-name machine-state-label">{{ group.label }}</span>
+          </div>
+          <div class="machine-state-names" [class.machine-state-empty]="group.machines.length === 0">
+            {{ group.machines.length > 0 ? group.machines.join(', ') : 'Aucune machine' }}
+          </div>
         </div>
       </div>
     </nb-card-body>
   </nb-card>
 
   <nb-card>
-    <nb-card-header>État de santé des machines</nb-card-header>
-    <nb-card-body>
-      <div class="progress-list">
-        <div class="progress-item" *ngFor="let item of machineHealth">
-          <div class="progress-top">
-            <span>{{ item.name }}</span>
-            <strong>{{ item.value }}%</strong>
-          </div>
-          <nb-progress-bar [value]="item.value" status="primary"></nb-progress-bar>
-        </div>
+    <nb-card-header>
+      <span class="card-header-icon">📈</span>
+      Pressurage horaire
+      <div class="card-header-actions">
+        <button type="button" class="quality-filter-btn" [class.active]="extractionFilterMode === 'day'"
+          (click)="setExtractionFilter('day')">Jour</button>
+        <button type="button" class="quality-filter-btn" [class.active]="extractionFilterMode === 'week'"
+          (click)="setExtractionFilter('week')">Semaine</button>
       </div>
+    </nb-card-header>
+    <nb-card-body>
+      <div echarts [options]="hourlyExtractionOptions" class="chart-host"></div>
     </nb-card-body>
   </nb-card>
 </div>
 
-<nb-card>
-  <nb-card-header>Activités récentes</nb-card-header>
-  <nb-card-body>
-    <nb-list>
-      <nb-list-item *ngFor="let item of activities">{{ item }}</nb-list-item>
-    </nb-list>
-  </nb-card-body>
-</nb-card>
+<!-- Détails utilisateurs card removed per request -->

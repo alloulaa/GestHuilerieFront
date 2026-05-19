@@ -4,8 +4,7 @@
     <header class="page-header">
       <div class="header-copy">
         <p class="eyebrow">Administration</p>
-        <h1>Utilisateurs</h1>
-        <p>Gerez les comptes, profils et statuts avec une vue centralisee.</p>
+        <h1>GESTION DES UTILISATEURS</h1>
       </div>
       <button class="btn-primary" type="button" (click)="onNewUser()">Nouvel utilisateur</button>
     </header>
@@ -31,10 +30,7 @@
         <option [ngValue]="null">Tous les profils</option>
         <option *ngFor="let p of profils" [ngValue]="getProfilId(p)">{{ getProfilLabel(p) }}</option>
       </select>
-      <label>
-        <span>Huilerie</span>
-        <input type="text" [(ngModel)]="filterHuilerieNom" placeholder="Nom de l'huilerie" />
-      </label>
+
     </section>
 
     <form class="form-card" *ngIf="showForm" [formGroup]="userForm" (ngSubmit)="onSubmit()">

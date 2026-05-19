@@ -214,49 +214,85 @@ $border-md: rgba(94, 114, 40, 0.28);
 .table-wrap {
   overflow-x: auto;
   flex: 1;
+  border: 1px solid $border;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(28, 34, 9, 0.06);
+  background: #fff;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  background: #fff;
 }
 
 th {
+  padding: 0.8rem 1rem;
   text-align: left;
-  padding: 0.7rem 1.25rem;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: lighten($olive-700, 20%);
-  background: $olive-50;
-  border-bottom: 1px solid $border;
+  letter-spacing: 0.1em;
+  color: $olive-700;
+  background: linear-gradient(180deg, $olive-100 0%, rgba(212, 228, 168, 0.45) 100%);
+  border-bottom: 2px solid $olive-200;
   white-space: nowrap;
+
+  &:first-child {
+    padding-left: 1.25rem;
+  }
+
+  &:last-child {
+    padding-right: 1.25rem;
+  }
 }
 
 td {
-  padding: 0.85rem 1.25rem;
-  font-size: 0.82rem;
-  color: $olive-800;
-  border-bottom: 1px solid rgba(94, 114, 40, 0.07);
+  padding: 0.85rem 1rem;
+  font-size: 0.875rem;
+  color: $olive-900;
+  border-bottom: 1px solid rgba(212, 228, 168, 0.5);
+  white-space: nowrap;
   vertical-align: middle;
+
+  &:first-child {
+    padding-left: 1.25rem;
+  }
+
+  &:last-child {
+    padding-right: 1.25rem;
+  }
 }
 
 tbody tr {
-  transition: background 0.12s ease;
+  transition: background-color 0.18s ease;
 
   &:last-child td {
     border-bottom: none;
   }
 
+  &:nth-child(even) td {
+    background: rgba(245, 249, 234, 0.55);
+  }
+
   &:hover td {
-    background: rgba(94, 114, 40, 0.035);
+    background: rgba(212, 228, 168, 0.35) !important;
   }
 }
 
 .machine-name {
-  font-weight: 700;
-  color: $olive-900;
+  font-weight: 600;
+  color: $olive-800;
+}
+
+.type-cell {
+  font-weight: 500;
+  color: $olive-800;
+}
+
+.unit-cell {
+  font-weight: 600;
+  color: $olive-800;
 }
 
 // ---- Badges d'état ----
@@ -301,7 +337,7 @@ tbody tr {
   align-items: center;
   gap: 5px;
   padding: 5px 11px;
-  border: 1px solid $border-md;
+  border: 1px solid $border;
   border-radius: 6px;
   background: transparent;
   color: $olive-700;
