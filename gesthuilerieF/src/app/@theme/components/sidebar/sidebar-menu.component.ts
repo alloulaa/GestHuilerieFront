@@ -53,7 +53,7 @@ export class SidebarMenuComponent {
       'Gestion Utilisateurs': ['COMPTES_PROFILS', 'UTILISATEURS'],
     };
 
-    return items.filter((item) => {
+    const filtered = items.filter((item) => {
       // Keep group headers
       if (item.group) {
         return true;
@@ -86,6 +86,12 @@ export class SidebarMenuComponent {
         return false;
       }
 
+      // Hide the main 'Dashboard' link for Admin users only
+      if (item.title === 'Dashboard') {
+        const isAdmin = this.permissionService.isAdmin();
+        return !isAdmin && this.permissionService.canRead('DASHBOARD');
+      }
+
       const isAdmin = this.permissionService.isAdmin();
 
       // Items with children: filter each child by action-level permissions.
@@ -110,6 +116,20 @@ export class SidebarMenuComponent {
       // Items without children are visible with READ permission.
       return isAdmin || this.permissionService.canRead(moduleName);
     });
+
+    // If current user is Admin, move the 'Dashboard Admin' item to the top
+    const isAdminUser = this.permissionService.isAdmin();
+    if (isAdminUser) {
+      const idx = filtered.findIndex((it) => it.title === 'Dashboard Admin');
+      if (idx > 0) {
+        const [adminItem] = filtered.splice(idx, 1);
+        filtered.unshift(adminItem);
+        // mark first item as home
+        filtered.forEach((it, i) => { it.home = i === 0; });
+      }
+    }
+
+    return filtered;
   }
 
   isModuleVisible(moduleName: string): boolean {

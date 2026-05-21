@@ -40,8 +40,8 @@ export class MachineService {
     private authService: AuthService,
   ) { }
 
-  findAll(huilerieNom?: string, typeMachine?: string): Observable<Machine[]> {
-    const params = this.buildFindAllParams(huilerieNom, typeMachine);
+  findAll(huilerieNom?: string, typeMachine?: string, huilerieId?: number | null): Observable<Machine[]> {
+    const params = this.buildFindAllParams(huilerieNom, typeMachine, huilerieId);
     return forkJoin({
       machines: this.http.get<MachineApiDto[]>(this.apiUrl, { params }),
       huileries: this.huilerieService.getAll(),
@@ -63,8 +63,8 @@ export class MachineService {
     );
   }
 
-  getAll(huilerieNom?: string, typeMachine?: string): Observable<Machine[]> {
-    return this.findAll(huilerieNom, typeMachine);
+  getAll(huilerieNom?: string, typeMachine?: string, huilerieId?: number | null): Observable<Machine[]> {
+    return this.findAll(huilerieNom, typeMachine, huilerieId);
   }
 
   findById(idMachine: number): Observable<Machine> {
@@ -216,9 +216,15 @@ export class MachineService {
     };
   }
 
-  private buildFindAllParams(huilerieNom?: string, typeMachine?: string): HttpParams | undefined {
+  private buildFindAllParams(huilerieNom?: string, typeMachine?: string, huilerieId?: number | null): HttpParams | undefined {
     let params = new HttpParams();
     let hasParams = false;
+
+    const normalizedHuilerieId = huilerieId == null ? '' : String(huilerieId).trim();
+    if (normalizedHuilerieId) {
+      params = params.set('huilerieId', normalizedHuilerieId);
+      hasParams = true;
+    }
 
     const normalizedTypeMachine = String(typeMachine ?? '').trim();
     if (normalizedTypeMachine) {

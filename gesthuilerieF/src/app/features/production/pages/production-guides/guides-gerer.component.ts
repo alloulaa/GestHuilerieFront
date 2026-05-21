@@ -392,7 +392,11 @@ export class GuidesGererComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[\s-]+/g, '_');
 
+    // guides-gerer.component.ts — getMachinesForStep()
     return this.allMachines.filter((m) => {
+      // ← ADD THIS: only EN_SERVICE machines
+      if (String(m?.etatMachine ?? '').trim().toUpperCase() !== 'EN_SERVICE') return false;
+
       if (selectedHuilerieId && Number(m.huilerieId) !== selectedHuilerieId) {
         return false;
       }

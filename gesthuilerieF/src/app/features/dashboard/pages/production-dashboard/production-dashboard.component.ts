@@ -3,6 +3,7 @@ import { NbCardModule, NbProgressBarModule } from '@nebular/theme';
 import { NgFor, NgIf } from '@angular/common';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ProductionDashboardService } from '../../services/production-dashboard.service';
 import { MachineService } from '../../../machines/services/machine.service';
 import { ExecutionProductionService } from '../../../production/services/execution-production.service';
@@ -16,6 +17,7 @@ import {
 } from '../../models/production-dashboard.models';
 import { Machine } from '../../../machines/models/enterprise.models';
 import { ExecutionProduction } from '../../../production/models/production.models';
+import { AuthService } from '../../../../core/auth/auth.service';
 
 interface MachineStateGroup {
   key: string;
@@ -41,6 +43,7 @@ export class ProductionDashboardComponent implements OnInit {
   loading = false;
   errorMessage = '';
   machinesLoaded = false;
+  private selectedHuilerieId: number | null = null;
   qualityPerformanceFilterMode: 'day' | 'week' = 'day';
   executions: ExecutionProduction[] = [];
 
@@ -165,10 +168,20 @@ export class ProductionDashboardComponent implements OnInit {
     private machineService: MachineService,
     private executionProductionService: ExecutionProductionService,
     private router: Router,
+    private route: ActivatedRoute,
     private permissionService: PermissionService,
+    private authService: AuthService,
+
   ) { }
 
   ngOnInit(): void {
+    // Prevent Admin users from viewing the Responsable production dashboard.
+    if (this.authService.isCurrentUserAdmin && this.authService.isCurrentUserAdmin()) {
+      void this.router.navigate(['/pages/dashboard/admin']);
+      return;
+    }
+
+    this.selectedHuilerieId = this.resolveSelectedHuilerieId();
     this.loadDashboard();
     this.loadMachineStates();
     this.loadQualityPerformanceData();
@@ -252,7 +265,7 @@ export class ProductionDashboardComponent implements OnInit {
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() - 30);
 
-    this.dashboardService.getSummary(this.toIsoDate(dateFrom), this.toIsoDate(dateTo)).subscribe({
+    this.dashboardService.getSummary(this.toIsoDate(dateFrom), this.toIsoDate(dateTo), this.selectedHuilerieId).subscribe({
       next: (summary) => {
         this.summary = summary;
         this.applySummary(summary);
@@ -267,9 +280,9 @@ export class ProductionDashboardComponent implements OnInit {
   }
 
   private loadMachineStates(): void {
-    this.machineService.getAll().subscribe({
+    this.machineService.getAll(undefined, undefined, this.selectedHuilerieId).subscribe({
       next: (machines) => {
-        this.machineStateGroups = this.groupMachinesByState(machines);
+        this.machineStateGroups = this.groupMachinesByState(machines ?? []);
         this.machinesLoaded = true;
       },
       error: () => {
@@ -321,7 +334,7 @@ export class ProductionDashboardComponent implements OnInit {
         return;
       }
 
-      this.dashboardService.getSummary(this.toIsoDate(range.from), this.toIsoDate(range.to)).subscribe({
+      this.dashboardService.getSummary(this.toIsoDate(range.from), this.toIsoDate(range.to), this.selectedHuilerieId).subscribe({
         next: (summary) => {
           this.machineLoad = this.buildMachineLoad(summary.machines?.chargeParMachine ?? []);
           this.patchHourlyExtractionChart(summary);
@@ -366,9 +379,9 @@ export class ProductionDashboardComponent implements OnInit {
     const cards: Array<{ label: string; value: string; extra: string }> = [];
     if (summary.receptionLots && this.permissionService.canRead('RECEPTION')) {
       cards.push({
-        label: 'Quantités reçus',
-        value: `${this.formatNumber(summary.receptionLots.stockUtilisable)} kg`,
-        extra: `${summary.receptionLots.lotsRecusAujourdhui} lots reçus aujourd\'hui`,
+        label: 'Quantités reçues',
+        value: `${this.formatNumber(summary.receptionLots.lotsRecusAujourdhui)} lots`,
+        extra: `${this.formatNumber(summary.receptionLots.matiereRecueAujourdhui ?? summary.receptionLots.stockUtilisable)} kg reçus aujourd\'hui`,
       });
     }
 
@@ -394,6 +407,10 @@ export class ProductionDashboardComponent implements OnInit {
     }
 
     if (summary.stockMovements && this.permissionService.canRead('STOCK_MOUVEMENT')) {
+      const totalMovements =
+        (summary.stockMovements.entreesAujourdhui ?? 0)
+        + (summary.stockMovements.sortiesAujourdhui ?? 0)
+        + (summary.stockMovements.transfertsAujourdhui ?? 0);
       cards.push({
         label: 'Mouvements du jour',
         value: `${summary.stockMovements.entreesAujourdhui}/${summary.stockMovements.sortiesAujourdhui}/${summary.stockMovements.transfertsAujourdhui}`,
@@ -578,6 +595,14 @@ export class ProductionDashboardComponent implements OnInit {
       { key: 'DESACTIVEE', label: 'Désactivée', machines: [] },
       { key: 'SURVEILLANCE', label: 'En surveillance', machines: [] },
     ];
+  }
+
+  private resolveSelectedHuilerieId(): number | null {
+    const queryValue = this.route.snapshot.queryParamMap.get('huilerieId');
+    const stateValue = typeof history !== 'undefined' ? history.state?.huilerieId : null;
+    const candidate = queryValue ?? stateValue ?? this.authService.getCurrentUserHuilerieId();
+    const parsed = Number(candidate ?? 0);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
   private groupMachinesByState(machines: Machine[]): MachineStateGroup[] {

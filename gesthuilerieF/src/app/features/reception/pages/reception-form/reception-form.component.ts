@@ -82,7 +82,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         private campagneService: CampagneService,
     ) {
         this.form = this.formBuilder.group({
-            datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
+            datePesee: [this.getLocalDateTimeValue(), [Validators.required]],
             poidsBrut: [null, [Validators.required, Validators.min(1)]],
             poidsTare: [0, [Validators.required, Validators.min(0)]],
             poidsNet: [{ value: 0, disabled: true }, [Validators.required]],
@@ -288,7 +288,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
         const payload: CreatePeseeInput = {
             lotId: raw.lotMode === 'new' ? undefined : Number(raw.existingLotId ?? 0) || undefined,
-            datePesee: raw.datePesee ?? new Date().toISOString(),
+            datePesee: raw.datePesee ?? this.getLocalDateTimeValue(),
             pesee: Number(raw.poidsBrut),
             poidsBrut: Number(raw.poidsBrut),
             poidsTare: Number(raw.poidsTare),
@@ -367,7 +367,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
         const defaultHuilerieId = this.huileries[0]?.idHuilerie ?? 1;
         this.form.reset({
-            datePesee: new Date().toISOString().slice(0, 16),
+            datePesee: this.getLocalDateTimeValue(),
             poidsBrut: null,
             poidsTare: 0,
             poidsNet: 0,
@@ -392,6 +392,16 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             fournisseurNom: '',
             fournisseurCIN: '',
         });
+    }
+
+    private getLocalDateTimeValue(): string {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
 

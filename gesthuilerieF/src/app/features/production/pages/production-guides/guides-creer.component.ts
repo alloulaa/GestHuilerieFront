@@ -244,23 +244,21 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[\s-]+/g, '_');
 
-    return this.allMachines.filter((m) => {
-      // If huilerie is selected, filter by it
-      if (selectedHuilerieId && Number(m.huilerieId) !== selectedHuilerieId) {
-        return false;
-      }
+    // guides-creer.component.ts — getMachinesForStep()
+return this.allMachines.filter((m) => {
+  // ← ADD THIS: only EN_SERVICE machines
+  if (String(m?.etatMachine ?? '').trim().toUpperCase() !== 'EN_SERVICE') return false;
 
-      // Prefer explicit category match
-      if (normalize(m.categorieMachine) === normalize(category)) return true;
-
-      // Fallback: match by typeMachine keywords
-      const tm = normalize(m.typeMachine);
-      for (const expected of expectedTypes) {
-        if (tm.includes(normalize(expected))) return true;
-      }
-
-      return false;
-    });
+  if (selectedHuilerieId && Number(m.huilerieId) !== selectedHuilerieId) {
+    return false;
+  }
+  if (normalize(m.categorieMachine) === normalize(category)) return true;
+  const tm = normalize(m.typeMachine);
+  for (const expected of expectedTypes) {
+    if (tm.includes(normalize(expected))) return true;
+  }
+  return false;
+});
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, throwError } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { GuideProduction, GuideProductionCreateDTO } from '../models/production.models';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -10,7 +10,6 @@ import { AuthService } from '../../../core/auth/auth.service';
 })
 export class GuideProductionService {
     private readonly apiUrl = `${environment.apiUrl}/guide-productions`;
-    private readonly fallbackUpdateUrl = `${environment.apiUrl}/guide-production`;
 
     constructor(
         private http: HttpClient,
@@ -43,15 +42,7 @@ export class GuideProductionService {
             idGuideProduction,
         } as any;
 
-        return this.http.put<GuideProduction>(`${this.apiUrl}/${idGuideProduction}`, body).pipe(
-            catchError((error) => {
-                if (error?.status !== 409) {
-                    return throwError(() => error);
-                }
-
-                return this.http.put<GuideProduction>(`${this.fallbackUpdateUrl}/${idGuideProduction}`, body);
-            }),
-        );
+        return this.http.put<GuideProduction>(`${this.apiUrl}/${idGuideProduction}`, body);
     }
 
     delete(idGuideProduction: number): Observable<void> {

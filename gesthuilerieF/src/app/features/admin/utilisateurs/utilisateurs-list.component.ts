@@ -43,6 +43,7 @@ export class UtilisateursListComponent implements OnInit {
     private permissionService: PermissionService,
     private toastService: ToastService,
     private confirmDialogService: ConfirmDialogService,
+
   ) { }
 
   get filteredUtilisateurs(): any[] {
@@ -296,6 +297,8 @@ export class UtilisateursListComponent implements OnInit {
       },
     });
   }
+
+
 
   onPageChange(page: number): void {
     this.currentPage = page;

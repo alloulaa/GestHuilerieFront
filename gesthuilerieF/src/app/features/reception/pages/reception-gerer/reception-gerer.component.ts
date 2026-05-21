@@ -86,7 +86,7 @@ export class ReceptionGererComponent implements OnInit {
     private analyseLaboratoireService: AnalyseLaboratoireService,
   ) {
     this.form = this.fb.group({
-      datePesee: [new Date().toISOString().slice(0, 16), [Validators.required]],
+      datePesee: [this.getLocalDateTimeValue(), [Validators.required]],
       poidsBrut: [0, [Validators.required, Validators.min(0)]],
       poidsTare: [0, [Validators.required, Validators.min(0)]],
       poidsNet: [{ value: 0, disabled: true }, [Validators.required]],
@@ -286,7 +286,7 @@ export class ReceptionGererComponent implements OnInit {
 
     const payload: CreatePeseeInput = {
       lotId: this.isNewLotMode() ? undefined : Number(raw.existingLotId ?? 0) || undefined,
-      datePesee: raw.datePesee ?? new Date().toISOString(),
+      datePesee: raw.datePesee ?? this.getLocalDateTimeValue(),
       pesee: poidsBrut || 0,
       poidsBrut: poidsBrut || 0,
       poidsTare: poidsTare || 0,
@@ -598,7 +598,7 @@ export class ReceptionGererComponent implements OnInit {
     this.isEditMode = false;
     this.errorMessage = '';
     this.form.reset({
-      datePesee: new Date().toISOString().slice(0, 16),
+      datePesee: this.getLocalDateTimeValue(),
       poidsBrut: 0,
       poidsTare: 0,
       poidsNet: 0,
@@ -619,6 +619,16 @@ export class ReceptionGererComponent implements OnInit {
     });
 
     this.selectDefaultLot();
+  }
+
+  private getLocalDateTimeValue(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
   isFieldInvalid(fieldName: string): boolean {

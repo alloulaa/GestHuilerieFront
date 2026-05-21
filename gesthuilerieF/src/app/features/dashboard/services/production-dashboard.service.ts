@@ -12,8 +12,13 @@ export class ProductionDashboardService {
 
     constructor(private http: HttpClient) { }
 
-    getSummary(dateFrom?: string, dateTo?: string): Observable<ProductionDashboardSummary> {
+    getSummary(dateFrom?: string, dateTo?: string, huilerieId?: number | null): Observable<ProductionDashboardSummary> {
         let params = new HttpParams();
+
+        const normalizedHuilerieId = huilerieId == null ? '' : String(huilerieId).trim();
+        if (normalizedHuilerieId) {
+            params = params.set('huilerieId', normalizedHuilerieId);
+        }
 
         const normalizedFrom = String(dateFrom ?? '').trim();
         if (normalizedFrom) {
