@@ -546,7 +546,15 @@
           </ng-container>
 
           <ng-container *ngIf="message.sender === 'bot' && message.intent !== 'lot_cycle_vie' && !isChoiceMessage(message) && !isRankingMessage(message) && !isMachineListMessage(message) && !(message.tableData && isMachineTableMessage(message))">
-            <p class="chatbot-widget__choice-prompt">{{ message.content }}</p>
+            <p 
+              *ngIf="isPredictionMessage(message)"
+              class="chatbot-widget__choice-prompt chatbot-widget__choice-prompt--prediction"
+              [innerHTML]="message.content | formatMarkdown"
+            ></p>
+            <p 
+              *ngIf="!isPredictionMessage(message)"
+              class="chatbot-widget__choice-prompt"
+            >{{ message.content }}</p>
           </ng-container>
 
           <!-- User bubble -->
@@ -625,6 +633,29 @@
           </ul>
           <div class="chatbot-widget__backend-error" *ngIf="backendPredictionError">{{ backendPredictionError }}</div>
         </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        <!-- GUIDE DE MACHINE SECTION -->
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        
+        <div class="chatbot-widget__form-group">
+          <label for="prediction_machine">Type de machine</label>
+          <select
+            id="prediction_machine"
+            [ngModel]="predictionField('type_machine')"
+            (ngModelChange)="updateMachineType($event)"
+            name="type_machine"
+          >
+            <option value="2_phase">2 Phases</option>
+            <option value="3_phase">3 Phases</option>
+            <option value="presse">Presse</option>
+          </select>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        <!-- DONNÉES D'ENTRÉE SECTION -->
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        
         <div class="chatbot-widget__form-group">
           <label for="prediction_variete">Variété</label>
           <select
@@ -735,47 +766,6 @@
         </div>
 
         <div class="chatbot-widget__form-group">
-          <label for="prediction_temp">Température malaxage (°C)</label>
-          <input
-            type="number"
-            id="prediction_temp"
-            [ngModel]="predictionNumber('temperature_malaxage_c')"
-            (ngModelChange)="updatePredictionField('temperature_malaxage_c', $event)"
-            name="temperature_malaxage_c"
-            min="24"
-            max="27"
-            step="0.5"
-          >
-        </div>
-
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_duree">Durée malaxage (min)</label>
-          <input
-            type="number"
-            id="prediction_duree"
-            [ngModel]="predictionNumber('duree_malaxage_min')"
-            (ngModelChange)="updatePredictionField('duree_malaxage_min', $event)"
-            name="duree_malaxage_min"
-            min="25"
-            max="40"
-          >
-        </div>
-
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_vitesse">Vitesse décanteur (tr/min)</label>
-          <input
-            type="number"
-            id="prediction_vitesse"
-            [ngModel]="predictionNumber('vitesse_decanteur_tr_min')"
-            (ngModelChange)="updatePredictionField('vitesse_decanteur_tr_min', $event)"
-            name="vitesse_decanteur_tr_min"
-            min="3000"
-            max="3400"
-            required
-          >
-        </div>
-
-        <div class="chatbot-widget__form-group">
           <label for="prediction_humidite">Humidité (%)</label>
           <input
             type="number"
@@ -830,20 +820,12 @@
           </select>
         </div>
 
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_machine">Type de machine</label>
-          <select
-            id="prediction_machine"
-            [ngModel]="predictionField('type_machine')"
-            (ngModelChange)="updatePredictionField('type_machine', $event)"
-            name="type_machine"
-          >
-            <option value="2_phase">2 Phases</option>
-            <option value="3_phase">3 Phases</option>
-            <option value="presse">Presse</option>
-          </select>
-        </div>
+        <div class="chatbot-widget__form-divider"></div>
 
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        <!-- CONFIGURATION DE MACHINE SECTION -->
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        
         <div class="chatbot-widget__form-group">
           <label for="prediction_broyeur">Type de broyeur</label>
           <select
@@ -892,37 +874,17 @@
           </select>
         </div>
 
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_separation">Type de séparation</label>
-          <select
-            id="prediction_separation"
-            [ngModel]="predictionField('type_separation')"
-            (ngModelChange)="updatePredictionField('type_separation', $event)"
-            name="type_separation"
-            required
-          >
-            <option value="">-- Sélectionner un type --</option>
-            <option *ngFor="let option of getSeparationOptions()" [value]="option">
-              {{ option }}
-            </option>
-          </select>
-        </div>
+        <!-- Type de séparation - AUTO-REMPLI selon le type de machine -->
+        <input type="hidden"
+               [ngModel]="predictionField('type_separation')"
+               (ngModelChange)="updatePredictionField('type_separation', $event)"
+               name="type_separation">
 
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_extracteur">Type d'extracteur</label>
-          <select
-            id="prediction_extracteur"
-            [ngModel]="predictionField('type_extracteur')"
-            (ngModelChange)="updatePredictionField('type_extracteur', $event)"
-            name="type_extracteur"
-            required
-          >
-            <option value="">-- Sélectionner un type --</option>
-            <option *ngFor="let option of getExtracteurOptions()" [value]="option">
-              {{ option }}
-            </option>
-          </select>
-        </div>
+        <!-- Type d'extracteur - AUTO-REMPLI selon le type de machine -->
+        <input type="hidden"
+               [ngModel]="predictionField('type_extracteur')"
+               (ngModelChange)="updatePredictionField('type_extracteur', $event)"
+               name="type_extracteur">
 
         <div class="chatbot-widget__form-group">
           <label for="prediction_controle">Contrôle température</label>
@@ -938,32 +900,63 @@
           </select>
         </div>
 
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_pression">Pression extraction (bar)</label>
-          <input type="number"
-                 id="prediction_pression"
-                 [ngModel]="predictionNumber('pression_extraction_bar')"
-                 (ngModelChange)="updatePredictionField('pression_extraction_bar', $event)"
-                 name="pression_extraction_bar"
-                 min="0"
-                 max="300"
-                 step="1"
-                 required>
+        <!-- Nombre d'étapes - AUTO-REMPLI selon le type de machine -->
+        <input type="hidden"
+               [ngModel]="predictionNumber('nombre_etapes')"
+               (ngModelChange)="updatePredictionField('nombre_etapes', $event)"
+               name="nombre_etapes">
+
+        <div class="chatbot-widget__form-divider"></div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        <!-- PARAMÈTRES DYNAMIQUES SELON LE GUIDE -->
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        
+        <!-- Température et Durée malaxage -->
+        <div *ngIf="isParameterVisible('temperature_malaxage_c')" class="chatbot-widget__form-group">
+          <label for="prediction_temp">Température malaxage (°C)</label>
+          <input
+            type="number"
+            id="prediction_temp"
+            [ngModel]="predictionNumber('temperature_malaxage_c')"
+            (ngModelChange)="updatePredictionField('temperature_malaxage_c', $event)"
+            name="temperature_malaxage_c"
+            min="24"
+            max="27"
+            step="0.5"
+          >
         </div>
 
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_etapes">Nombre d'étapes</label>
-          <input type="number"
-                 id="prediction_etapes"
-                 [ngModel]="predictionNumber('nombre_etapes')"
-                 (ngModelChange)="updatePredictionField('nombre_etapes', $event)"
-                 name="nombre_etapes"
-                 min="1"
-                 max="20"
-                 required>
+        <div *ngIf="isParameterVisible('duree_malaxage_min')" class="chatbot-widget__form-group">
+          <label for="prediction_duree">Durée malaxage (min)</label>
+          <input
+            type="number"
+            id="prediction_duree"
+            [ngModel]="predictionNumber('duree_malaxage_min')"
+            (ngModelChange)="updatePredictionField('duree_malaxage_min', $event)"
+            name="duree_malaxage_min"
+            min="25"
+            max="40"
+          >
         </div>
 
-        <div class="chatbot-widget__form-group">
+        <!-- Vitesse décanteur (2 phases et 3 phases) -->
+        <div *ngIf="isParameterVisible('vitesse_decanteur_tr_min')" class="chatbot-widget__form-group">
+          <label for="prediction_vitesse">Vitesse décanteur (tr/min)</label>
+          <input
+            type="number"
+            id="prediction_vitesse"
+            [ngModel]="predictionNumber('vitesse_decanteur_tr_min')"
+            (ngModelChange)="updatePredictionField('vitesse_decanteur_tr_min', $event)"
+            name="vitesse_decanteur_tr_min"
+            min="3000"
+            max="3400"
+            required
+          >
+        </div>
+
+        <!-- Ajout d'eau (2 phases et 3 phases) -->
+        <div *ngIf="isParameterVisible('presence_ajout_eau')" class="chatbot-widget__form-group">
           <label for="prediction_presence_eau">Ajout d'eau</label>
           <select id="prediction_presence_eau"
                   [ngModel]="predictionField('presence_ajout_eau')"
@@ -975,24 +968,40 @@
           </select>
         </div>
 
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_presence_presse">Présence presse</label>
-          <select id="prediction_presence_presse"
-                  [ngModel]="predictionField('presence_presse')"
-                  (ngModelChange)="updatePredictionField('presence_presse', $event)"
-                  name="presence_presse"
+        <!-- Séparateur (2 phases et 3 phases) -->
+        <div *ngIf="isParameterVisible('presence_separateur')" class="chatbot-widget__form-group">
+          <label for="prediction_presence_separateur">Présence séparateur</label>
+          <select id="prediction_presence_separateur"
+                  [ngModel]="predictionField('presence_separateur')"
+                  (ngModelChange)="updatePredictionField('presence_separateur', $event)"
+                  name="presence_separateur"
                   required>
             <option value="0">Non</option>
             <option value="1">Oui</option>
           </select>
         </div>
 
-        <div class="chatbot-widget__form-group">
-          <label for="prediction_presence_separateur">Présence séparateur</label>
-          <select id="prediction_presence_separateur"
-                  [ngModel]="predictionField('presence_separateur')"
-                  (ngModelChange)="updatePredictionField('presence_separateur', $event)"
-                  name="presence_separateur"
+        <!-- Pression extraction (Presse) -->
+        <div *ngIf="isParameterVisible('pression_extraction_bar')" class="chatbot-widget__form-group">
+          <label for="prediction_pression">Pression extraction (bar)</label>
+          <input type="number"
+                 id="prediction_pression"
+                 [ngModel]="predictionNumber('pression_extraction_bar')"
+                 (ngModelChange)="updatePredictionField('pression_extraction_bar', $event)"
+                 name="pression_extraction_bar"
+                 min="50"
+                 max="350"
+                 step="1"
+                 required>
+        </div>
+
+        <!-- Présence presse (Presse) -->
+        <div *ngIf="isParameterVisible('presence_presse')" class="chatbot-widget__form-group">
+          <label for="prediction_presence_presse">Présence presse</label>
+          <select id="prediction_presence_presse"
+                  [ngModel]="predictionField('presence_presse')"
+                  (ngModelChange)="updatePredictionField('presence_presse', $event)"
+                  name="presence_presse"
                   required>
             <option value="0">Non</option>
             <option value="1">Oui</option>

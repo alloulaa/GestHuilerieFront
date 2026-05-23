@@ -29,7 +29,27 @@
     radial-gradient(circle at 82% 84%, rgba(130, 151, 83, 0.22), transparent 30%),
     linear-gradient(135deg, #f5efdf 0%, #f8f4ea 42%, #ebe2cf 100%);
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(103, 127, 50, 0.4) rgba(103, 127, 50, 0.1);
+
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(103, 127, 50, 0.1);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(103, 127, 50, 0.4);
+    border-radius: 5px;
+
+    &:hover {
+      background: rgba(103, 127, 50, 0.6);
+    }
+  }
 }
 
 :host::before,
@@ -77,6 +97,20 @@
     radial-gradient(circle at 84% 18%, rgba(185, 151, 84, 0.14), transparent 25%),
     radial-gradient(circle at 82% 84%, rgba(130, 151, 83, 0.18), transparent 30%),
     linear-gradient(135deg, #171d12 0%, #1d2415 46%, #241f17 100%);
+
+  scrollbar-color: rgba(189, 213, 133, 0.4) rgba(189, 213, 133, 0.1);
+
+  &::-webkit-scrollbar-track {
+    background: rgba(189, 213, 133, 0.1);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(189, 213, 133, 0.4);
+
+    &:hover {
+      background: rgba(189, 213, 133, 0.6);
+    }
+  }
 }
 
 .auth-shell {

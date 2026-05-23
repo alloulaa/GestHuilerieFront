@@ -8,10 +8,12 @@ import { finalize } from 'rxjs/operators';
 
 import { ChatbotChartPayload, ChatbotChartType, ChatbotResponse, ChatbotResponseType, ChatbotService, PredictionPayload } from '../../../core/services/chatbot.service';
 import { getParameterStandard } from '../../constants/lab-analysis-standards';
+import { getMachineGuide, getVisibleFields, MachineGuide, MACHINE_GUIDE_FIELDS } from '../../constants/machine-guides';
+import { FormatMarkdownPipe } from '../../pipes/format-markdown.pipe';
 
 Chart.register(...registerables);
 
-const CHART_COLORS = ['#6f8d3a', '#9bb85a', '#d8c65a', '#7e9fcb', '#f3a15f', '#c96c6c'];
+const CHART_COLORS = ['#9bb85a', '#b8d46d', '#7e9fcb', '#5dade2', '#f8a93c', '#f5b041', '#ec7063', '#f48fb1'];
 const RANKING_INTENTS = ['fournisseur', 'machines_utilisees', 'lot_liste', 'analyse_labo', 'stock', 'production', 'rendement', 'qualite', 'campagne', 'reception', 'diagnostic', 'comparaison', 'mouvement_stock', 'machine'] as const;
 
 type RankingIntent = typeof RANKING_INTENTS[number];
@@ -198,7 +200,7 @@ interface ChatMessage {
 @Component({
   selector: 'app-chatbot-widget',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FormatMarkdownPipe],
   templateUrl: './chatbot-widget.component.html',
   styleUrls: ['./chatbot-widget.component.scss'],
   changeDetection: ChangeDetectionStrategy.Default,
@@ -982,6 +984,25 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
     return message.sender === 'bot' && message.type === 'chart' && !!message.chartData;
   }
 
+  isPredictionMessage(message: ChatMessage): boolean {
+    if (!message.content) return false;
+    const content = String(message.content).toLowerCase();
+    return content.includes('prédiction') || 
+           content.includes('qualité') || 
+           content.includes('rendement') || 
+           content.includes('huile estimée') ||
+           content.includes('confidence');
+  }
+
+  formatPredictionContent(content: string): string {
+    if (!content) return '';
+    
+    let formatted = String(content);
+
+    // Just return the formatted text - Angular will handle the display
+    return formatted;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Machine type options helpers
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1045,6 +1066,69 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
       'presse': 'Presse',
     };
     return labels[type] || type;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Machine Guide Methods
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Met à jour le type de machine et auto-remplit les champs dépendants
+   */
+  updateMachineType(machineType: string): void {
+    this.predictionFormData['type_machine'] = machineType;
+    console.log(`[Chatbot Widget] Machine type changed to: ${machineType}`);
+
+    // Auto-remplir les champs selon le type de machine
+    const guide = getMachineGuide(machineType);
+    if (guide) {
+      // Déterminer le type de séparation automatiquement
+      if (machineType === '2_phase') {
+        this.predictionFormData['type_separation'] = 'decanteur_2_phases';
+        this.predictionFormData['type_extracteur'] = 'centrifugation_2_phases';
+      } else if (machineType === '3_phase') {
+        this.predictionFormData['type_separation'] = 'decanteur_3_phases';
+        this.predictionFormData['type_extracteur'] = 'centrifugation_3_phases';
+      } else if (machineType === 'presse') {
+        this.predictionFormData['type_separation'] = 'presse_hydraulique';
+        this.predictionFormData['type_extracteur'] = 'presse_hydraulique';
+      }
+
+      // Initialiser le nombre d'étapes selon le guide
+      this.predictionFormData['nombre_etapes'] = guide.steps.length;
+    }
+  }
+
+  /**
+   * Obtient le guide de machine courant selon le type de machine sélectionné
+   */
+  getCurrentMachineGuide(): MachineGuide | null {
+    const machineType = String(this.predictionFormData['type_machine'] ?? '2_phase');
+    return getMachineGuide(machineType);
+  }
+
+  /**
+   * Vérifie si un paramètre doit être visible pour le type de machine courant
+   */
+  isParameterVisible(fieldName: string): boolean {
+    const machineType = String(this.predictionFormData['type_machine'] ?? '2_phase');
+    const field = MACHINE_GUIDE_FIELDS[fieldName];
+    return field ? field.visibleIn.includes(machineType as any) : false;
+  }
+
+  /**
+   * Obtient la configuration d'un champ du guide
+   */
+  getFieldConfig(fieldName: string): any {
+    return MACHINE_GUIDE_FIELDS[fieldName] || null;
+  }
+
+  /**
+   * Obtient les champs visibles pour le type de machine courant
+   */
+  getVisibleMachineFields(): Record<string, any> {
+    const machineType = String(this.predictionFormData['type_machine'] ?? '2_phase');
+    return getVisibleFields(machineType);
   }
 
   isRankingMessage(message: ChatMessage): boolean {
@@ -2392,12 +2476,12 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
         data: ds.data,
         type: dsType as any,
         borderColor: color,
-        backgroundColor: dsType === 'line' || (chartType === 'line' && !dsType) ? color : this.withAlpha(color, 0.28),
+        backgroundColor: dsType === 'line' || (chartType === 'line' && !dsType) ? color : this.withAlpha(color, 0.6),
         borderWidth: 2,
         fill: false,
         tension: dsType === 'line' || (chartType === 'line' && !dsType) ? 0.35 : 0,
         yAxisID,
-        maxBarThickness: isBarDataset ? 42 : undefined,
+        maxBarThickness: isBarDataset ? 28 : undefined,
       } as ChartDataset<'bar' | 'line', number[]>;
     });
 
@@ -2405,14 +2489,19 @@ export class ChatbotWidgetComponent implements AfterViewInit, OnDestroy {
   }
 
   private buildRankingChartDatasets(datasets: any[]): ChartDataset<'bar' | 'line', number[]>[] {
-    return datasets.map((ds: any, index: number) => ({
-      label: ds.label ?? `Série ${index + 1}`,
-      data: Array.isArray(ds.data) ? ds.data.map((v: any) => this.normalizeNumber(v)) : [],
-      backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
-      borderColor: CHART_COLORS[index % CHART_COLORS.length],
-      fill: false,
-      tension: 0.35,
-    }));
+    return datasets.map((ds: any, index: number) => {
+      const color = CHART_COLORS[index % CHART_COLORS.length];
+      return {
+        label: ds.label ?? `Série ${index + 1}`,
+        data: Array.isArray(ds.data) ? ds.data.map((v: any) => this.normalizeNumber(v)) : [],
+        backgroundColor: this.withAlpha(color, 0.6),
+        borderColor: color,
+        borderWidth: 2,
+        fill: false,
+        tension: 0.35,
+        maxBarThickness: 28,
+      };
+    });
   }
 
   private getTooltipContext(rankingItems: any[] | undefined, intent: string | null): string[] {
