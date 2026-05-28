@@ -12,9 +12,9 @@
   --olive-300: #b4cc98;
   --olive-200: #d5e8c4;
   --olive-100: #eaf3df;
-  --olive-50:  #f4f9ee;
-  --sand-100:  #f8f5ee;
-  --sand-200:  #ede8dc;
+  --olive-50: #f4f9ee;
+  --sand-100: #f8f5ee;
+  --sand-200: #ede8dc;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -138,6 +138,12 @@
   box-shadow: 0 3px 8px rgba(79, 122, 56, 0.25);
 }
 
+.section-icon-label {
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .section-icon mat-icon,
 .section-icon i {
   color: #fff;
@@ -170,6 +176,10 @@
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 0.8rem;
+}
+
+.section-body--compact-top {
+  padding-top: 0.85rem;
 }
 
 /* ── Champs formulaire ── */
@@ -495,27 +505,70 @@
 }
 
 @keyframes popIn {
-  from { opacity: 0; transform: scale(0.9) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* ── Responsive ── */
 @media (max-width: 1150px) {
-  .section-body { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .form-field, .form-field-quarter { grid-column: span 3; }
-  .form-field-half { grid-column: span 6; }
-  .wash-field { grid-column: span 3; }
+  .section-body {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .form-field,
+  .form-field-quarter {
+    grid-column: span 3;
+  }
+
+  .form-field-half {
+    grid-column: span 6;
+  }
+
+  .wash-field {
+    grid-column: span 3;
+  }
 }
 
 @media (max-width: 720px) {
-  .section-body { grid-template-columns: 1fr; }
-  .form-field, .form-field-half, .form-field-quarter, .wash-field { grid-column: auto; }
-  .stats-strip { display: grid; grid-template-columns: 1fr 1fr; }
-  .footer-row { justify-content: stretch; }
-  .actions { width: 100%; }
-  .actions button, .actions a { flex: 1; }
+  .section-body {
+    grid-template-columns: 1fr;
+  }
+
+  .form-field,
+  .form-field-half,
+  .form-field-quarter,
+  .wash-field {
+    grid-column: auto;
+  }
+
+  .stats-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .footer-row {
+    justify-content: stretch;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions button,
+  .actions a {
+    flex: 1;
+  }
 }
 
 @media (max-width: 480px) {
-  .stats-strip { grid-template-columns: 1fr; }
+  .stats-strip {
+    grid-template-columns: 1fr;
+  }
 }

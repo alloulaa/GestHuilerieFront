@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -35,6 +35,7 @@ export class HuileriesManagementComponent implements OnInit {
 
   editingHuilerieId: number | null = null;
   editingHuilerieStatus = true;
+  @ViewChild('nomInput') nomInput?: ElementRef<HTMLInputElement>;
 
   readonly huilerieForm;
 
@@ -117,6 +118,7 @@ export class HuileriesManagementComponent implements OnInit {
       capaciteProduction: item.capaciteProduction,
       entrepriseId: item.entrepriseId,
     });
+    this.focusHuilerieForm();
   }
 
   async askToggleHuilerieActivation(item: Huilerie): Promise<void> {
@@ -160,6 +162,12 @@ export class HuileriesManagementComponent implements OnInit {
       certification: '',
       capaciteProduction: 0,
       entrepriseId: 1,
+    });
+  }
+  private focusHuilerieForm(): void {
+    window.requestAnimationFrame(() => {
+      this.nomInput?.nativeElement.focus();
+      this.nomInput?.nativeElement.select();
     });
   }
 

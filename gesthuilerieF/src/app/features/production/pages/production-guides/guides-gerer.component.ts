@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbIconModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -44,6 +44,7 @@ export class GuidesGererComponent implements OnInit {
   guideEditingId: number | null = null;
   executionEditingId: number | null = null;
   pendingExecutionDeletion: ExecutionProduction | null = null;
+  @ViewChild('guideNameInput') guideNameInput?: ElementRef<HTMLInputElement>;
 
   executionMessage = '';
   executionError = '';
@@ -423,17 +424,19 @@ export class GuidesGererComponent implements OnInit {
 
       const codeVal = etapeControl.get('codeEtape')?.value;
       const code = codeVal == null ? null : String(codeVal);
+      const selectedHuilerieId = Number(this.guideForm.get('huilerieId')?.value ?? 0) || 0;
+      const cacheKey = `${selectedHuilerieId}:${code ?? ''}`;
 
       // Check cache first
-      if (code && this.machinesCacheByStep.has(code)) {
-        const cached = this.machinesCacheByStep.get(code) || [];
+      if (code && this.machinesCacheByStep.has(cacheKey)) {
+        const cached = this.machinesCacheByStep.get(cacheKey) || [];
         return cached;
       }
 
       // Compute and cache result
       const result = this.getMachinesForStep(code);
       if (code) {
-        this.machinesCacheByStep.set(code, result);
+        this.machinesCacheByStep.set(cacheKey, result);
       }
 
       return result || [];
@@ -565,16 +568,27 @@ export class GuidesGererComponent implements OnInit {
   }
 
   editGuide(guide: GuideProduction): void {
+    const sourceEtapes = Array.isArray(guide.etapes) ? guide.etapes : [];
     const etapesArray = this.guideForm.get('etapes') as FormArray;
     while (etapesArray.length > 0) {
       etapesArray.removeAt(0);
     }
 
     const selectedTypeMachine = String(guide.typeMachine ?? '').trim();
+    this.guideForm.patchValue({
+      nom: guide.nom,
+      description: guide.description,
+      dateCreation: guide.dateCreation.slice(0, 10),
+      huilerieId: guide.huilerieId,
+      typeMachine: selectedTypeMachine,
+    }, { emitEvent: false });
+
+    this.machinesCacheByStep.clear();
+
     if (selectedTypeMachine) {
       this.applyGuideTemplate(selectedTypeMachine);
+      this.populateGuideTemplateFromExistingGuide(sourceEtapes);
     } else {
-      const sourceEtapes = Array.isArray(guide.etapes) ? guide.etapes : [];
       if (sourceEtapes.length === 0) {
         etapesArray.push(this.createEtapeGroup(1));
       } else {
@@ -585,13 +599,8 @@ export class GuidesGererComponent implements OnInit {
     }
 
     this.guideEditingId = guide.idGuideProduction;
-    this.guideForm.patchValue({
-      nom: guide.nom,
-      description: guide.description,
-      dateCreation: guide.dateCreation.slice(0, 10),
-      huilerieId: guide.huilerieId,
-      typeMachine: selectedTypeMachine,
-    });
+
+    this.focusGuideForm();
   }
 
   private applyGuideTemplate(typeMachine: string): void {
@@ -614,6 +623,174 @@ export class GuidesGererComponent implements OnInit {
     templates.forEach((template) => {
       etapesArray.push(this.createEtapeGroupFromTemplate(template.nom, template.ordre, template.description, template.codeEtape, template.parametres));
     });
+  }
+
+  private populateGuideTemplateFromExistingGuide(sourceEtapes: EtapeProduction[]): void {
+    const etapesArray = this.guideForm.get('etapes') as FormArray;
+    const usedSourceIndexes = new Set<number>();
+
+    etapesArray.controls.forEach((etapeControl, templateIndex) => {
+      const matchIndex = this.findMatchingSourceEtapeIndex(sourceEtapes, usedSourceIndexes, etapeControl, templateIndex);
+      if (matchIndex === null) {
+        return;
+      }
+
+      usedSourceIndexes.add(matchIndex);
+      this.patchEtapeControlFromSource(etapeControl, sourceEtapes[matchIndex]);
+    });
+
+    sourceEtapes.forEach((sourceEtape, sourceIndex) => {
+      if (usedSourceIndexes.has(sourceIndex)) {
+        return;
+      }
+
+      etapesArray.push(this.createEtapeGroupFromGuide(sourceEtape, etapesArray.length + 1));
+    });
+  }
+
+  private findMatchingSourceEtapeIndex(
+    sourceEtapes: EtapeProduction[],
+    usedSourceIndexes: Set<number>,
+    templateControl: any,
+    templateIndex: number,
+  ): number | null {
+    const templateCode = this.normalizeMatchValue(templateControl.get('codeEtape')?.value);
+    const templateName = this.normalizeMatchValue(templateControl.get('nom')?.value);
+    const templateOrder = Number(templateControl.get('ordre')?.value ?? templateIndex + 1);
+
+    const matchers: Array<(source: EtapeProduction, sourceIndex: number) => boolean> = [
+      (source, sourceIndex) => !usedSourceIndexes.has(sourceIndex)
+        && templateCode !== ''
+        && this.normalizeMatchValue(source.codeEtape) === templateCode,
+      (source, sourceIndex) => !usedSourceIndexes.has(sourceIndex)
+        && Number(source.ordre ?? 0) === templateOrder,
+      (source, sourceIndex) => !usedSourceIndexes.has(sourceIndex)
+        && templateName !== ''
+        && this.normalizeMatchValue(source.nom) === templateName,
+    ];
+
+    for (const matcher of matchers) {
+      const foundIndex = sourceEtapes.findIndex((source, sourceIndex) => matcher(source, sourceIndex));
+      if (foundIndex !== -1) {
+        return foundIndex;
+      }
+    }
+
+    return null;
+  }
+
+  private patchEtapeControlFromSource(etapeControl: any, sourceEtape: EtapeProduction): void {
+    const resolvedMachineId = this.resolveSourceEtapeMachineId(sourceEtape);
+    etapeControl.patchValue({
+      idEtapeProduction: sourceEtape.idEtapeProduction ?? null,
+      nom: String(sourceEtape.nom ?? '').trim() || etapeControl.get('nom')?.value,
+      ordre: Number(sourceEtape.ordre ?? etapeControl.get('ordre')?.value ?? 1),
+      description: String(sourceEtape.description ?? '').trim() || etapeControl.get('description')?.value,
+      codeEtape: String(sourceEtape.codeEtape ?? etapeControl.get('codeEtape')?.value ?? '').trim(),
+      machineId: resolvedMachineId,
+    }, { emitEvent: false });
+
+    this.patchEtapeParametresFromSource(etapeControl, sourceEtape.parametres ?? []);
+  }
+
+  private resolveSourceEtapeMachineId(sourceEtape: EtapeProduction): number | null {
+    const directMachineId = Number((sourceEtape as any).machineId ?? 0);
+    if (directMachineId > 0) {
+      return directMachineId;
+    }
+
+    const nestedMachineId = Number((sourceEtape as any).idMachine ?? (sourceEtape as any).machine?.idMachine ?? 0);
+    if (nestedMachineId > 0) {
+      return nestedMachineId;
+    }
+
+    const machineName = String((sourceEtape as any).machineNom ?? (sourceEtape as any).machine?.nomMachine ?? '').trim().toLowerCase();
+    if (!machineName) {
+      return null;
+    }
+
+    const resolvedByName = this.allMachines.find((machine) => {
+      const currentName = String(machine?.nomMachine ?? '').trim().toLowerCase();
+      return currentName.length > 0 && currentName === machineName;
+    });
+
+    return Number(resolvedByName?.idMachine ?? 0) || null;
+  }
+
+  private patchEtapeParametresFromSource(etapeControl: any, sourceParametres: ParametreEtape[]): void {
+    const parametresArray = etapeControl.get('parametres') as FormArray;
+    const usedSourceIndexes = new Set<number>();
+
+    parametresArray.controls.forEach((paramControl, templateIndex) => {
+      const matchIndex = this.findMatchingSourceParametreIndex(sourceParametres, usedSourceIndexes, paramControl, templateIndex);
+      if (matchIndex === null) {
+        return;
+      }
+
+      usedSourceIndexes.add(matchIndex);
+      this.patchParametreControlFromSource(paramControl, sourceParametres[matchIndex]);
+    });
+
+    sourceParametres.forEach((sourceParametre, sourceIndex) => {
+      if (usedSourceIndexes.has(sourceIndex)) {
+        return;
+      }
+
+      parametresArray.push(this.createParametreGroupFromGuide(sourceParametre));
+    });
+  }
+
+  private findMatchingSourceParametreIndex(
+    sourceParametres: ParametreEtape[],
+    usedSourceIndexes: Set<number>,
+    templateControl: any,
+    templateIndex: number,
+  ): number | null {
+    const templateCode = this.normalizeMatchValue(templateControl.get('codeParametre')?.value);
+    const templateName = this.normalizeMatchValue(templateControl.get('nom')?.value || templateControl.get('nomPersonnalise')?.value);
+    const templateOrder = templateIndex;
+
+    const matchers: Array<(source: ParametreEtape, sourceIndex: number) => boolean> = [
+      (source, sourceIndex) => !usedSourceIndexes.has(sourceIndex)
+        && templateCode !== ''
+        && this.normalizeMatchValue(source.codeParametre) === templateCode,
+      (source, sourceIndex) => !usedSourceIndexes.has(sourceIndex)
+        && templateName !== ''
+        && this.normalizeMatchValue(source.nom) === templateName,
+      (source, sourceIndex) => !usedSourceIndexes.has(sourceIndex)
+        && sourceIndex === templateOrder,
+    ];
+
+    for (const matcher of matchers) {
+      const foundIndex = sourceParametres.findIndex((source, sourceIndex) => matcher(source, sourceIndex));
+      if (foundIndex !== -1) {
+        return foundIndex;
+      }
+    }
+
+    return null;
+  }
+
+  private patchParametreControlFromSource(paramControl: any, sourceParametre: ParametreEtape): void {
+    const isFixedParam = this.isFixedParametreCode(sourceParametre.codeParametre, sourceParametre.nom);
+    const codeParametre = isFixedParam
+      ? String(sourceParametre.codeParametre ?? sourceParametre.nom ?? '').trim()
+      : this.customParametreCode;
+
+    paramControl.patchValue({
+      idParametreEtape: sourceParametre.idParametreEtape ?? null,
+      codeParametre,
+      nom: isFixedParam ? String(sourceParametre.nom ?? '').trim() : '',
+      nomPersonnalise: isFixedParam ? '' : String(sourceParametre.nom ?? '').trim(),
+      uniteMesure: String(sourceParametre.uniteMesure ?? '').trim(),
+      valeur: String(sourceParametre.valeur ?? '').trim(),
+      description: String(sourceParametre.description ?? '').trim(),
+    }, { emitEvent: false });
+
+    if (!isFixedParam) {
+      paramControl.get('nomPersonnalise')?.setValidators([Validators.required]);
+      paramControl.get('nomPersonnalise')?.updateValueAndValidity({ emitEvent: false });
+    }
   }
 
   private createEtapeGroupFromTemplate(
@@ -651,6 +828,7 @@ export class GuidesGererComponent implements OnInit {
   }
 
   private createEtapeGroupFromGuide(etape: EtapeProduction, ordreFallback: number) {
+    const resolvedMachineId = this.resolveSourceEtapeMachineId(etape);
     const parametres = Array.isArray(etape.parametres) && etape.parametres.length > 0
       ? etape.parametres.map(param => this.createParametreGroupFromGuide(param))
       : [this.createParametreGroup()];
@@ -660,7 +838,7 @@ export class GuidesGererComponent implements OnInit {
       nom: [String(etape.nom ?? '').trim(), [Validators.required]],
       ordre: [Number(etape.ordre ?? ordreFallback), [Validators.required]],
       description: [String(etape.description ?? '').trim(), [Validators.required]],
-      machineId: [etape.machineId ?? null],
+      machineId: [resolvedMachineId],
       parametres: this.fb.array(parametres),
     });
   }
@@ -746,6 +924,17 @@ export class GuidesGererComponent implements OnInit {
     }
 
 
+  }
+
+  private focusGuideForm(): void {
+    window.requestAnimationFrame(() => {
+      this.guideNameInput?.nativeElement.focus();
+      this.guideNameInput?.nativeElement.select();
+    });
+  }
+
+  private normalizeMatchValue(value: unknown): string {
+    return String(value ?? '').trim().toLowerCase();
   }
 
   submitExecution(): void {

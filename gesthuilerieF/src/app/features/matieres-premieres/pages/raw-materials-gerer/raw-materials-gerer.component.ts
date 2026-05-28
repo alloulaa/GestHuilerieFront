@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -33,6 +33,7 @@ export class RawMaterialsGererComponent implements OnInit {
   currentEntrepriseId: number | null = null;
   editingId: string | number | null = null;
   formErrorMessage = '';
+  @ViewChild('nomInput') nomInput?: ElementRef<HTMLInputElement>;
 
   readonly form;
 
@@ -150,6 +151,8 @@ export class RawMaterialsGererComponent implements OnInit {
       description: item.description,
       huilerieId: item.huilerieId ?? this.form.get('huilerieId')?.value ?? null,
     });
+
+    this.focusEditField();
   }
 
   async askDelete(item: MatierePremiere): Promise<void> {
@@ -196,6 +199,13 @@ export class RawMaterialsGererComponent implements OnInit {
   isFieldInvalid(fieldName: string): boolean {
     const control = this.form.get(fieldName);
     return !!control && control.invalid && control.touched;
+  }
+
+  private focusEditField(): void {
+    window.requestAnimationFrame(() => {
+      this.nomInput?.nativeElement.focus();
+      this.nomInput?.nativeElement.select();
+    });
   }
 
   trackByMaterial(index: number, item: MatierePremiere): number {

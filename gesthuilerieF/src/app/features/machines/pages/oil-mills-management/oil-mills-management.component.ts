@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -37,6 +37,7 @@ export class OilMillsManagementComponent implements OnInit {
   machineFilterMessage = '';
 
   editingMachineId: number | null = null;
+  @ViewChild('nomMachineInput') nomMachineInput?: ElementRef<HTMLInputElement>;
 
   readonly machineCategoryOptions = MACHINE_CATEGORY_OPTIONS;
   readonly machineSubtypeOptions = MACHINE_SUBTYPE_OPTIONS;
@@ -185,6 +186,8 @@ export class OilMillsManagementComponent implements OnInit {
         typeMachineCustom: item.typeMachine ?? '',
       });
     }
+
+    this.focusMachineForm();
   }
 
   async askToggleMachineActivation(item: Machine): Promise<void> {
@@ -255,6 +258,13 @@ export class OilMillsManagementComponent implements OnInit {
   isMachineFieldInvalid(fieldName: string): boolean {
     const control = this.machineForm.get(fieldName);
     return !!control && control.invalid && control.touched;
+  }
+
+  private focusMachineForm(): void {
+    window.requestAnimationFrame(() => {
+      this.nomMachineInput?.nativeElement.focus();
+      this.nomMachineInput?.nativeElement.select();
+    });
   }
 
   private loadData(): void {

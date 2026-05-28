@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -32,6 +32,7 @@ export class CampagnesGererComponent implements OnInit {
     huileries: Array<{ idHuilerie: number; nom: string }> = [];
     editingId: number | null = null;
     readonly isAdmin: boolean;
+    @ViewChild('anneeInput') anneeInput?: ElementRef<HTMLInputElement>;
 
     readonly form: FormGroup<{
         annee: FormControl<string | null>;
@@ -132,6 +133,8 @@ export class CampagnesGererComponent implements OnInit {
             dateFin: campagne.dateFin ?? '',
             huilerieId: campagne.huilerieId ?? this.form.get('huilerieId')?.value ?? null,
         });
+
+        this.focusCampaignForm();
     }
 
     async delete(campagne: CampagneOlives): Promise<void> {
@@ -241,5 +244,12 @@ export class CampagnesGererComponent implements OnInit {
         }
 
         return 'Impossible de supprimer la campagne.';
+    }
+
+    private focusCampaignForm(): void {
+        window.requestAnimationFrame(() => {
+            this.anneeInput?.nativeElement.focus();
+            this.anneeInput?.nativeElement.select();
+        });
     }
 }

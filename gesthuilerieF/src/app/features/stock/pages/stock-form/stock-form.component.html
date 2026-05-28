@@ -4,7 +4,7 @@
   </mat-card-header>
   <mat-card-content>
 
-    
+
 
     <form class="grid" [formGroup]="form" (ngSubmit)="submit()">
 
@@ -28,7 +28,7 @@
 
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>Date mouvement</mat-label>
-        <input matInput type="datetime-local" formControlName="dateMouvement" />
+        <input #dateMouvementInput matInput type="datetime-local" formControlName="dateMouvement" />
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field compact">
@@ -40,7 +40,7 @@
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="form-field wide" style="grid-column: span 8;">
+      <mat-form-field appearance="outline" class="form-field wide">
         <mat-label>Commentaire</mat-label>
         <input matInput formControlName="commentaire" />
       </mat-form-field>

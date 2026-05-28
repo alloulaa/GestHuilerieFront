@@ -20,7 +20,7 @@
         <form class="campaign-form" [formGroup]="form" (ngSubmit)="submit()">
             <mat-form-field appearance="outline" class="form-field">
                 <mat-label>Annee</mat-label>
-                <input matInput formControlName="annee" placeholder="2026" />
+                <input #anneeInput matInput formControlName="annee" placeholder="2026" />
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="form-field">

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -45,6 +45,7 @@ export class StockFormComponent {
   editingMovementId: number | null = null;
   private availableLotIds = new Set<number>();
   private lotIdsWithRestrictedMovements = new Set<number>();
+  @ViewChild('dateMouvementInput') dateMouvementInput?: ElementRef<HTMLInputElement>;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -120,6 +121,7 @@ export class StockFormComponent {
       huilerieId: movement.huilerieId,
     });
     this.refreshSelectableLots();
+    this.focusEditField();
   }
 
   cancelEdit(): void {
@@ -208,6 +210,12 @@ export class StockFormComponent {
       dateMouvement: new Date().toISOString().slice(0, 16),
       commentaire: '',
       huilerieId: firstHuilerieId,
+    });
+  }
+
+  private focusEditField(): void {
+    window.requestAnimationFrame(() => {
+      this.dateMouvementInput?.nativeElement.focus();
     });
   }
 
