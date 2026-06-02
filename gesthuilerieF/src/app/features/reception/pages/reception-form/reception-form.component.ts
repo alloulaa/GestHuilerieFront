@@ -540,7 +540,10 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             return;
         }
 
-        this.form.patchValue({ huilerieId: resolvedHuilerieId });
+        // Disable event emission to prevent race condition with huilerieId value change listener
+        this.form.patchValue({ huilerieId: resolvedHuilerieId }, { emitEvent: false });
+        // Explicitly load campaigns for the new huilerie
+        this.loadCampagnesForHuilerie(resolvedHuilerieId);
     }
 
     private resolveHuilerieIdFromMatiere(matiere: MatierePremiere): number | null {

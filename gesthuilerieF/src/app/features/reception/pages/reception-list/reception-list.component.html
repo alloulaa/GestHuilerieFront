@@ -129,28 +129,40 @@
         </div>
 
         <div class="analysis-grid">
-          <label>
+          <label [class.field-invalid]="isAnalysisFieldInvalid('acidite_huile_pourcent')">
             Acidite huile
-            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.acidite_huile_pourcent"
-              name="acidite_huile_pourcent" />
+            <input matInput type="number" min="0.1" max="5" step="0.01" [ngModel]="analysisDraft.acidite_huile_pourcent"
+              (ngModelChange)="onAnalysisFieldChange('acidite_huile_pourcent', $event)" name="acidite_huile_pourcent" />
+            <span class="field-error" *ngIf="getAnalysisError('acidite_huile_pourcent')">{{
+              getAnalysisError('acidite_huile_pourcent') }}</span>
           </label>
-          <label>
+          <label [class.field-invalid]="isAnalysisFieldInvalid('indice_peroxyde_meq_o2_kg')">
             Indice peroxyde
-            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.indice_peroxyde_meq_o2_kg"
+            <input matInput type="number" min="5" max="40" step="0.01"
+              [ngModel]="analysisDraft.indice_peroxyde_meq_o2_kg"
+              (ngModelChange)="onAnalysisFieldChange('indice_peroxyde_meq_o2_kg', $event)"
               name="indice_peroxyde_meq_o2_kg" />
+            <span class="field-error" *ngIf="getAnalysisError('indice_peroxyde_meq_o2_kg')">{{
+              getAnalysisError('indice_peroxyde_meq_o2_kg') }}</span>
           </label>
-          <label>
+          <label [class.field-invalid]="isAnalysisFieldInvalid('polyphenols_mg_kg')">
             Polyphenols
-            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.polyphenols_mg_kg"
-              name="polyphenols_mg_kg" />
+            <input matInput type="number" min="100" max="800" step="0.01" [ngModel]="analysisDraft.polyphenols_mg_kg"
+              (ngModelChange)="onAnalysisFieldChange('polyphenols_mg_kg', $event)" name="polyphenols_mg_kg" />
+            <span class="field-error" *ngIf="getAnalysisError('polyphenols_mg_kg')">{{
+              getAnalysisError('polyphenols_mg_kg') }}</span>
           </label>
-          <label>
+          <label [class.field-invalid]="isAnalysisFieldInvalid('k232')">
             K232
-            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.k232" name="k232" />
+            <input matInput type="number" min="1.5" max="3.5" step="0.01" [ngModel]="analysisDraft.k232"
+              (ngModelChange)="onAnalysisFieldChange('k232', $event)" name="k232" />
+            <span class="field-error" *ngIf="getAnalysisError('k232')">{{ getAnalysisError('k232') }}</span>
           </label>
-          <label>
+          <label [class.field-invalid]="isAnalysisFieldInvalid('k270')">
             K270
-            <input matInput type="number" min="0" step="0.01" [(ngModel)]="analysisDraft.k270" name="k270" />
+            <input matInput type="number" min="0.1" max="0.5" step="0.01" [ngModel]="analysisDraft.k270"
+              (ngModelChange)="onAnalysisFieldChange('k270', $event)" name="k270" />
+            <span class="field-error" *ngIf="getAnalysisError('k270')">{{ getAnalysisError('k270') }}</span>
           </label>
         </div>
 

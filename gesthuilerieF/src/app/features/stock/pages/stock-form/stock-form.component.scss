@@ -247,7 +247,8 @@
 .table-wrap {
   border: 1.5px solid var(--ol-200);
   border-radius: var(--r-lg);
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: visible;
   background: #fff;
 }
 

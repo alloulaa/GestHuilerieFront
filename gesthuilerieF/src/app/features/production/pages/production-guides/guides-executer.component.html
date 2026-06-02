@@ -149,7 +149,7 @@
           </header>
 
           <div class="execution-card__meta">
-            <p><strong>Date fin réelle:</strong> {{ formatExecutionDate(execution.dateFinReelle) }}</p>
+            <p><strong>Date fin prévue:</strong> {{ formatExecutionDate(execution.dateFinPrevue) }}</p>
             <p><strong>Produit final:</strong> {{ execution.produitFinalReference || '-' }}</p>
           </div>
 
@@ -186,8 +186,8 @@
           <div class="execution-detail-item"><span>Guide</span><strong>{{ execution.guideProductionReference || ('#' +
               execution.guideProductionId) }}</strong></div>
           <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotReference || '-' }}</strong></div>
-          <div class="execution-detail-item"><span>Date fin réelle</span><strong>{{
-              formatExecutionDate(execution.dateFinReelle) }}</strong></div>
+          <div class="execution-detail-item"><span>Date fin prévue</span><strong>{{
+              formatExecutionDate(execution.dateFinPrevue) }}</strong></div>
           <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
               }}</strong></div>
           <div class="execution-detail-item"><span>Contrôle température</span><strong>{{ execution.controleTemperature ?
@@ -244,10 +244,6 @@
             <div class="prediction-metric">
               <span>Qualité prédite</span>
               <strong>{{ normalizeQualityLabel(getLatestPrediction(execution)?.qualitePredite) || '-' }}</strong>
-            </div>
-            <div class="prediction-metric">
-              <span>Probabilité</span>
-              <strong>{{ formatPredictionProbability(getLatestPrediction(execution)?.probabiliteQualite) }}</strong>
             </div>
             <div class="prediction-metric">
               <span>Rendement prédit (%)</span>

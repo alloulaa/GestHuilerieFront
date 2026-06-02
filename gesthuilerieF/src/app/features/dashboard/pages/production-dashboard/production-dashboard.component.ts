@@ -491,7 +491,7 @@ export class ProductionDashboardComponent implements OnInit {
   private refreshQualityPerformanceChart(): void {
     const range = this.getQualityPerformanceRange();
     const filteredExecutions = this.executions.filter((execution) => {
-      const executionDate = this.parseDateTime(execution.dateFinReelle);
+      const executionDate = this.parseDateTime(execution.dateFinPrevue);
       if (!executionDate) {
         return false;
       }

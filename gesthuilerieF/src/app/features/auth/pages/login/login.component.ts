@@ -137,7 +137,7 @@ export class LoginComponent {
   }
 
   private hasAssignedPermissions(): boolean {
-    if (this.permissionService.isAdmin()) {
+    if (this.permissionService.isAdmin() || this.authService.isCurrentUserAdmin()) {
       return true;
     }
 

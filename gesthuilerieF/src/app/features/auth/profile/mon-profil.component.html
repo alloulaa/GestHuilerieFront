@@ -47,7 +47,8 @@
 
         <div class="info-row">
           <label>ENTREPRISE</label>
-          <p>{{ user.companyName || user.entreprise || 'N/A' }}</p>
+          <p>{{ user.companyName || (user.entreprise?.nom ?? user.entreprise) || (user.huilerie?.entreprise?.nom ??
+            user.huilerie?.entreprise?.name) || '-' }}</p>
         </div>
 
         <div class="info-row">

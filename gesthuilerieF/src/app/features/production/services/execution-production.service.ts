@@ -95,7 +95,7 @@ export class ExecutionProductionService {
         execution: ExecutionProduction,
         produitFinal: { qualite: string; quantiteProduite: number | null; rendement?: number | null },
     ): Observable<ExecutionProductionDTO> {
-        const dateProduction = String(execution?.dateFinReelle ?? '').trim() || new Date().toISOString().slice(0, 19);
+        const dateProduction = String(execution?.dateFinPrevue ?? '').trim() || new Date().toISOString().slice(0, 19);
         const produitNomFallback = String(execution?.lotVariete ?? '').trim();
         const payload = {
             executionProductionId: execution.idExecutionProduction,

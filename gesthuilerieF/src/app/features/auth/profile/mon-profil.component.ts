@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import { HuilerieService } from '../../machines/services/huilerie.service';
+import { EntrepriseService } from '../../machines/services/entreprise.service';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
@@ -34,15 +36,38 @@ export class MonProfilComponent implements OnInit {
     private permissionService: PermissionService,
     private toastService: ToastService,
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private huilerieService: HuilerieService,
+    private entrepriseService: EntrepriseService,
   ) { }
 
+
   ngOnInit(): void {
-    this.loadUserProfile();
     this.initializeChangePasswordForm();
+
+    // React to any change in currentUser (e.g., permissions updated by admin)
+    this.authService.currentUser.subscribe((u) => {
+      this.user = u ?? this.authService.getCurrentUser();
+      if (!this.user) {
+        this.router.navigate(['/login']);
+        return;
+      }
+      this.setupFullNamePersistenceHook();
+      this.extractPermissions();
+      this.loadEntrepriseAndHuilerie();
+      this.isLoading = false;
+    });
+
+    // Fetch latest profile from backend to ensure permissions are up-to-date
+    this.isLoading = true;
+    this.authService.getMe().subscribe({
+      next: () => { this.isLoading = false; },
+      error: () => { this.isLoading = false; /* silent fallback to cached user */ },
+    });
   }
 
   loadUserProfile(): void {
+    // Deprecated: kept for compatibility. Prefer subscription in ngOnInit.
     this.user = this.authService.getCurrentUser();
     if (!this.user) {
       this.router.navigate(['/login']);
@@ -52,6 +77,7 @@ export class MonProfilComponent implements OnInit {
     this.setupFullNamePersistenceHook();
     this.isLoading = false;
     this.extractPermissions();
+    this.loadEntrepriseAndHuilerie();
   }
 
   private setupFullNamePersistenceHook(): void {
@@ -165,26 +191,96 @@ export class MonProfilComponent implements OnInit {
   }
 
   extractPermissions(): void {
-    const modules = [
-      'DASHBOARD',
-      'RECEPTION',
-      'PRODUCTION',
-      'MACHINES',
-      'MATIERES_PREMIERES',
-      'STOCK',
-      'LOTS',
-      'UTILISATEURS',
-      'PROFILS',
-      'PARAMETRES'
-    ];
+    const user = this.authService.getCurrentUser() ?? this.user;
 
-    this.userPermissions = modules.map(module => ({
-      module,
-      canView: this.permissionService.hasPermission(module, 'READ'),
-      canCreate: this.permissionService.hasPermission(module, 'CREATE'),
-      canEdit: this.permissionService.hasPermission(module, 'UPDATE'),
-      canDelete: this.permissionService.hasPermission(module, 'DELETE')
-    }));
+    const rawPerms: any[] = Array.isArray(user?.permissions) ? user.permissions : [];
+
+    // If admin, present full-access for visible modules
+    if (this.permissionService.isAdmin()) {
+      const modules = this.permissionService.getVisibleModules();
+      this.userPermissions = modules.map((m) => ({ module: m, canView: true, canCreate: true, canEdit: true, canDelete: true }));
+      return;
+    }
+
+    // Map backend permission objects into canonical rows
+    const rows: Array<{ module: string; canView: boolean; canCreate: boolean; canEdit: boolean; canDelete: boolean }> = [];
+
+    const resolveBool = (obj: any, keys: string[]) => {
+      for (const k of keys) {
+        if (k in obj && obj[k] !== undefined && obj[k] !== null) {
+          return Boolean(obj[k]);
+        }
+      }
+      return false;
+    };
+
+    for (const p of rawPerms) {
+      const moduleName = String(p?.module ?? p?.nom ?? p?.name ?? p?.moduleName ?? '').trim();
+      if (!moduleName) continue;
+      const canView = resolveBool(p, ['canRead', 'can_read', 'read', 'canView', 'afficher', 'canAfficher', 'view']);
+      const canCreate = resolveBool(p, ['canCreate', 'can_create', 'create', 'creer', 'canCreate']);
+      const canEdit = resolveBool(p, ['canUpdate', 'can_update', 'update', 'edit', 'editer', 'canEdit']);
+      const canDelete = resolveBool(p, ['canDelete', 'can_delete', 'delete', 'supprimer', 'canDelete']);
+
+      // Only include if at least one flag is true (avoid empty rows)
+      if (canView || canCreate || canEdit || canDelete) {
+        rows.push({ module: moduleName, canView, canCreate, canEdit, canDelete });
+      }
+    }
+
+    // Fallback: if backend provided no structured permissions, infer from PermissionService visible modules
+    if (rows.length === 0) {
+      const modules = this.permissionService.getVisibleModules();
+      this.userPermissions = modules.map(module => ({
+        module,
+        canView: this.permissionService.canRead(module),
+        canCreate: this.permissionService.canCreate(module),
+        canEdit: this.permissionService.canUpdate(module),
+        canDelete: this.permissionService.canDelete(module),
+      }));
+      return;
+    }
+
+    this.userPermissions = rows;
+  }
+
+  private loadEntrepriseAndHuilerie(): void {
+    try {
+      const user = this.authService.getCurrentUser() ?? this.user;
+      const entrepriseId = this.authService.getCurrentUserEntrepriseId();
+      const huilerieId = this.authService.getCurrentUserHuilerieId();
+
+      if (huilerieId) {
+        this.huilerieService.findById(huilerieId).subscribe({
+          next: (h) => {
+            if (h) {
+              // ensure nested huilerie/entreprise names propagate into displayed user object
+              this.user.huilerie = h;
+              if (!this.user.companyName) {
+                const maybeEntreprise = (h as any)?.entreprise;
+                if (maybeEntreprise?.nom) {
+                  this.user.companyName = maybeEntreprise.nom;
+                }
+              }
+            }
+          },
+          error: () => { /* ignore */ }
+        });
+      }
+
+      if (entrepriseId) {
+        this.entrepriseService.getById(entrepriseId).subscribe({
+          next: (e) => {
+            if (e) {
+              this.user.companyName = e.nom ?? this.user.companyName ?? '';
+            }
+          },
+          error: () => { /* ignore */ }
+        });
+      }
+    } catch {
+      // swallow errors to avoid breaking profile display
+    }
   }
 
   initializeChangePasswordForm(): void {

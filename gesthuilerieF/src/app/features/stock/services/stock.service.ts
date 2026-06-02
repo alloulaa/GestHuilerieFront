@@ -10,7 +10,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 })
 export class StockService {
     private readonly apiUrl = `${environment.apiUrl}/stocks`;
-    private readonly fallbackApiUrl = `${environment.apiUrl}/stock`;
+    private readonly fallbackApiUrl = `${environment.apiUrl}/stocks`;
 
     constructor(
         private http: HttpClient,

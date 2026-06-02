@@ -882,6 +882,16 @@ export class GuidesGererComponent implements OnInit {
   }
 
   async askDeleteGuide(guide: GuideProduction): Promise<void> {
+    // Vérifier s'il y a au moins une exécution associée à ce guide
+    const linkedExecutions = this.executions.filter((exec) =>
+      Number(exec.guideProductionId ?? 0) === Number(guide.idGuideProduction ?? 0)
+    );
+
+    if (linkedExecutions.length > 0) {
+      this.toastService.error('ce guide est liee a des executions impossible de suppression');
+      return;
+    }
+
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Supprimer guide',
       message: `Êtes-vous sûr de vouloir supprimer le guide ${guide.nom} et toutes ses étapes ?`,

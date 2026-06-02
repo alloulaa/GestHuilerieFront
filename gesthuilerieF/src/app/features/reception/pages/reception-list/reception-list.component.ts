@@ -15,6 +15,24 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { NbButtonModule, NbIconModule } from '@nebular/theme';
 import { LAB_ANALYSIS_STANDARDS } from '../../../../shared/constants/lab-analysis-standards';
 
+type AnalysisFieldKey = 'acidite_huile_pourcent' | 'indice_peroxyde_meq_o2_kg' | 'polyphenols_mg_kg' | 'k232' | 'k270';
+
+const ANALYSIS_FIELDS: AnalysisFieldKey[] = [
+  'acidite_huile_pourcent',
+  'indice_peroxyde_meq_o2_kg',
+  'polyphenols_mg_kg',
+  'k232',
+  'k270',
+];
+
+interface AnalysisDraft {
+  acidite_huile_pourcent: number | null;
+  indice_peroxyde_meq_o2_kg: number | null;
+  polyphenols_mg_kg: number | null;
+  k232: number | null;
+  k270: number | null;
+}
+
 @Component({
   selector: 'app-reception-list',
   standalone: true,
@@ -36,13 +54,9 @@ export class ReceptionListComponent implements OnInit {
   filterMessage = '';
   selectedPeseeForAnalysis: Pesee | null = null;
   analysisSaveError = '';
-  analysisDraft = {
-    acidite_huile_pourcent: 0.6,
-    indice_peroxyde_meq_o2_kg: 8,
-    polyphenols_mg_kg: 50,
-    k232: 1.9,
-    k270: 0.18,
-  };
+  analysisDraft: AnalysisDraft = this.createDefaultAnalysisDraft();
+  analysisErrors: Partial<Record<AnalysisFieldKey, string>> = {};
+  private analysisToastState: Partial<Record<AnalysisFieldKey, string>> = {};
 
   // Lab analysis standards for Tunisia
   labStandards = LAB_ANALYSIS_STANDARDS;
@@ -148,19 +162,26 @@ export class ReceptionListComponent implements OnInit {
     }
 
     this.analysisSaveError = '';
+    this.analysisErrors = {};
+    this.analysisToastState = {};
     this.selectedPeseeForAnalysis = pesee;
-    this.analysisDraft = {
-      acidite_huile_pourcent: 0.6,
-      indice_peroxyde_meq_o2_kg: 8,
-      polyphenols_mg_kg: 50,
-      k232: 1.9,
-      k270: 0.18,
-    };
+    this.analysisDraft = this.createDefaultAnalysisDraft();
   }
 
   closeAddAnalysis(): void {
     this.selectedPeseeForAnalysis = null;
     this.analysisSaveError = '';
+    this.analysisErrors = {};
+    this.analysisToastState = {};
+  }
+
+  onAnalysisFieldChange(field: AnalysisFieldKey, value: number | string | null): void {
+    this.analysisDraft = {
+      ...this.analysisDraft,
+      [field]: value,
+    };
+    this.analysisSaveError = '';
+    this.validateAnalysisField(field, true);
   }
 
   saveAnalysis(): void {
@@ -170,17 +191,17 @@ export class ReceptionListComponent implements OnInit {
       return;
     }
 
+    const validationErrors = this.validateAllAnalysisFields(true);
+    if (validationErrors.length > 0) {
+      this.analysisSaveError = validationErrors[0] ?? 'Corrigez les champs en rouge avant l\'enregistrement.';
+      return;
+    }
+
     const acidite_huile_pourcent = Number(this.analysisDraft.acidite_huile_pourcent);
     const indice_peroxyde_meq_o2_kg = Number(this.analysisDraft.indice_peroxyde_meq_o2_kg);
     const polyphenols_mg_kg = Number(this.analysisDraft.polyphenols_mg_kg);
     const k232 = Number(this.analysisDraft.k232);
     const k270 = Number(this.analysisDraft.k270);
-
-    const hasInvalidNumber = [acidite_huile_pourcent, indice_peroxyde_meq_o2_kg, polyphenols_mg_kg, k232, k270].some((value) => Number.isNaN(value) || value < 0);
-    if (hasInvalidNumber) {
-      this.analysisSaveError = 'Veuillez saisir des valeurs d\'analyse valides.';
-      return;
-    }
 
     this.analysisSaveError = '';
     this.analyseLaboratoireService.addToStore({
@@ -209,5 +230,79 @@ export class ReceptionListComponent implements OnInit {
 
   triggerDelete(pesee: Pesee): void {
     this.deletePesee.emit(pesee);
+  }
+
+  getAnalysisError(field: AnalysisFieldKey): string | null {
+    return this.analysisErrors[field] ?? null;
+  }
+
+  isAnalysisFieldInvalid(field: AnalysisFieldKey): boolean {
+    return Boolean(this.analysisErrors[field]);
+  }
+
+  private validateAllAnalysisFields(announceToast: boolean): string[] {
+    const errors: string[] = [];
+
+    ANALYSIS_FIELDS.forEach((field) => {
+      const error = this.validateAnalysisField(field, announceToast && errors.length === 0);
+      if (error) {
+        errors.push(error);
+      }
+    });
+
+    return errors;
+  }
+
+  private validateAnalysisField(field: AnalysisFieldKey, announceToast: boolean): string | null {
+    const standard = this.labStandards.find((item) => item.code === field);
+    const rawValue = this.analysisDraft[field];
+
+    if (!standard || rawValue === null || rawValue === undefined) {
+      delete this.analysisErrors[field];
+      delete this.analysisToastState[field];
+      return null;
+    }
+
+    const value = Number(rawValue);
+    if (Number.isNaN(value)) {
+      const message = `${standard.label} invalide : veuillez saisir une valeur numérique. Intervalle attendu: ${this.formatAnalysisInterval(standard)}.`;
+      this.analysisErrors[field] = message;
+      this.raiseToastIfNeeded(field, message, announceToast);
+      return message;
+    }
+
+    if (value < standard.min || value > standard.max) {
+      const message = `${standard.label} invalide : la valeur doit être comprise entre ${this.formatAnalysisInterval(standard)}.`;
+      this.analysisErrors[field] = message;
+      this.raiseToastIfNeeded(field, message, announceToast);
+      return message;
+    }
+
+    delete this.analysisErrors[field];
+    delete this.analysisToastState[field];
+    return null;
+  }
+
+  private raiseToastIfNeeded(field: AnalysisFieldKey, message: string, announceToast: boolean): void {
+    if (!announceToast || this.analysisToastState[field] === message) {
+      return;
+    }
+
+    this.analysisToastState[field] = message;
+    this.toastService.error(message);
+  }
+
+  private createDefaultAnalysisDraft(): AnalysisDraft {
+    return {
+      acidite_huile_pourcent: 0.6,
+      indice_peroxyde_meq_o2_kg: 8,
+      polyphenols_mg_kg: 250,
+      k232: 2.1,
+      k270: 0.18,
+    };
+  }
+
+  private formatAnalysisInterval(standard: { min: number; max: number; unit: string }): string {
+    return standard.unit ? `${standard.min} et ${standard.max} ${standard.unit}` : `${standard.min} et ${standard.max}`;
   }
 }

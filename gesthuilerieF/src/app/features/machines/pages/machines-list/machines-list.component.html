@@ -10,7 +10,8 @@
   <mat-card-content>
     <div class="filter-bar">
       <input [(ngModel)]="selectedHuilerieNom" name="selectedHuilerieNom" placeholder="Filtrer par nom d'huilerie" />
-      <input [(ngModel)]="selectedEtatMachine" name="selectedEtatMachine" placeholder="Filtrer par état (EN_SERVICE, MAINTENANCE...)" />
+      <input [(ngModel)]="selectedEtatMachine" name="selectedEtatMachine"
+        placeholder="Filtrer par état (EN_SERVICE, MAINTENANCE...)" />
       <button mat-raised-button color="primary" class="filter-btn" type="button"
         (click)="applyAdminHuilerieFilter()">Filtrer</button>
       <button mat-stroked-button type="button" (click)="resetAdminHuilerieFilter()">Réinitialiser</button>
