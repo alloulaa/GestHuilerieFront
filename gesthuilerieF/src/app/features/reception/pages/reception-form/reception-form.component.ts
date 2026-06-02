@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -45,6 +45,7 @@ import {
 export class ReceptionFormComponent implements OnInit, OnChanges {
     @Input() editingPesee: Pesee | null = null;
     @Output() editCleared = new EventEmitter<void>();
+    @ViewChild('datePeseeInput') datePeseeInput?: ElementRef<HTMLInputElement>;
 
     lots: LotOlives[] = [];
     weighings: Pesee[] = [];
@@ -539,7 +540,10 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             return;
         }
 
-        this.form.patchValue({ huilerieId: resolvedHuilerieId });
+        // Disable event emission to prevent race condition with huilerieId value change listener
+        this.form.patchValue({ huilerieId: resolvedHuilerieId }, { emitEvent: false });
+        // Explicitly load campaigns for the new huilerie
+        this.loadCampagnesForHuilerie(resolvedHuilerieId);
     }
 
     private resolveHuilerieIdFromMatiere(matiere: MatierePremiere): number | null {
@@ -595,6 +599,13 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         } as any);
 
         this.loadCampagnesForHuilerie(huilerieId, campagneReference);
+        this.focusFirstEditableField();
+    }
+
+    private focusFirstEditableField(): void {
+        window.requestAnimationFrame(() => {
+            this.datePeseeInput?.nativeElement.focus();
+        });
     }
 
     private resolveMatiereIdFromReference(reference: string | null | undefined): number | null {

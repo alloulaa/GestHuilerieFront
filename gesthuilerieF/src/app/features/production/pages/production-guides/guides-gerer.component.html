@@ -19,7 +19,7 @@
           <div class="form-stack">
             <div class="form-group">
               <label>Nom *</label>
-              <input class="form-input" type="text" formControlName="nom" placeholder="Nom du guide"
+              <input #guideNameInput class="form-input" type="text" formControlName="nom" placeholder="Nom du guide"
                 [class.ng-invalid]="isGuideFieldInvalid('nom')" />
             </div>
             <div class="form-group">
@@ -96,8 +96,8 @@
               <div class="form-group">
                 <label>Machine assignée</label>
                 <select class="form-select" formControlName="machineId">
-                  <option [value]="null">-- Aucune sélection --</option>
-                  <option *ngFor="let m of getMachinesForStepByIndex(i)" [value]="m.idMachine">
+                  <option [ngValue]="null">-- Aucune sélection --</option>
+                  <option *ngFor="let m of getMachinesForStepByIndex(i)" [ngValue]="m.idMachine">
                     {{ m.nomMachine }} <span *ngIf="m.huilerieNom">({{ m.huilerieNom }})</span> - {{ m.typeMachine }}
                   </option>
                 </select>

@@ -10,7 +10,7 @@
     <form class="entity-form" [formGroup]="machineForm" (ngSubmit)="submitMachine()">
       <div class="form-group">
         <label class="form-label">Nom machine *</label>
-        <input nbInput fullWidth formControlName="nomMachine" placeholder="Nom machine"
+        <input #nomMachineInput nbInput fullWidth formControlName="nomMachine" placeholder="Nom machine"
           [status]="isMachineFieldInvalid('nomMachine') ? 'danger' : 'basic'" />
       </div>
 

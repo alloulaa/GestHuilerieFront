@@ -22,7 +22,7 @@
     <form class="entity-form" [formGroup]="huilerieForm" (ngSubmit)="submitHuilerie()">
       <div class="form-group">
         <label class="form-label">Nom *</label>
-        <input nbInput fullWidth formControlName="nom" placeholder="Nom de l'huilerie"
+        <input #nomInput nbInput fullWidth formControlName="nom" placeholder="Nom de l'huilerie"
           [status]="isHuilerieFieldInvalid('nom') ? 'danger' : 'basic'" [disabled]="isEditingInactiveHuilerie" />
       </div>
 

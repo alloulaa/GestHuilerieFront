@@ -176,7 +176,7 @@ export class AdminService {
   deleteProfil(id: number): Observable<void> {
     const url = `${API_URL}/api/admin/profils/${id}`;
     return this.http
-      .delete<ApiResponseDTO<unknown>>(url)
+      .delete<void>(url)
       .pipe(
         map(() => void 0),
         catchError(this.logAndThrow('deleteProfil', url, { id }))

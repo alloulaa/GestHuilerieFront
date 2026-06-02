@@ -129,7 +129,7 @@ export class LotTraceabilityComponent implements OnInit {
       .map((execution) => ({
         lotId: Number(execution.lotId),
         event: {
-          date: String(execution.dateFinReelle ?? execution.dateFinPrevue ?? execution.dateDebut ?? ''),
+          date: String(execution.dateFinPrevue ?? execution.dateDebut ?? ''),
           etape: 'PRODUIT_FINAL' as const,
           description: String(execution.produitFinalNomProduit ?? execution.observations ?? 'Produit final créé').trim(),
           reference: String(execution.produitFinalReference ?? execution.produitFinalCode ?? '').trim(),

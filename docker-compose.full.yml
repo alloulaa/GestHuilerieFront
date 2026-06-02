@@ -15,10 +15,21 @@ services:
       retries: 20
       start_period: 20s
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: huilerie-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: verysecret
+    depends_on:
+      - mysql
+
   prediction:
-    build:
-      context: ./prediction
-      dockerfile: Dockerfile
+    image: takwa1409/sys_prediction:latest
     container_name: prediction-service
     restart: unless-stopped
     ports:
@@ -30,29 +41,55 @@ services:
       retries: 5
       start_period: 20s
 
+  chatbot:
+    image: takwa1409/chatbot_huilerie:latest
+    container_name: huilerie-chatbot
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    depends_on:
+      - backend
+      - mysql
+    environment:
+      JAVA_BACKEND_URL: http://backend:8000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: gestionhuilerie
+      DB_USER: root
+      DB_PASSWORD: verysecret
+
   backend:
-    build:
-      context: ./GestionHuilerieBackend
-      dockerfile: Dockerfile
+gesthuilerie-backend
+
     container_name: huilerie-backend
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
-      prediction:
-        condition: service_healthy
     environment:
+      # Configurations existantes
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/gestionhuilerie?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: verysecret
       AI_PREDICTION_BASE_URL: http://prediction:7500
-    ports:
-      - "8000:8000"
+      JWT_SECRET: mySuperSecretKeyThatIsVeryLongAndSecureForJWTTokenGeneration2026ForOilProductionSystemSecurity
+
+      # 🔑 LIAISON DES VARIABLES D'EMAIL (GMAIL)
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: "Huileria"
+      SPRING_MAIL_PASSWORD: "crwa aody lsyd tacp"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT: 5000
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT: 5000
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT: 5000
+      APP_MAIL_FROM: "huileria1@gmail.com"
+
 
   frontend:
-    build:
-      context: ./gesthuilerieF
-      dockerfile: Dockerfile
+    image: takwa1409/gesthuilerie-frontend:latest
     container_name: huilerie-frontend
     restart: unless-stopped
     depends_on:
@@ -66,3 +103,4 @@ networks:
 
 volumes:
   mysql_data:
+    name: gesthuileriefront_mysql_data

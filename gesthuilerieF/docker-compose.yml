@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    image: gesthuilerie-frontend:latest
+    container_name: gesthuilerie-frontend
+    ports:
+      - "4200:80"
+    restart: unless-stopped
+    networks:
+      - huilerie-net
+
+networks:
+  huilerie-net:
+    external: true

@@ -84,7 +84,6 @@ export interface ExecutionProduction {
     reference?: string;
     dateDebut: string;
     dateFinPrevue: string;
-    dateFinReelle: string | null;
     statut: string;
     rendement: number;
     observations: string;
@@ -117,7 +116,6 @@ export interface ExecutionProductionCreate {
     reference: string;
     dateDebut: string;
     dateFinPrevue: string;
-    dateFinReelle: string | null;
     statut: string;
     rendement: number;
     observations: string;

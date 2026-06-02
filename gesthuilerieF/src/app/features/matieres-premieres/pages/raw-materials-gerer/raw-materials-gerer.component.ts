@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -33,6 +33,7 @@ export class RawMaterialsGererComponent implements OnInit {
   currentEntrepriseId: number | null = null;
   editingId: string | number | null = null;
   formErrorMessage = '';
+  @ViewChild('nomInput') nomInput?: ElementRef<HTMLInputElement>;
 
   readonly form;
 
@@ -95,6 +96,7 @@ export class RawMaterialsGererComponent implements OnInit {
 
   async submit(): Promise<void> {
     this.formErrorMessage = '';
+    const isUpdate = Boolean(this.editingId);
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -129,10 +131,10 @@ export class RawMaterialsGererComponent implements OnInit {
     }
 
     request.subscribe({
-      next: () => {
+      next: (saved) => {
+        this.upsertRawMaterial(saved);
         this.resetForm();
-        this.loadRawMaterials();
-        this.toastService.success(this.editingId ? 'Matière première mise à jour avec succès.' : 'Matière première créée avec succès.');
+        this.toastService.success(isUpdate ? 'Matière première mise à jour avec succès.' : 'Matière première créée avec succès.');
       },
       error: (error: HttpErrorResponse) => {
         this.formErrorMessage = error?.error?.message ?? 'Erreur lors de la sauvegarde.';
@@ -150,6 +152,8 @@ export class RawMaterialsGererComponent implements OnInit {
       description: item.description,
       huilerieId: item.huilerieId ?? this.form.get('huilerieId')?.value ?? null,
     });
+
+    this.focusEditField();
   }
 
   async askDelete(item: MatierePremiere): Promise<void> {
@@ -193,9 +197,34 @@ export class RawMaterialsGererComponent implements OnInit {
     });
   }
 
+  private upsertRawMaterial(saved: MatierePremiere): void {
+    const normalizedSaved = {
+      ...saved,
+      huilerieId: Number(saved?.huilerieId ?? 0) || undefined,
+    };
+    const identifier = Number(saved?.idMatierePremiere ?? saved?.id ?? 0);
+
+    if (identifier > 0) {
+      const existingIndex = this.rawMaterials.findIndex((item) => Number(item.idMatierePremiere ?? item.id ?? 0) === identifier);
+      if (existingIndex >= 0) {
+        this.rawMaterials = this.rawMaterials.map((item, index) => index === existingIndex ? { ...item, ...normalizedSaved } : item);
+        return;
+      }
+    }
+
+    this.rawMaterials = [normalizedSaved, ...this.rawMaterials];
+  }
+
   isFieldInvalid(fieldName: string): boolean {
     const control = this.form.get(fieldName);
     return !!control && control.invalid && control.touched;
+  }
+
+  private focusEditField(): void {
+    window.requestAnimationFrame(() => {
+      this.nomInput?.nativeElement.focus();
+      this.nomInput?.nativeElement.select();
+    });
   }
 
   trackByMaterial(index: number, item: MatierePremiere): number {

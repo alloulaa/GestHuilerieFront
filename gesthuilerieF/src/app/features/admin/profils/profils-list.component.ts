@@ -1,4 +1,4 @@
-// c:\Users\jendo\OneDrive\Bureau\GestHuilerieFront\gesthuilerieF\src\app\features\admin\profils\profils-list.component.ts
+// profils-list.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -86,7 +86,6 @@ export class ProfilsListComponent implements OnInit {
     if (page < 1 || page > this.totalPages) {
       return;
     }
-
     this.currentPage = page;
   }
 
@@ -103,11 +102,6 @@ export class ProfilsListComponent implements OnInit {
     this.adminService.getProfils(this.huilerieNomFilter).subscribe({
       next: (res: any) => {
         this.profils = res?.data ?? [];
-        console.log('[ProfilsListComponent] Profils loaded:', {
-          count: this.profils.length,
-          filter: this.huilerieNomFilter,
-          data: this.profils
-        });
         this.currentPage = 1;
         this.isLoading = false;
       },
@@ -119,22 +113,10 @@ export class ProfilsListComponent implements OnInit {
   }
 
   loadAllProfils(): void {
-    console.log('[ProfilsListComponent] Loading all profils (no filter)...');
     this.isLoading = true;
     this.adminService.getProfils('').subscribe({
       next: (res: any) => {
         this.profils = res?.data ?? [];
-        console.log('[ProfilsListComponent] All profils loaded:', {
-          count: this.profils.length,
-          data: this.profils.map((p: any) => ({
-            id: p.idProfil || p.id,
-            nom: p.nom,
-            description: p.description,
-            actif: p.actif,
-            createdAt: p.createdAt || p.dateCreation,
-            allKeys: Object.keys(p)
-          }))
-        });
         this.huilerieNomFilter = '';
         this.currentPage = 1;
         this.isLoading = false;
@@ -154,15 +136,13 @@ export class ProfilsListComponent implements OnInit {
 
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Confirmer la création',
-      message: 'Voulez-vous créer ce profil ? ',
+      message: 'Voulez-vous créer ce profil ?',
       confirmText: 'Confirmer',
       cancelText: 'Annuler',
       intent: 'primary',
     });
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     this.adminService.createProfil(this.createForm.value).subscribe({
       next: () => {
@@ -186,15 +166,13 @@ export class ProfilsListComponent implements OnInit {
 
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Confirmer la modification',
-      message: 'Voulez-vous enregistrer les modifications de ce profil ? ',
+      message: 'Voulez-vous enregistrer les modifications de ce profil ?',
       confirmText: 'Confirmer',
       cancelText: 'Annuler',
       intent: 'primary',
     });
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     this.adminService.updateProfil(this.editingProfil.idProfil, this.editForm.value).subscribe({
       next: () => {
@@ -228,16 +206,60 @@ export class ProfilsListComponent implements OnInit {
       intent: 'danger',
     });
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    this.adminService.deleteProfil(id).subscribe({
-      next: () => {
-        this.loadProfils();
-        this.toastService.success('Profil supprimé avec succès.');
+    this.adminService.getUtilisateurs().subscribe({
+      next: (response: any) => {
+        const users = response?.data ?? [];
+        const linkedUsers = users.filter((user: any) => this.resolveUserProfilId(user) === id);
+
+        if (linkedUsers.length > 0) {
+          this.toastService.error('Ce profil est attribue a un utilisateur impossible de suppression');
+          return;
+        }
+
+        this.adminService.getPermissions(id).subscribe({
+          next: (permissions) => {
+            const clearPermissions$ = permissions.length > 0
+              ? this.adminService.updatePermissions(id, [])
+              : null;
+
+            const finalizeDeletion = () => {
+              this.adminService.deleteProfil(id).subscribe({
+                next: () => {
+                  this.loadProfils();
+                  this.toastService.success('Profil supprimé avec succès.');
+                },
+                error: (error: any) => {
+                  if (error?.status === 409) {
+                    this.toastService.error('Ce profil est attribue a un utilisateur impossible de suppression');
+                  } else {
+                    this.toastService.error(error?.error?.message || 'Erreur lors de la suppression du profil.');
+                  }
+                }
+              });
+            };
+
+            if (!clearPermissions$) {
+              finalizeDeletion();
+              return;
+            }
+
+            clearPermissions$.subscribe({
+              next: () => finalizeDeletion(),
+              error: (error: any) => {
+                this.toastService.error(error?.error?.message || 'Erreur lors de la suppression des permissions du profil.');
+              }
+            });
+          },
+          error: (error: any) => {
+            this.toastService.error(error?.error?.message || 'Erreur lors du chargement des permissions du profil.');
+          }
+        });
       },
-      error: (error) => this.toastService.error(this.getDeleteProfilErrorMessage(error))
+      error: (error: any) => {
+        this.toastService.error(error?.error?.message || 'Erreur lors du chargement des utilisateurs.');
+      }
     });
   }
 
@@ -245,19 +267,24 @@ export class ProfilsListComponent implements OnInit {
     this.router.navigate(['/admin/permissions', id]);
   }
 
-  private getDeleteProfilErrorMessage(error: any): string {
-    const backendMessage = String(error?.error?.message ?? error?.error?.error ?? error?.message ?? '').toLowerCase();
-    const profileAssigned =
-      error?.status === 409 ||
-      backendMessage.includes('attribu') ||
-      backendMessage.includes('utilisateur') ||
-      backendMessage.includes('foreign key') ||
-      backendMessage.includes('constraint');
+  private resolveUserProfilId(user: any): number | null {
+    const id = Number(
+      user?.profil?.idProfil
+      ?? user?.profil?.id
+      ?? user?.profilId
+      ?? user?.idProfil
+      ?? user?.utilisateur?.profil?.idProfil
+      ?? user?.utilisateur?.profil?.id
+      ?? user?.utilisateur?.profilId
+      ?? user?.employe?.profil?.idProfil
+      ?? user?.employe?.profil?.id
+      ?? user?.employe?.profilId
+      ?? user?.administrateur?.profil?.idProfil
+      ?? user?.administrateur?.profil?.id
+      ?? user?.administrateur?.profilId
+      ?? 0,
+    );
 
-    if (profileAssigned) {
-      return 'Impossible de supprimer ce profil: il est attribue a un ou plusieurs utilisateurs.';
-    }
-
-    return 'Erreur lors de la suppression du profil.';
+    return id > 0 ? id : null;
   }
 }

@@ -56,6 +56,8 @@ export class GuidesExecuterComponent implements OnInit {
   guides: GuideProduction[] = [];
   machines: Machine[] = [];
   lots: LotOlives[] = [];
+  // Full list of lots returned by the API (not filtered by availability)
+  allLots: LotOlives[] = [];
   filteredMachines: Machine[] = [];
   filteredLots: LotOlives[] = [];
   matieresPremieres: MatierePremiere[] = [];
@@ -109,7 +111,6 @@ export class GuidesExecuterComponent implements OnInit {
       dateDebut: [this.today(), [Validators.required]],
       dureeStockageAvantBroyage: [{ value: 0, disabled: true }],
       dateFinPrevue: [this.tomorrow(), [Validators.required]],
-      dateFinReelle: this.fb.control<string | null>(null),
       statut: ['EN_COURS', [Validators.required]],
       rendement: [0, [Validators.required, Validators.min(0)]],
       observations: [''],
@@ -476,7 +477,6 @@ export class GuidesExecuterComponent implements OnInit {
       reference: executionReference,
       dateDebut: String(raw.dateDebut ?? this.today()),
       dateFinPrevue: String(raw.dateFinPrevue ?? this.tomorrow()),
-      dateFinReelle: raw.dateFinReelle ? String(raw.dateFinReelle) : null,
       statut: String(raw.statut ?? 'EN_COURS'),
       rendement: Number(raw.rendement ?? 0),
       observations: String(raw.observations ?? '').trim(),
@@ -565,8 +565,11 @@ export class GuidesExecuterComponent implements OnInit {
       produitFinalQualite: enriched.produitFinalQualite ?? '',
       produitFinalQuantiteProduite: enriched.produitFinalQuantiteProduite ?? null,
       produitFinalRendement: enriched.produitFinalRendement ?? 0,
+      lotId: enriched.lotId ?? null,
     });
     this.populateExecutionValuesFromGuideOrExecution(enriched);
+    // Ensure rendement is up-to-date when selecting an execution (lotId and quantity may have changed)
+    this.updateComputedRendement();
   }
 
   saveValeursReelles(): void {
@@ -620,8 +623,6 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
-    const dateFinReelle = this.nowDateTimeLocal();
-
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Terminer l\'exécution',
       message: 'Cette action va créer le produit final, afficher sa référence et passer le statut à TERMINEE.',
@@ -636,7 +637,6 @@ export class GuidesExecuterComponent implements OnInit {
 
     const executionToFinalize: ExecutionProduction = {
       ...execution,
-      dateFinReelle,
       statut: 'TERMINEE',
     };
 
@@ -657,7 +657,6 @@ export class GuidesExecuterComponent implements OnInit {
         const mergedExecution: ExecutionProduction = {
           ...executionToFinalize,
           ...(executionWithProduct ?? {}),
-          dateFinReelle: executionWithProduct?.dateFinReelle ?? executionToFinalize.dateFinReelle,
           statut: executionWithProduct?.statut ?? executionToFinalize.statut,
           produitFinalQualite: produitFinalQualite,
           produitFinalQuantiteProduite: produitFinalQuantiteProduite,
@@ -682,7 +681,7 @@ export class GuidesExecuterComponent implements OnInit {
         this.toastService.success('Exécution terminée avec succès.');
         // Notify dashboard to append this produced quantity to the hourly curve
         try {
-          const dateIso = mergedExecution.dateFinReelle ?? dateFinReelle;
+          const dateIso = mergedExecution.dateFinPrevue ?? mergedExecution.dateDebut;
           const qty = Number(produitFinalQuantiteProduite ?? 0);
           if (dateIso && Number.isFinite(qty) && qty > 0) {
             this.productionDashboardService.notifyProductionAdded(dateIso, qty);
@@ -735,7 +734,6 @@ export class GuidesExecuterComponent implements OnInit {
         this.selectedExecution = refreshed
           ? {
             ...refreshed,
-            dateFinReelle: refreshed.dateFinReelle ?? this.selectedExecution.dateFinReelle,
             valeursReelles: (refreshed.valeursReelles && refreshed.valeursReelles.length > 0)
               ? refreshed.valeursReelles
               : this.selectedExecution.valeursReelles,
@@ -787,7 +785,10 @@ export class GuidesExecuterComponent implements OnInit {
         .filter((id) => Number.isFinite(id) && id > 0),
     );
 
-    this.lots = (items ?? []).filter((lot) => {
+    // keep a copy of the full list for lookups even when some lots are filtered out
+    this.allLots = (items ?? []);
+
+    this.lots = this.allLots.filter((lot) => {
       const lotId = Number(lot?.idLot ?? 0);
       if (!lotId || usedLotIds.has(lotId)) {
         return false;
@@ -1015,7 +1016,6 @@ export class GuidesExecuterComponent implements OnInit {
       dateDebut: this.today(),
       dureeStockageAvantBroyage: 0,
       dateFinPrevue: this.tomorrow(),
-      dateFinReelle: null,
       statut: 'EN_COURS',
       rendement: 0,
       observations: '',
@@ -1046,18 +1046,38 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private computeRendement(): number | null {
-    const quantiteProduite = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
+    // Get the quantity of oil produced by the user (in liters)
+    const quantiteHuileLitres = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
 
-    if (!Number.isFinite(quantiteProduite) || quantiteProduite <= 0) {
+    if (!Number.isFinite(quantiteHuileLitres) || quantiteHuileLitres <= 0) {
       return null;
     }
 
-    const quantitePredite = Number(this.getLatestPrediction(this.selectedExecution)?.quantiteHuileRecalculeeLitres ?? 0);
-    if (!Number.isFinite(quantitePredite) || quantitePredite <= 0) {
+    // Get the selected lot to retrieve the weight of olives
+    const lotId = Number(this.executionForm.get('lotId')?.value ?? 0);
+    if (lotId <= 0) {
       return null;
     }
 
-    const rendement = (quantiteProduite / quantitePredite) * 100;
+    // Find the lot in the filtered lots or available lots; fall back to the full list if needed
+    const selectedLot = this.filteredLots.find((l) => l.idLot === lotId)
+      || this.lots.find((l) => l.idLot === lotId)
+      || this.allLots.find((l) => l.idLot === lotId);
+    if (!selectedLot) {
+      return null;
+    }
+
+    // Get the weight of olives (in kg)
+    const poidsOlivesKg = Number(selectedLot.quantiteInitiale ?? 0);
+    if (!Number.isFinite(poidsOlivesKg) || poidsOlivesKg <= 0) {
+      return null;
+    }
+
+    // Convert oil quantity from liters to kg using the conversion factor 0.916 kg/L
+    const poidsHuileKg = quantiteHuileLitres * 0.916;
+
+    // Calculate rendement: (weight of oil in kg / weight of olives in kg) * 100
+    const rendement = (poidsHuileKg / poidsOlivesKg) * 100;
     return Math.round(rendement * 100) / 100;
   }
 
@@ -1117,7 +1137,6 @@ export class GuidesExecuterComponent implements OnInit {
     const lines = [
       `Mode de prédiction: ${String(prediction.modePrediction ?? '-').toUpperCase()}`,
       `Qualité prédite: ${this.normalizeQualityLabel(prediction.qualitePredite)}`,
-      `Probabilité de qualité: ${prediction.probabiliteQualite != null ? Number(prediction.probabiliteQualite).toFixed(4) : '-'}`,
       `Rendement prédit (%): ${prediction.rendementPreditPourcent != null ? Number(prediction.rendementPreditPourcent).toFixed(2) : '-'}`,
       `Quantité d'huile recalculée (L): ${prediction.quantiteHuileRecalculeeLitres != null ? Number(prediction.quantiteHuileRecalculeeLitres).toFixed(2) : '-'}`,
     ];

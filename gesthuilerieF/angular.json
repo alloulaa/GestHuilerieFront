@@ -71,7 +71,7 @@
             },
             "development": {
               "buildTarget": "gesthuilerieF:build:development",
-              "proxyConfig": "proxy.conf.json"
+              "proxyConfig": "proxy.conf.js"
             }
           },
           "defaultConfiguration": "development"
