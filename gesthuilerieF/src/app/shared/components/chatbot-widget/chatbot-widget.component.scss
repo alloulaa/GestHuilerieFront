@@ -6,7 +6,7 @@
   --chatbot-border: #d7dee8;
   --chatbot-shadow: 0 20px 45px rgba(20, 35, 22, 0.24);
   --chatbot-title: #f7fbf4;
-  --chatbot-title-bg: #516b31;
+  --chatbot-title-bg: #66893c;
   --chatbot-user-bubble: #f1f1f1;
   --chatbot-user-text: #333333;
   --chatbot-bot-bubble: #e3ebdd;
@@ -43,9 +43,9 @@
   --chatbot-user-text: #222a36;
   --chatbot-bot-bubble: #2c3a26;
   --chatbot-bot-text: #dfe8d7;
-  --chatbot-input-bg: #202734;
+  --chatbot-input-bg: #39393a;
   --chatbot-input-border: #44536b;
-  --chatbot-send-bg: #95ad4f;
+  --chatbot-send-bg: #5b701b;
   --chatbot-send-bg-hover: #aec378;
   --chatbot-send-text: #112007;
   --chatbot-muted-text: #93a3ba;
@@ -72,7 +72,7 @@
   height: 62px;
   border: 0;
   border-radius: 50%;
-  background: linear-gradient(145deg, #8aa64a 0%, #5f7a31 100%);
+  background: linear-gradient(145deg, #8aa64a 0%, #77895a 100%);
   color: #f6faef;
   box-shadow: 0 18px 35px rgba(29, 53, 17, 0.35);
   cursor: pointer;
@@ -287,7 +287,7 @@
 
     // Styling for prediction labels
     strong {
-      color: #5a7530;
+      color: #83a64c;
       font-weight: 700;
     }
 
