@@ -93,9 +93,10 @@ export class ExecutionProductionService {
 
     createProduitFinal(
         execution: ExecutionProduction,
-        produitFinal: { qualite: string; quantiteProduite: number | null; rendement?: number | null },
+        produitFinal: { qualite: string; quantiteProduite: number | null; rendement?: number | null; dateFinReelle?: string | null },
     ): Observable<ExecutionProductionDTO> {
         const dateProduction = String(execution?.dateFinPrevue ?? '').trim() || new Date().toISOString().slice(0, 19);
+        const dateFinReelle = String(produitFinal.dateFinReelle ?? '').trim() || new Date().toISOString().slice(0, 10);
         const produitNomFallback = String(execution?.lotVariete ?? '').trim();
         const payload = {
             executionProductionId: execution.idExecutionProduction,
@@ -104,6 +105,7 @@ export class ExecutionProductionService {
             qualite: String(produitFinal.qualite ?? '').trim(),
             rendement: Number(produitFinal.rendement ?? 0),
             dateProduction,
+            dateFinReelle,
         };
 
         return this.http.post<ExecutionProductionDTO>(this.produitFinalApiUrl, payload);

@@ -111,6 +111,7 @@ export class GuidesExecuterComponent implements OnInit {
       dateDebut: [this.today(), [Validators.required]],
       dureeStockageAvantBroyage: [{ value: 0, disabled: true }],
       dateFinPrevue: [this.tomorrow(), [Validators.required]],
+      dateFinReelle: this.fb.control<string | null>(null),
       statut: ['EN_COURS', [Validators.required]],
       rendement: [0, [Validators.required, Validators.min(0)]],
       observations: [''],
@@ -617,9 +618,41 @@ export class GuidesExecuterComponent implements OnInit {
 
     const produitFinalQualite = String(this.executionForm.get('produitFinalQualite')?.value ?? '').trim();
     const produitFinalQuantiteProduite = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
-    const produitFinalRendement = this.computeRendement();
     if (!produitFinalQualite || !Number.isFinite(produitFinalQuantiteProduite) || produitFinalQuantiteProduite <= 0) {
       this.toastService.error('Veuillez saisir la qualité et la quantité produite avant de terminer l\'exécution.');
+      return;
+    }
+
+    console.log('📝 finishExecution() - execution.lotId:', execution.lotId, 'produitFinalQuantiteProduite:', produitFinalQuantiteProduite);
+
+    // Ensure the lot is available for rendement calculation
+    let lotFound = this.filteredLots.find((l) => l.idLot === execution.lotId)
+      || this.lots.find((l) => l.idLot === execution.lotId)
+      || this.allLots.find((l) => l.idLot === execution.lotId);
+
+    if (!lotFound) {
+      console.log('⚠️  Lot', execution.lotId, 'not found locally. Fetching from backend...');
+      try {
+        const fetchedLot = await this.lotOlivesService.findById(execution.lotId).toPromise();
+        if (fetchedLot) {
+          console.log('✅ Lot fetched from backend:', fetchedLot);
+          this.allLots = [...this.allLots, fetchedLot];
+          lotFound = fetchedLot;
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch lot from backend:', error);
+      }
+    }
+
+    // Compute rendement using execution's lotId directly
+    const produitFinalRendement = this.computeRendementForLot(execution.lotId, produitFinalQuantiteProduite);
+    console.log('📊 finishExecution() - Computed rendement:', produitFinalRendement);
+    console.log('🔍 finishExecution() - Is rendement finite?', Number.isFinite(produitFinalRendement));
+
+    if (!Number.isFinite(produitFinalRendement)) {
+      console.log('❌ DEBUG: produitFinalRendement value:', produitFinalRendement);
+      console.log('❌ DEBUG: execution object:', execution);
+      this.toastService.error('Le rendement n\'a pas pu être calculé. Vérifiez que le lot et la quantité produite sont corrects. [DEBUG: lotId=' + execution.lotId + ', qty=' + produitFinalQuantiteProduite + ']');
       return;
     }
 
@@ -635,6 +668,12 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
+    // Capture dateFinReelle automatically when finishing execution
+    const dateFinReelle = this.today();
+    console.log('📅 Captured dateFinReelle:', dateFinReelle);
+    console.log('📊 Rendement to persist:', produitFinalRendement);
+    this.executionForm.patchValue({ dateFinReelle }, { emitEvent: false });
+
     const executionToFinalize: ExecutionProduction = {
       ...execution,
       statut: 'TERMINEE',
@@ -646,18 +685,27 @@ export class GuidesExecuterComponent implements OnInit {
       ? this.executionProductionService.saveValeursReelles(execution.idExecutionProduction, valeursPayload)
       : of(void 0);
 
+    console.log('📤 Sending to backend - rendement:', produitFinalRendement, 'dateFinReelle:', dateFinReelle);
     saveValeursReelles$.pipe(
-      switchMap(() => this.executionProductionService.createProduitFinal(executionToFinalize, {
-        qualite: produitFinalQualite,
-        quantiteProduite: produitFinalQuantiteProduite,
-        rendement: produitFinalRendement,
-      })),
+      switchMap(() => {
+        console.log('🚀 Inside switchMap - calling createProduitFinal...');
+        return this.executionProductionService.createProduitFinal(executionToFinalize, {
+          qualite: produitFinalQualite,
+          quantiteProduite: produitFinalQuantiteProduite,
+          rendement: produitFinalRendement,
+          dateFinReelle: dateFinReelle,
+        });
+      }),
     ).subscribe({
       next: (executionWithProduct) => {
+        console.log('📥 Backend response:', executionWithProduct);
+        console.log('✅ Response has rendement?', executionWithProduct?.produitFinalRendement);
+        console.log('✅ Response has dateFinReelle?', executionWithProduct?.dateFinReelle);
         const mergedExecution: ExecutionProduction = {
           ...executionToFinalize,
           ...(executionWithProduct ?? {}),
           statut: executionWithProduct?.statut ?? executionToFinalize.statut,
+          dateFinReelle: executionWithProduct?.dateFinReelle ?? dateFinReelle,
           produitFinalQualite: produitFinalQualite,
           produitFinalQuantiteProduite: produitFinalQuantiteProduite,
           produitFinalRendement: produitFinalRendement,
@@ -666,6 +714,11 @@ export class GuidesExecuterComponent implements OnInit {
             : valeursPayload,
         };
 
+        console.log('🔄 FINAL mergedExecution state:', {
+          dateFinReelle: mergedExecution.dateFinReelle,
+          produitFinalRendement: mergedExecution.produitFinalRendement,
+          produitFinalQuantiteProduite: mergedExecution.produitFinalQuantiteProduite,
+        });
         this.executionMessage = 'Valeurs réelles enregistrées, produit final créé et exécution terminée.';
         this.selectedExecution = mergedExecution;
         this.executionForm.patchValue({
@@ -1016,6 +1069,7 @@ export class GuidesExecuterComponent implements OnInit {
       dateDebut: this.today(),
       dureeStockageAvantBroyage: 0,
       dateFinPrevue: this.tomorrow(),
+      dateFinReelle: null,
       statut: 'EN_COURS',
       rendement: 0,
       observations: '',
@@ -1059,26 +1113,54 @@ export class GuidesExecuterComponent implements OnInit {
       return null;
     }
 
+    return this.computeRendementForLot(lotId, quantiteHuileLitres);
+  }
+
+  private computeRendementForLot(lotId: number, quantiteHuileLitres: number): number | null {
+    console.log('🔹 computeRendementForLot() called with lotId:', lotId, 'quantiteHuileLitres:', quantiteHuileLitres);
+
+    if (lotId <= 0 || !Number.isFinite(quantiteHuileLitres) || quantiteHuileLitres <= 0) {
+      console.log('❌ Early return: lotId invalid or quantity not finite/positive');
+      return null;
+    }
+
     // Find the lot in the filtered lots or available lots; fall back to the full list if needed
+    console.log('🔎 Searching for lot in filteredLots:', this.filteredLots.length, 'lots');
+    console.log('🔎 Searching for lot in lots:', this.lots.length, 'lots');
+    console.log('🔎 Searching for lot in allLots:', this.allLots.length, 'lots');
+    
     const selectedLot = this.filteredLots.find((l) => l.idLot === lotId)
       || this.lots.find((l) => l.idLot === lotId)
       || this.allLots.find((l) => l.idLot === lotId);
     if (!selectedLot) {
+      console.log('❌ Lot not found with lotId:', lotId);
+      console.log('📋 Available lot IDs in filteredLots:', this.filteredLots.map(l => l.idLot));
+      console.log('📋 Available lot IDs in lots:', this.lots.map(l => l.idLot));
+      console.log('📋 Available lot IDs in allLots:', this.allLots.map(l => l.idLot));
       return null;
     }
 
+    console.log('✅ Lot found:', selectedLot);
+
     // Get the weight of olives (in kg)
     const poidsOlivesKg = Number(selectedLot.quantiteInitiale ?? 0);
+    console.log('⚖️  poidsOlivesKg:', poidsOlivesKg);
+
     if (!Number.isFinite(poidsOlivesKg) || poidsOlivesKg <= 0) {
+      console.log('❌ poidsOlivesKg is not finite or <= 0');
       return null;
     }
 
     // Convert oil quantity from liters to kg using the conversion factor 0.916 kg/L
     const poidsHuileKg = quantiteHuileLitres * 0.916;
+    console.log('⚖️  poidsHuileKg:', poidsHuileKg);
 
     // Calculate rendement: (weight of oil in kg / weight of olives in kg) * 100
     const rendement = (poidsHuileKg / poidsOlivesKg) * 100;
-    return Math.round(rendement * 100) / 100;
+    console.log('📊 Calculated rendement:', rendement);
+    const roundedRendement = Math.round(rendement * 100) / 100;
+    console.log('✅ Final rounded rendement:', roundedRendement);
+    return roundedRendement;
   }
 
   private computeStorageDurationDays(): number | null {
