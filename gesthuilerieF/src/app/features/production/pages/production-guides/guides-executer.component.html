@@ -174,7 +174,8 @@
         <p class="empty-state">Aucune exécution enregistrée.</p>
       </ng-template>
 
-      <article class="execution-detail-card" *ngIf="selectedExecution as execution">
+      <!-- ↓ id ajouté pour le scroll automatique -->
+      <article class="execution-detail-card" id="execution-detail-section" *ngIf="selectedExecution as execution">
         <div class="execution-detail-card__header">
           <div>
             <h3>Détails de l'exécution</h3>
@@ -282,6 +283,14 @@
             </div>
           </div>
         </form>
+
+        <!-- ↓ Bouton Terminer en bas du panneau de détails -->
+        <div class="detail-finish-row" *ngIf="!isExecutionTerminated(execution)">
+          <button type="button" class="btn-finish-detail" (click)="finishExecution(execution)">
+            ✓ Terminer l'exécution
+          </button>
+        </div>
+
       </article>
     </div>
   </nb-card-body>

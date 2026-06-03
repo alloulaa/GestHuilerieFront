@@ -197,7 +197,7 @@ export class ProfilsListComponent implements OnInit {
     this.showEditForm = true;
   }
 
-  async onDelete(id: number): Promise<void> {
+async onDelete(id: number): Promise<void> {
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Supprimer le profil',
       message: 'Êtes-vous sûr de vouloir supprimer ce profil ? Cette action est irréversible.',
@@ -214,46 +214,22 @@ export class ProfilsListComponent implements OnInit {
         const linkedUsers = users.filter((user: any) => this.resolveUserProfilId(user) === id);
 
         if (linkedUsers.length > 0) {
-          this.toastService.error('Ce profil est attribue a un utilisateur impossible de suppression');
+          this.toastService.error('Ce profil est attribué à un utilisateur, impossible de supprimer.');
           return;
         }
 
-        this.adminService.getPermissions(id).subscribe({
-          next: (permissions) => {
-            const clearPermissions$ = permissions.length > 0
-              ? this.adminService.updatePermissions(id, [])
-              : null;
-
-            const finalizeDeletion = () => {
-              this.adminService.deleteProfil(id).subscribe({
-                next: () => {
-                  this.loadProfils();
-                  this.toastService.success('Profil supprimé avec succès.');
-                },
-                error: (error: any) => {
-                  if (error?.status === 409) {
-                    this.toastService.error('Ce profil est attribue a un utilisateur impossible de suppression');
-                  } else {
-                    this.toastService.error(error?.error?.message || 'Erreur lors de la suppression du profil.');
-                  }
-                }
-              });
-            };
-
-            if (!clearPermissions$) {
-              finalizeDeletion();
-              return;
-            }
-
-            clearPermissions$.subscribe({
-              next: () => finalizeDeletion(),
-              error: (error: any) => {
-                this.toastService.error(error?.error?.message || 'Erreur lors de la suppression des permissions du profil.');
-              }
-            });
+        // Supprimer directement sans tenter de vider les permissions
+        this.adminService.deleteProfil(id).subscribe({
+          next: () => {
+            this.loadProfils();
+            this.toastService.success('Profil supprimé avec succès.');
           },
           error: (error: any) => {
-            this.toastService.error(error?.error?.message || 'Erreur lors du chargement des permissions du profil.');
+            if (error?.status === 409) {
+              this.toastService.error('Ce profil est attribué à un utilisateur, impossible de supprimer.');
+            } else {
+              this.toastService.error(error?.error?.message || 'Erreur lors de la suppression du profil.');
+            }
           }
         });
       },

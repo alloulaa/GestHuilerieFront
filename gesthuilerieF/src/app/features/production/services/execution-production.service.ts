@@ -1,4 +1,3 @@
-// ...existing code...
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
@@ -8,6 +7,12 @@ import { ExecutionPredictionStartDTO, ExecutionProduction, ExecutionProductionCr
 import { AuthService } from '../../../core/auth/auth.service';
 import { GuideProductionService } from './guide-production.service';
 import { MachineService } from '../../machines/services/machine.service';
+
+export interface ExecutionProductionUpdatePayload {
+    statut?: string;
+    rendement?: number;
+    dateFinReelle?: string | null;
+}
 
 @Injectable({
     providedIn: 'root',
@@ -58,7 +63,7 @@ export class ExecutionProductionService {
         return this.http.post<Prediction>(`${this.apiUrl}/${idExecutionProduction}/predict-on-start`, overrides);
     }
 
-    update(idExecutionProduction: number, payload: Partial<ExecutionProductionCreate>): Observable<ExecutionProduction> {
+    update(idExecutionProduction: number, payload: ExecutionProductionUpdatePayload): Observable<ExecutionProduction> {
         return this.http.put<ExecutionProduction>(`${this.apiUrl}/${idExecutionProduction}`, payload);
     }
 

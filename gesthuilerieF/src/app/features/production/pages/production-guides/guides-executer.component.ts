@@ -236,7 +236,6 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   getParameterLabelFromExecution(execution: ExecutionProduction, valeur: any): string {
-    // Try to extract parameter id from multiple possible shapes returned by API
     const paramId = Number(
       valeur?.parametreEtapeId
       ?? valeur?.idParametreEtape
@@ -245,7 +244,6 @@ export class GuidesExecuterComponent implements OnInit {
       ?? 0,
     );
 
-    // Find guide and parameter name from guide metadata
     const guide = this.guides.find((g) => Number(g?.idGuideProduction ?? 0) === Number(execution?.guideProductionId ?? 0));
     if (guide && paramId > 0) {
       for (const etape of (guide.etapes ?? [])) {
@@ -337,11 +335,9 @@ export class GuidesExecuterComponent implements OnInit {
 
     const guide = this.guides.find((item) => item.idGuideProduction === guideId);
     if (guide) {
-      // Filtrage lots et machines par huilerie du guide
       this.filteredLots = this.filterLotsByGuideHuilerie(guide);
       this.refreshFilteredMachines(guide);
 
-      // Réinitialiser le lot si non valide
       if (!this.filteredLots.some((l) => l.idLot === this.executionForm.get('lotId')?.value)) {
         this.executionForm.patchValue({ lotId: null });
       }
@@ -518,7 +514,7 @@ export class GuidesExecuterComponent implements OnInit {
         },
         error: (error) => {
           this.submittingExecution = false;
-          this.executionError = this.readHttpError(error, 'Impossible de créer l’exécution de production.');
+this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécution de production.');
           this.toastService.error(this.executionError);
         },
       });
@@ -540,7 +536,6 @@ export class GuidesExecuterComponent implements OnInit {
       .map((step) => Number(step.machineId ?? 0))
       .filter((id) => id > 0);
     if (stepMachineIds.length > 0) {
-      // La machine est déjà fixée au niveau du guide: on fait confiance à la configuration du guide.
       return stepMachineIds[0];
     }
 
@@ -559,6 +554,17 @@ export class GuidesExecuterComponent implements OnInit {
     return 0;
   }
 
+  // ─── Scroll automatique vers la section de détails ───────────────────────
+  private scrollToDetailSection(): void {
+    // Utilise setTimeout pour laisser Angular finir le rendu du DOM
+    setTimeout(() => {
+      const el = document.getElementById('execution-detail-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  }
+
   selectExecution(execution: ExecutionProduction): void {
     const enriched = this.enrichExecutionWithLotInfo(execution);
     this.selectedExecution = enriched;
@@ -569,8 +575,9 @@ export class GuidesExecuterComponent implements OnInit {
       lotId: enriched.lotId ?? null,
     });
     this.populateExecutionValuesFromGuideOrExecution(enriched);
-    // Ensure rendement is up-to-date when selecting an execution (lotId and quantity may have changed)
     this.updateComputedRendement();
+    // ─── Scroll automatique vers les détails ───
+    this.scrollToDetailSection();
   }
 
   saveValeursReelles(): void {
@@ -608,6 +615,8 @@ export class GuidesExecuterComponent implements OnInit {
     if (!isCurrentSelection) {
       this.selectedExecution = execution;
       this.populateExecutionValuesFromGuideOrExecution(execution);
+      // ─── Scroll automatique vers les détails ───
+      this.scrollToDetailSection();
     }
 
     if (this.executionValueRows.length > 0 && (this.valeursReelles.invalid || this.valeursReelles.length === 0)) {
@@ -625,7 +634,6 @@ export class GuidesExecuterComponent implements OnInit {
 
     console.log('📝 finishExecution() - execution.lotId:', execution.lotId, 'produitFinalQuantiteProduite:', produitFinalQuantiteProduite);
 
-    // Ensure the lot is available for rendement calculation
     let lotFound = this.filteredLots.find((l) => l.idLot === execution.lotId)
       || this.lots.find((l) => l.idLot === execution.lotId)
       || this.allLots.find((l) => l.idLot === execution.lotId);
@@ -644,7 +652,6 @@ export class GuidesExecuterComponent implements OnInit {
       }
     }
 
-    // Compute rendement using execution's lotId directly
     const produitFinalRendement = this.computeRendementForLot(execution.lotId, produitFinalQuantiteProduite);
     console.log('📊 finishExecution() - Computed rendement:', produitFinalRendement);
     console.log('🔍 finishExecution() - Is rendement finite?', Number.isFinite(produitFinalRendement));
@@ -668,7 +675,6 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
-    // Capture dateFinReelle automatically when finishing execution
     const dateFinReelle = this.today();
     console.log('📅 Captured dateFinReelle:', dateFinReelle);
     console.log('📊 Rendement to persist:', produitFinalRendement);
@@ -732,7 +738,6 @@ export class GuidesExecuterComponent implements OnInit {
         );
         this.saveExecutionCache(this.executions);
         this.toastService.success('Exécution terminée avec succès.');
-        // Notify dashboard to append this produced quantity to the hourly curve
         try {
           const dateIso = mergedExecution.dateFinPrevue ?? mergedExecution.dateDebut;
           const qty = Number(produitFinalQuantiteProduite ?? 0);
@@ -744,7 +749,7 @@ export class GuidesExecuterComponent implements OnInit {
         }
       },
       error: (error) => {
-        this.executionError = this.readHttpError(error, 'Impossible de terminer l’exécution.');
+        this.executionError = this.readHttpError(error, 'Impossible de terminer l\'exécution.');
         this.toastService.error(this.executionError);
       },
     });
@@ -838,7 +843,6 @@ export class GuidesExecuterComponent implements OnInit {
         .filter((id) => Number.isFinite(id) && id > 0),
     );
 
-    // keep a copy of the full list for lookups even when some lots are filtered out
     this.allLots = (items ?? []);
 
     this.lots = this.allLots.filter((lot) => {
@@ -857,7 +861,6 @@ export class GuidesExecuterComponent implements OnInit {
 
       return this.availableLotIds.has(lotId);
     });
-    // Recompute storage duration when lot list changes (e.g. after execution creation)
     this.updateComputedStorageDuration();
   }
 
@@ -979,8 +982,6 @@ export class GuidesExecuterComponent implements OnInit {
           ?? 0,
         );
 
-        // Sans historique: garder seulement les paramètres de base (executionProduction null)
-        // et, pour une exécution existante, les paramètres de cette exécution.
         const isBaseParam = paramExecutionId <= 0;
         const isCurrentExecutionParam = executionParamIds.has(parametreEtapeId);
         if (!isBaseParam && !isCurrentExecutionParam) {
@@ -1004,7 +1005,6 @@ export class GuidesExecuterComponent implements OnInit {
         const currentIsExecutionParam = executionParamIds.has(parametreEtapeId);
         const existingIsExecutionParam = executionParamIds.has(existingId);
 
-        // Priorité à l'instance du paramètre liée à l'exécution courante.
         if (currentIsExecutionParam && !existingIsExecutionParam) {
           uniqueParamsByKey.set(key, parametre);
         }
@@ -1040,12 +1040,9 @@ export class GuidesExecuterComponent implements OnInit {
           valeurReelle: [realValue, [Validators.required]],
         });
 
-        // Ajouter la validation sur changement de valeur
         const valeurReelleControl = formGroup.get('valeurReelle');
         if (valeurReelleControl) {
           valeurReelleControl.valueChanges.subscribe((value) => {
-            // Déterminer le paramName pour la validation
-            // Utiliser le nom du paramètre standardisé (snake_case)
             this.validateExecutionParameter(parameterName, value);
           });
         }
@@ -1100,14 +1097,12 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private computeRendement(): number | null {
-    // Get the quantity of oil produced by the user (in liters)
     const quantiteHuileLitres = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
 
     if (!Number.isFinite(quantiteHuileLitres) || quantiteHuileLitres <= 0) {
       return null;
     }
 
-    // Get the selected lot to retrieve the weight of olives
     const lotId = Number(this.executionForm.get('lotId')?.value ?? 0);
     if (lotId <= 0) {
       return null;
@@ -1124,11 +1119,10 @@ export class GuidesExecuterComponent implements OnInit {
       return null;
     }
 
-    // Find the lot in the filtered lots or available lots; fall back to the full list if needed
     console.log('🔎 Searching for lot in filteredLots:', this.filteredLots.length, 'lots');
     console.log('🔎 Searching for lot in lots:', this.lots.length, 'lots');
     console.log('🔎 Searching for lot in allLots:', this.allLots.length, 'lots');
-    
+
     const selectedLot = this.filteredLots.find((l) => l.idLot === lotId)
       || this.lots.find((l) => l.idLot === lotId)
       || this.allLots.find((l) => l.idLot === lotId);
@@ -1142,7 +1136,6 @@ export class GuidesExecuterComponent implements OnInit {
 
     console.log('✅ Lot found:', selectedLot);
 
-    // Get the weight of olives (in kg)
     const poidsOlivesKg = Number(selectedLot.quantiteInitiale ?? 0);
     console.log('⚖️  poidsOlivesKg:', poidsOlivesKg);
 
@@ -1151,11 +1144,9 @@ export class GuidesExecuterComponent implements OnInit {
       return null;
     }
 
-    // Convert oil quantity from liters to kg using the conversion factor 0.916 kg/L
     const poidsHuileKg = quantiteHuileLitres * 0.916;
     console.log('⚖️  poidsHuileKg:', poidsHuileKg);
 
-    // Calculate rendement: (weight of oil in kg / weight of olives in kg) * 100
     const rendement = (poidsHuileKg / poidsOlivesKg) * 100;
     console.log('📊 Calculated rendement:', rendement);
     const roundedRendement = Math.round(rendement * 100) / 100;
@@ -1295,9 +1286,6 @@ export class GuidesExecuterComponent implements OnInit {
     return !!control && control.invalid && (control.touched || control.dirty);
   }
 
-  /**
-   * Valide un paramètre d'exécution et affiche un toast si hors limites
-   */
   validateExecutionParameter(paramName: string, value: number | null | undefined): void {
     const message = this.parameterValidationService.validateExecutionParameter(paramName, value);
     if (message) {
@@ -1305,9 +1293,6 @@ export class GuidesExecuterComponent implements OnInit {
     }
   }
 
-  /**
-   * Valide un paramètre d'analyse et affiche un toast si hors limites
-   */
   validateAnalysisParameter(paramName: string, value: number | null | undefined): void {
     const message = this.parameterValidationService.validateAnalysisParameter(paramName, value);
     if (message) {
