@@ -6,6 +6,7 @@ import { Component, Inject, OnInit, forwardRef } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NbButtonModule, NbCardModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { HttpErrorResponse } from '@angular/common/http';
+import { forkJoin, map, of, switchMap } from 'rxjs';
 import { Machine } from '../../../machines/models/enterprise.models';
 import { MachineService } from '../../../machines/services/machine.service';
 import { LotOlives } from '../../../lots/models/lot.models';
@@ -20,7 +21,6 @@ import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.s
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { TYPE_MACHINE_OPTIONS } from '../../../../shared/constants/domain-options';
-import { forkJoin, of, switchMap } from 'rxjs';
 import { StockService } from '../../../stock/services/stock.service';
 import { StockManagementService } from '../../../stock/services/stock-management.service';
 import { StockMovement } from '../../../stock/models/stock.models';
@@ -514,7 +514,7 @@ export class GuidesExecuterComponent implements OnInit {
         },
         error: (error) => {
           this.submittingExecution = false;
-this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécution de production.');
+          this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécution de production.');
           this.toastService.error(this.executionError);
         },
       });
@@ -694,7 +694,6 @@ this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécut
     console.log('📤 Sending to backend - rendement:', produitFinalRendement, 'dateFinReelle:', dateFinReelle);
     saveValeursReelles$.pipe(
       switchMap(() => {
-        console.log('🚀 Inside switchMap - calling createProduitFinal...');
         return this.executionProductionService.createProduitFinal(executionToFinalize, {
           qualite: produitFinalQualite,
           quantiteProduite: produitFinalQuantiteProduite,
@@ -702,6 +701,14 @@ this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécut
           dateFinReelle: dateFinReelle,
         });
       }),
+      // ✅ Ajout: persister rendement + dateFinReelle sur l'exécution
+      switchMap((executionWithProduct) =>
+        this.executionProductionService.update(execution.idExecutionProduction, {
+          statut: 'TERMINEE',
+          rendement: produitFinalRendement ?? 0,
+          dateFinReelle: dateFinReelle,
+        }).pipe(map(() => executionWithProduct))
+      ),
     ).subscribe({
       next: (executionWithProduct) => {
         console.log('📥 Backend response:', executionWithProduct);
@@ -1211,7 +1218,7 @@ this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécut
       `Mode de prédiction: ${String(prediction.modePrediction ?? '-').toUpperCase()}`,
       `Qualité prédite: ${this.normalizeQualityLabel(prediction.qualitePredite)}`,
       `Rendement prédit (%): ${prediction.rendementPreditPourcent != null ? Number(prediction.rendementPreditPourcent).toFixed(2) : '-'}`,
-      `Quantité d'huile recalculée (L): ${prediction.quantiteHuileRecalculeeLitres != null ? Number(prediction.quantiteHuileRecalculeeLitres).toFixed(2) : '-'}`,
+      `Quantité d'huile (L): ${prediction.quantiteHuileRecalculeeLitres != null ? Number(prediction.quantiteHuileRecalculeeLitres).toFixed(2) : '-'}`,
     ];
 
     await this.confirmDialogService.confirm({

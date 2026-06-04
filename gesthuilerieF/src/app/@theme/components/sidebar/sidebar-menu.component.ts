@@ -61,7 +61,7 @@ export class SidebarMenuComponent {
 
       // Admin items visible only to admins
       if (item.title === 'Dashboard Admin') {
-        return this.permissionService.isAdmin() || this.permissionService.canRead('DASHBOARD_ADMIN');
+        return this.permissionService.isAdmin();
       }
 
       if (item.title === 'Huileries') {

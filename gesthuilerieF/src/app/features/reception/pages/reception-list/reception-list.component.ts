@@ -121,7 +121,7 @@ export class ReceptionListComponent implements OnInit {
     const fournisseurValue = String(this.fournisseurSearchValue ?? '').trim().toLowerCase();
     this.filterMessage = '';
 
-    let filtered = [...this.allPesees];
+let filtered = [...this.allPesees].reverse();
 
     if (fournisseurValue) {
       filtered = filtered.filter((pesee) => {
