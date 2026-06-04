@@ -7,6 +7,7 @@ import { Huilerie } from '../../../machines/models/enterprise.models';
 import { HuilerieService } from '../../../machines/services/huilerie.service';
 import { EntrepriseService } from '../../../machines/services/entreprise.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-huileries-management',
@@ -44,6 +45,7 @@ export class HuileriesManagementComponent implements OnInit {
     private huilerieService: HuilerieService,
     private entrepriseService: EntrepriseService,
     private confirmDialogService: ConfirmDialogService,
+    private toastService: ToastService,
   ) {
     this.huilerieForm = this.formBuilder.group({
       nom: ['', [Validators.required]],
@@ -72,6 +74,7 @@ export class HuileriesManagementComponent implements OnInit {
 
       this.huilerieService.update(this.editingHuilerieId, payload).subscribe({
         next: () => {
+          this.toastService.success('Huilerie mise à jour avec succès.');
           this.resetHuilerieForm();
           this.loadData();
         },
@@ -92,6 +95,7 @@ export class HuileriesManagementComponent implements OnInit {
 
       this.huilerieService.create(payload).subscribe({
         next: () => {
+          this.toastService.success('Huilerie créée avec succès.');
           this.resetHuilerieForm();
           this.loadData();
         },
@@ -138,6 +142,11 @@ export class HuileriesManagementComponent implements OnInit {
 
     this.huilerieService.toggleStatus(item.idHuilerie, !item.active).subscribe({
       next: () => {
+        this.toastService.success(
+          isInactive
+            ? `Huilerie "${item.nom}" activée avec succès.`
+            : `Huilerie "${item.nom}" désactivée avec succès.`
+        );
         if (this.editingHuilerieId === item.idHuilerie) {
           this.resetHuilerieForm();
         }
@@ -188,7 +197,7 @@ export class HuileriesManagementComponent implements OnInit {
     this.huileries = filtered;
 
     if (filtered.length === 0) {
-      this.huilerieFilterMessage = 'Aucune huilerie trouvee pour ce nom.';
+      this.toastService.error('Aucune huilerie trouvée pour ce nom.');
     }
   }
 

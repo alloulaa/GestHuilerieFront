@@ -13,8 +13,6 @@
       <button nbButton status="basic" outline type="button" (click)="resetHuilerieFilter()">Reinitialiser</button>
     </div>
 
-    <p class="error" *ngIf="huilerieFilterMessage">{{ huilerieFilterMessage }}</p>
-
     <div *ngIf="isEditingInactiveHuilerie" class="warning-message">
       <strong>⚠️ Attention:</strong> Cette huilerie est inactive. Vous ne pouvez pas modifier ses coordonnées.
     </div>

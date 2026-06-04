@@ -35,8 +35,19 @@ export class CampagnesConsulterComponent implements OnInit {
     }
 
     applyFilters(): void {
-        this.reload();
-        this.toastService.info('Filtres appliques.');
+        const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+        this.campagneService.getAll(this.referenceFilter, huilerieNom).subscribe({
+            next: (items) => {
+                this.campagnes = items;
+                if (items.length === 0) {
+                    this.toastService.error('Aucune campagne trouvée pour ces critères.');
+                }
+            },
+            error: () => {
+                this.campagnes = [];
+                this.toastService.error('Impossible de charger les campagnes.');
+            },
+        });
     }
 
     resetFilters(): void {

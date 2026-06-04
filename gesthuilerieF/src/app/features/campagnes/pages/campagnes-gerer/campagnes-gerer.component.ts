@@ -77,6 +77,13 @@ export class CampagnesGererComponent implements OnInit {
         const raw = this.form.getRawValue();
         const huilerieId = Number(raw.huilerieId ?? 0);
 
+        const annee = Number(String(raw.annee ?? '').trim());
+        const currentYear = new Date().getFullYear();
+        if (annee > currentYear) {
+            this.toastService.error(`L'année de la campagne ne peut pas dépasser ${currentYear}. Année saisie : ${annee}.`);
+            return;
+        }
+
         if (!this.isEditMode && (!Number.isFinite(huilerieId) || huilerieId <= 0)) {
             this.toastService.error('Selectionnez une huilerie valide.');
             return;

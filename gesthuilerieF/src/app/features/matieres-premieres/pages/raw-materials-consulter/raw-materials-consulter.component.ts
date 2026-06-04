@@ -6,6 +6,7 @@ import { NbButtonModule, NbCardModule, NbInputModule } from '@nebular/theme';
 import { MatierePremiere } from '../../models/raw-material.models';
 import { RawMaterialService } from '../../services/raw-material.service';
 import { MatCardModule } from '@angular/material/card';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-raw-materials-consulter',
@@ -28,7 +29,11 @@ export class RawMaterialsConsulterComponent implements OnInit {
   pendingRawMaterialDeletion: MatierePremiere | null = null;
   deleteErrorMessage = '';
 
-  constructor(private rawMaterialService: RawMaterialService) { }
+  constructor(
+    private rawMaterialService: RawMaterialService,
+    private toastService: ToastService,
+
+  ) { }
 
   ngOnInit(): void {
     this.loadRawMaterials();
@@ -37,9 +42,9 @@ export class RawMaterialsConsulterComponent implements OnInit {
   loadRawMaterials(huilerieNom?: string): void {
     this.rawMaterialService.getAll(huilerieNom).subscribe(data => {
       this.rawMaterials = data;
-      this.filterMessage = data.length === 0 && !!String(huilerieNom ?? '').trim()
-        ? 'Aucune matiere premiere trouvee pour cette huilerie.'
-        : '';
+      if (data.length === 0 && !!String(huilerieNom ?? '').trim()) {
+        this.toastService.error('Aucune matière première trouvée pour cette huilerie.');
+      }
     });
   }
 
@@ -50,7 +55,6 @@ export class RawMaterialsConsulterComponent implements OnInit {
 
   resetHuilerieFilter(): void {
     this.huilerieSearchNom = '';
-    this.filterMessage = '';
     this.loadRawMaterials();
   }
 

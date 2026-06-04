@@ -40,9 +40,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngIf="campagnes.length === 0">
-                        <td [attr.colspan]="isAdmin ? 5 : 4" class="empty-row">Aucune campagne a afficher.</td>
-                    </tr>
+
                     <tr *ngFor="let campagne of campagnes" class="row-hover">
                         <td>{{ campagne.reference }}</td>
                         <td>{{ campagne.annee || '-' }}</td>

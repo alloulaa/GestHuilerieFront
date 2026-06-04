@@ -8,6 +8,7 @@ import { Machine } from '../../models/enterprise.models';
 import { MachineService } from '../../services/machine.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { MACHINE_TYPE_DATA, MachineTypeInfo } from '../../../../shared/constants/machine-type-data';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-machines-list',
@@ -27,6 +28,7 @@ export class MachinesListComponent implements OnInit {
   constructor(
     private machineService: MachineService,
     private permissionService: PermissionService,
+    private toastService: ToastService,
   ) { }
 
   get isAdmin(): boolean {
@@ -46,9 +48,15 @@ export class MachinesListComponent implements OnInit {
       return;
     }
 
-    this.machines = this.allMachines.filter((machine) =>
+    const filtered = this.allMachines.filter((machine) =>
       this.matchesFilter(machine, huilerieQuery, etatQuery),
     );
+
+    this.machines = filtered;
+
+    if (filtered.length === 0) {
+      this.toastService.error('Aucune machine trouvée pour ces critères de recherche.');
+    }
   }
 
   resetAdminHuilerieFilter(): void {

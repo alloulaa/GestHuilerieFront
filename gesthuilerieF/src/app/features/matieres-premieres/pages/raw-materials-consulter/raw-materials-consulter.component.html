@@ -19,7 +19,6 @@
       </div>
     </div>
 
-    <p class="filter-message" *ngIf="filterMessage">{{ filterMessage }}</p>
 
     <div class="table-wrap">
       <table class="crud-table">
@@ -34,9 +33,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngIf="rawMaterials.length === 0">
-            <td colspan="5" class="empty">Aucune matiere premiere a afficher.</td>
-          </tr>
+
           <tr *ngFor="let item of rawMaterials" class="row-hover">
             <td class="id-cell">{{ item.reference || (item.idMatierePremiere ? ('#' + item.idMatierePremiere) : '-') }}
             </td>
