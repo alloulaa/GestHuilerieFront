@@ -118,11 +118,31 @@
                   <input nbInput fullWidth formControlName="uniteMesure" placeholder="C" />
                 </label>
 
-                <label class="field">
-                  <span>Valeur *</span>
-                  <input nbInput fullWidth type="number" formControlName="valeur" placeholder="25"
-                    [class.field-invalid]="isParametreValueInvalid(etapeIndex, parametreIndex)" />
-                </label>
+                <!-- Valeur : radio buttons pour les paramètres booléens, input number sinon -->
+                <ng-container *ngIf="isBooleanParam(etapeIndex, parametreIndex); else numericValeur">
+                  <div class="field">
+                    <span>Valeur *</span>
+                    <div class="bool-radio-group">
+                      <label class="bool-radio-label"
+                        [class.bool-radio-label--active]="getParamRawValue(etapeIndex, parametreIndex) == 1">
+                        <input type="radio" formControlName="valeur" value="1" />
+                        <span class="bool-radio-text">Oui</span>
+                      </label>
+                      <label class="bool-radio-label"
+                        [class.bool-radio-label--active]="getParamRawValue(etapeIndex, parametreIndex) == 0">
+                        <input type="radio" formControlName="valeur" value="0" />
+                        <span class="bool-radio-text">Non</span>
+                      </label>
+                    </div>
+                  </div>
+                </ng-container>
+                <ng-template #numericValeur>
+                  <label class="field">
+                    <span>Valeur *</span>
+                    <input nbInput fullWidth type="number" formControlName="valeur" placeholder="25"
+                      [class.field-invalid]="isParametreValueInvalid(etapeIndex, parametreIndex)" />
+                  </label>
+                </ng-template>
 
                 <div class="field field-wide error-hint"
                   *ngIf="getParametreValueError(etapeIndex, parametreIndex) as valueError">
@@ -169,7 +189,6 @@
               <em>{{ rule.min }} à {{ rule.max }}{{ rule.unite ? ' ' + rule.unite : '' }}</em>
             </span>
           </div>
-          <!-- Debug: show counts -->
           <small class="interval-help-panel__description">
             {{guideParameterHelp.length||0}} guide params
           </small>

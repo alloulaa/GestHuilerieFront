@@ -431,9 +431,36 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+
+  // Par défaut : vert (TERMINEE, PLANIFIEE, etc.)
   color: #3b6011;
   background: #e8f3d6;
   border: 1px solid rgba(94, 114, 40, 0.25);
+
+  // EN_COURS → rouge
+  &.status--en-cours {
+    color: #8b1f1f;
+    background: #fdecea;
+    border-color: rgba(161, 42, 42, 0.3);
+  }
+
+  // TERMINEE → vert (explicite)
+  &.status--terminee {
+    color: #3b6011;
+    background: #e8f3d6;
+    border-color: rgba(94, 114, 40, 0.25);
+  }
+}
+
+.radio-group--real-value {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid rgba(94, 114, 40, 0.2);
+  border-radius: 8px;
+  background: #fff;
+  min-height: 42px;
 }
 
 .execution-card__meta {
@@ -790,6 +817,237 @@
   }
 }
 
+// ============================================================
+// À AJOUTER dans production-guides.component.scss
+// (à la fin du fichier, avant la dernière accolade @media)
+// ============================================================
+
+// ---- Radio booléen Oui / Non (vert = oui, rouge = non) ----
+.bool-radio-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bool-radio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1.5px solid #d1d5db;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+  background: transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+  line-height: 1;
+
+  &:hover {
+    border-color: #86efac;
+    color: #166534;
+    background: #f0fdf4;
+  }
+
+  // État actif Oui → vert
+  &--oui {
+    border-color: #16a34a !important;
+    color: #14532d !important;
+    background: #f0fdf4 !important;
+  }
+
+  // État actif Non → rouge
+  &--non {
+    border-color: #dc2626 !important;
+    color: #7f1d1d !important;
+    background: #fef2f2 !important;
+  }
+}
+
+.bool-radio-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  &--oui {
+    border-color: #16a34a !important;
+    background: #16a34a !important;
+  }
+
+  &--non {
+    border-color: #dc2626 !important;
+    background: #dc2626 !important;
+  }
+
+  &__inner {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: white;
+    display: block;
+  }
+}
+
+// Badge booléen dans la grille de détails
+.bool-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  &--oui {
+    background: #dcfce7;
+    color: #14532d;
+    border: 1px solid #86efac;
+  }
+
+  &--non {
+    background: #fee2e2;
+    color: #7f1d1d;
+    border: 1px solid #fca5a5;
+  }
+}
+
+// ---- Bouton Terminer l'exécution (amélioré) ----
+.btn-finish-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  border: 1.5px solid #4a7220;
+  background: linear-gradient(135deg, #5e7228 0%, #4a5920 100%);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(74, 114, 32, 0.25);
+
+  svg {
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, #4a5920 0%, #3b4a18 100%);
+    border-color: #3b4a18;
+    box-shadow: 0 4px 14px rgba(74, 114, 32, 0.35);
+    transform: translateY(-1px);
+
+    svg {
+      transform: scale(1.1);
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(74, 114, 32, 0.2);
+  }
+}
+
+.detail-finish-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(94, 114, 40, 0.12);
+}
+
+
+// ============================================================
+// À AJOUTER dans guides-gerer.component.scss
+// (à la fin du fichier)
+// ============================================================
+
+// ---- Radio booléen dans le formulaire de création/gestion ----
+.param-bool-radio-wrap {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+// Les classes .bool-radio-btn, .bool-radio-dot, .bool-radio-dot__inner
+// sont déjà définies dans production-guides.component.scss (héritage du host parent).
+// Si guides-gerer.component.scss est chargé sans le parent,
+// dupliquer les règles ci-dessous :
+
+.bool-radio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1.5px solid #d1d5db;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b7280;
+  background: transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+
+  &:hover {
+    border-color: #86efac;
+    color: #166534;
+    background: #f0fdf4;
+  }
+
+  &--oui {
+    border-color: #16a34a !important;
+    color: #14532d !important;
+    background: #f0fdf4 !important;
+  }
+
+  &--non {
+    border-color: #dc2626 !important;
+    color: #7f1d1d !important;
+    background: #fef2f2 !important;
+  }
+}
+
+.bool-radio-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  &--oui {
+    border-color: #16a34a !important;
+    background: #16a34a !important;
+  }
+
+  &--non {
+    border-color: #dc2626 !important;
+    background: #dc2626 !important;
+  }
+
+  &__inner {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: white;
+    display: block;
+  }
+}
+
 @media (max-width: 760px) {
   .form-grid,
   .parameter-row__grid {
@@ -819,4 +1077,54 @@
       min-width: 0;
     }
   }
+  // ---- Boutons radio booléens ----
+.bool-radio-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  height: 100%;
+}
+
+.bool-radio-btn {
+  flex: 1;
+  padding: 0.52rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid rgba(94, 114, 40, 0.3);
+  background: #fff;
+  color: #7a8a5c;
+  transition: all 0.18s;
+
+  &:hover {
+    border-color: #5e7228;
+    color: #5e7228;
+  }
+
+  &--active {
+    background: #5e7228;
+    border-color: #5e7228;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(94, 114, 40, 0.3);
+  }
+
+  &--no {
+    border-color: rgba(161, 42, 42, 0.25);
+    color: #9a5a5a;
+
+    &:hover {
+      border-color: #a12a2a;
+      color: #a12a2a;
+    }
+  }
+
+  &--active-no {
+    background: #a12a2a;
+    border-color: #a12a2a;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(161, 42, 42, 0.25);
+  }
+}  
+
 }

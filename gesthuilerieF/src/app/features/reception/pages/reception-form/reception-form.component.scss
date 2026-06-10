@@ -572,3 +572,85 @@
     grid-template-columns: 1fr;
   }
 }
+/* ── Bannière erreur date récolte hors campagne ── */
+.date-recolte-error-banner {
+  grid-column: span 3;
+  margin-top: -0.5rem;
+  margin-bottom: 0.4rem;
+  padding: 0.55rem 0.9rem;
+  background: #fff5f5;
+  border: 1.5px solid #f5c2bf;
+  border-left: 4px solid #d85a30;
+  border-radius: var(--radius-md);
+  color: #b73a34;
+  font-size: 0.84rem;
+  font-weight: 600;
+  animation: fadeInError 0.2s ease;
+}
+
+@keyframes fadeInError {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* ── Toast erreur date récolte hors campagne ── */
+.date-recolte-toast {
+  position: fixed;
+  top: 1.2rem;
+  right: 1.4rem;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-width: 320px;
+  max-width: 460px;
+  padding: 0.85rem 1rem 0.85rem 1rem;
+  background: #fff5f5;
+  border: 1.5px solid #f5c2bf;
+  border-left: 5px solid #d85a30;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 28px rgba(180, 40, 30, 0.18), 0 2px 8px rgba(0,0,0,0.08);
+  animation: toastSlideIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.date-recolte-toast__icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.date-recolte-toast__msg {
+  flex: 1;
+  color: #b73a34;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.date-recolte-toast__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #c0564f;
+  font-size: 0.9rem;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

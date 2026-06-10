@@ -8,6 +8,7 @@ import { ExecutionProductionService } from '../../../production/services/executi
 import { ExecutionProduction } from '../../../production/models/production.models';
 import { FormsModule } from '@angular/forms';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-lot-traceability',
@@ -37,6 +38,7 @@ export class LotTraceabilityComponent implements OnInit {
     private lotManagementService: LotManagementService,
     private executionProductionService: ExecutionProductionService,
     private permissionService: PermissionService,
+    private toastService: ToastService,
   ) { }
 
   get isAdmin(): boolean {
@@ -55,6 +57,11 @@ export class LotTraceabilityComponent implements OnInit {
   applyFilters(): void {
     if (this.isAdmin) {
       this.reloadLots();
+    } else {
+      const filtered = this.filteredLots();
+      if (filtered.length === 0 && this.lotSearch.trim()) {
+        this.toastService.warning(`Aucun lot trouvé pour cette recherche "${this.lotSearch}".`);
+      }
     }
   }
 

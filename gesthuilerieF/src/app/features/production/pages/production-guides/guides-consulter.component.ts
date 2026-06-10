@@ -5,6 +5,7 @@ import { NbButtonModule, NbCardModule, NbIconModule } from '@nebular/theme';
 import { GuideProduction } from '../../models/production.models';
 import { GuideProductionService } from '../../services/guide-production.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-guides-consulter',
@@ -20,11 +21,13 @@ export class GuidesConsulterComponent implements OnInit {
   guideSearchValue = '';
   selectedHuilerieNom = '';
   selectedGuideId: number | null = null;
+  private filterFeedbackPending = false;
 
   constructor(
     @Inject(forwardRef(() => GuideProductionService))
     private guideProductionService: GuideProductionService,
     private permissionService: PermissionService,
+    private toastService: ToastService,
   ) { }
 
   get isAdmin(): boolean {
@@ -52,17 +55,49 @@ export class GuidesConsulterComponent implements OnInit {
   }
 
   applyFilters(): void {
+    this.filterFeedbackPending = true;
+
     if (this.isAdmin) {
       this.reloadGuides();
       return;
     }
 
     this.filterGuides();
+    this.consumeFilterFeedback();
+  }
+
+  private consumeFilterFeedback(): void {
+    if (!this.filterFeedbackPending) {
+      return;
+    }
+    this.filterFeedbackPending = false;
+
+    if (this.filteredGuides.length > 0) {
+      return;
+    }
+
+    const huilerieValue = String(this.selectedHuilerieNom ?? '').trim();
+    const search = this.guideSearchValue.trim();
+
+    if (this.isAdmin && huilerieValue && this.guides.length === 0) {
+      this.toastService.warning(`Aucun guide trouve pour l'huilerie « ${huilerieValue} ».`);
+      return;
+    }
+
+    if (search) {
+      this.toastService.warning(`Aucun guide ne correspond a « ${search} ».`);
+      return;
+    }
+
+    if (huilerieValue) {
+      this.toastService.warning(`Aucun guide trouve pour l'huilerie « ${huilerieValue} ».`);
+    }
   }
 
   resetFilters(): void {
     this.selectedHuilerieNom = '';
     this.guideSearchValue = '';
+    this.filterFeedbackPending = false;
 
     if (this.isAdmin) {
       this.reloadGuides();
@@ -99,6 +134,8 @@ export class GuidesConsulterComponent implements OnInit {
       if (this.guideSearchValue.trim()) {
         this.filterGuides();
       }
+
+      this.consumeFilterFeedback();
 
       if (selectGuideId) {
         const createdGuide = this.guides.find((guide) => guide.idGuideProduction === selectGuideId);

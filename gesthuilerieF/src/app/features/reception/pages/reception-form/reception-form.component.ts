@@ -83,7 +83,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         private campagneService: CampagneService,
     ) {
         this.form = this.formBuilder.group({
-            datePesee: [this.getLocalDateTimeValue(), [Validators.required]],
+            // datePesee initialisé à null — l'utilisateur doit saisir lui-même
+            datePesee: [null as string | null, [Validators.required]],
             poidsBrut: [null, [Validators.required, Validators.min(1)]],
             poidsTare: [0, [Validators.required, Validators.min(0)]],
             poidsNet: [{ value: 0, disabled: true }, [Validators.required]],
@@ -97,7 +98,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             region: [''],
             methodeRecolte: [''],
             typeSol: [''],
-            tempsDepuisRecolteHeures: [0, [Validators.min(0)]],
+            // Calculé automatiquement — désactivé pour la saisie
+            tempsDepuisRecolteHeures: [{ value: 0, disabled: true }],
             humiditePourcent: [0, [Validators.min(0), Validators.max(100)]],
             aciditeOlivesPourcent: [0, [Validators.min(0), Validators.max(100)]],
             tauxFeuillesPourcent: [0, [Validators.min(0), Validators.max(100)]],
@@ -109,12 +111,29 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             fournisseurCIN: ['', [Validators.required]],
         });
 
+        // Calcul poidsNet + calcul automatique tempsDepuisRecolteHeures
         this.form.valueChanges.subscribe(values => {
+            // Poids net
             const net = this.lotManagementService.calculatePoidsNet(
                 Number(values.poidsBrut ?? 0),
                 Number(values.poidsTare ?? 0),
             );
             this.form.get('poidsNet')?.setValue(net, { emitEvent: false });
+
+            // Temps depuis récolte = (datePesee - dateRecolte) * 24
+            const datePeseeVal = values.datePesee ? new Date(values.datePesee) : null;
+            const dateRecolteVal = values.dateRecolte ? new Date(values.dateRecolte) : null;
+            if (
+                datePeseeVal && dateRecolteVal &&
+                !isNaN(datePeseeVal.getTime()) && !isNaN(dateRecolteVal.getTime())
+            ) {
+                const diffHeures = Math.max(0, Math.round(
+                    (datePeseeVal.getTime() - dateRecolteVal.getTime()) / 3_600_000
+                ));
+                this.form.get('tempsDepuisRecolteHeures')?.setValue(diffHeures, { emitEvent: false });
+            } else {
+                this.form.get('tempsDepuisRecolteHeures')?.setValue(0, { emitEvent: false });
+            }
         });
 
         this.form.get('lotMode')?.valueChanges.subscribe(mode => {
@@ -132,6 +151,11 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         // Chargement dynamique des campagnes selon la huilerie sélectionnée
         this.form.get('huilerieId')?.valueChanges.subscribe(huilerieId => {
             this.loadCampagnesForHuilerie(Number(huilerieId));
+        });
+
+        // Revalider dateRecolte quand la campagne change
+        this.form.get('campagneId')?.valueChanges.subscribe(() => {
+            this.form.get('dateRecolte')?.updateValueAndValidity({ emitEvent: false });
         });
 
         // Initialiser la liste au démarrage
@@ -156,7 +180,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         if (!existingLotId) {
             return null;
         }
-
         return this.lots.find((lot) => Number(lot.idLot) === existingLotId) ?? null;
     }
 
@@ -169,7 +192,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         const huilerieNom = this.getHuilerieNomById(huilerieId);
         this.campagneService.getAll(undefined, huilerieNom).subscribe(campagnes => {
             this.campagnes = campagnes;
-            // Si la campagne sélectionnée n'est plus valide, on la réinitialise
             const currentCampagne = this.form.get('campagneId')?.value;
             const campagneRefs = this.campagnes.map(c => c.reference);
             if (preferredCampagneReference && campagneRefs.includes(preferredCampagneReference)) {
@@ -177,6 +199,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             } else if (!currentCampagne || !campagneRefs.includes(currentCampagne)) {
                 this.form.patchValue({ campagneId: this.campagnes[0]?.reference ?? null });
             }
+            // Revalider dateRecolte avec la nouvelle campagne chargée
+            this.form.get('dateRecolte')?.updateValueAndValidity({ emitEvent: false });
         });
     }
 
@@ -195,14 +219,23 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         if (!control || !control.errors || !(control.dirty || control.touched)) {
             return null;
         }
-
         if (control.errors['range']) {
             const rule = this.receptionIntervalRules.find((item) => item.controlName === controlName);
             if (rule) {
                 return `${rule.label} doit être comprise entre ${rule.min} et ${rule.max}${rule.unit}`.trim();
             }
         }
+        return null;
+    }
 
+    getDateRecolteError(): string | null {
+        const control = this.form.get('dateRecolte');
+        if (!control || !control.errors || !(control.dirty || control.touched)) {
+            return null;
+        }
+        if (control.errors['dateRecolteHorsCampagne']) {
+            return control.errors['dateRecolteHorsCampagne'].message as string;
+        }
         return null;
     }
 
@@ -212,10 +245,50 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             if (rawValue === null || rawValue === undefined || rawValue === '') {
                 return null;
             }
-
             const value = Number(rawValue);
             if (Number.isNaN(value) || value < min || value > max) {
                 return { range: { min, max, actual: rawValue } };
+            }
+            return null;
+        };
+    }
+
+    /**
+     * Validateur : dateRecolte doit être comprise entre dateDebut et dateFin
+     * de la campagne sélectionnée.
+     */
+    private createDateRecolteValidator(): ValidatorFn {
+        return (control: AbstractControl): ValidationErrors | null => {
+            const dateRecolteStr = control.value as string | null;
+            if (!dateRecolteStr) return null;
+
+            const campagneRef = this.form?.get('campagneId')?.value as string | null;
+            const campagne = this.campagnes.find(c => c.reference === campagneRef);
+            if (!campagne) return null;
+
+            const dateRecolte = new Date(dateRecolteStr);
+
+            // Adapter les noms de propriétés selon votre modèle CampagneOlives
+            const dateDebut = (campagne as any).dateDebut
+                ? new Date((campagne as any).dateDebut)
+                : null;
+            const dateFin = (campagne as any).dateFin
+                ? new Date((campagne as any).dateFin)
+                : null;
+
+            if (dateDebut && !isNaN(dateDebut.getTime()) && dateRecolte < dateDebut) {
+                return {
+                    dateRecolteHorsCampagne: {
+                        message: `La date de récolte doit être après le ${dateDebut.toLocaleDateString('fr-FR')} (début de campagne).`
+                    }
+                };
+            }
+            if (dateFin && !isNaN(dateFin.getTime()) && dateRecolte > dateFin) {
+                return {
+                    dateRecolteHorsCampagne: {
+                        message: `La date de récolte doit être avant le ${dateFin.toLocaleDateString('fr-FR')} (fin de campagne).`
+                    }
+                };
             }
 
             return null;
@@ -235,7 +308,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                 this.form.patchValue({ huilerieId: this.huileries[0].idHuilerie });
             }
 
-            // Set default matière première
             if (this.matieresPremieres.length > 0) {
                 const currentMatiereId = this.form.get('matierePremiereId')?.value;
                 if (!currentMatiereId || !this.matieresPremieres.some((m) => m.idMatierePremiere === currentMatiereId)) {
@@ -276,7 +348,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             const invalidFields = Object.keys(this.form.controls)
                 .filter((key) => this.form.get(key)?.invalid);
             console.warn('[reception-form] invalid fields on submit:', invalidFields);
-
             this.form.markAllAsTouched();
             this.toastService.error('Veuillez corriger les champs invalides avant de continuer.');
             return;
@@ -289,14 +360,13 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
         const payload: CreatePeseeInput = {
             lotId: raw.lotMode === 'new' ? undefined : Number(raw.existingLotId ?? 0) || undefined,
-            datePesee: raw.datePesee ?? this.getLocalDateTimeValue(),
+            datePesee: raw.datePesee ?? '',
             pesee: Number(raw.poidsBrut),
             poidsBrut: Number(raw.poidsBrut),
             poidsTare: Number(raw.poidsTare),
             huilerieId: Number(raw.huilerieId),
             origine: String(raw.origine ?? ''),
             varieteOlive: String(raw.varieteOlive ?? ''),
-            // Prefer sending fournisseur name + CIN. no fournisseurId sent from UI.
             fournisseurId: undefined,
             fournisseurNom: String(raw.fournisseurNom ?? ''),
             fournisseurCIN: String(raw.fournisseurCIN ?? ''),
@@ -306,6 +376,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             region: String(raw.region ?? ''),
             methodeRecolte: String(raw.methodeRecolte ?? ''),
             typeSol: String(raw.typeSol ?? ''),
+            // On envoie la valeur calculée (getRawValue() retourne aussi les champs disabled)
             tempsDepuisRecolteHeures: Number(raw.tempsDepuisRecolteHeures ?? 0),
             humiditePourcent: Number(raw.humiditePourcent ?? 0),
             aciditeOlivesPourcent: Number(raw.aciditeOlivesPourcent ?? 0),
@@ -326,11 +397,9 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                     this.clearEditState();
                     return;
                 }
-
                 this.savedReception = result;
                 this.showSaveSuccessPopup = true;
                 this.toastService.success('Réception enregistrée avec succès.');
-                // Ne pas rediriger, afficher le popup pour téléchargement PDF
             },
             error: errorResponse => {
                 this.errorMessage =
@@ -358,9 +427,39 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
     private closePopupAndGoToList(): void {
         this.showSaveSuccessPopup = false;
-        this.router.navigateByUrl('/pages/reception');
+        this.resetForm();
     }
-
+    resetForm(): void {
+        const defaultHuilerieId = this.huileries[0]?.idHuilerie ?? 1;
+        this.form.reset({
+            datePesee: null,
+            poidsBrut: null,
+            poidsTare: 0,
+            poidsNet: 0,
+            lotMode: 'existing',
+            existingLotId: null,
+            origine: '',
+            varieteOlive: '',
+            maturite: '',
+            dateRecolte: new Date().toISOString().slice(0, 10),
+            dateReception: new Date().toISOString().slice(0, 10),
+            region: '',
+            methodeRecolte: '',
+            typeSol: '',
+            tempsDepuisRecolteHeures: 0,
+            humiditePourcent: 0,
+            aciditeOlivesPourcent: 0,
+            tauxFeuillesPourcent: 0,
+            lavageEffectue: '',
+            matierePremiereId: this.matieresPremieres[0]?.idMatierePremiere ?? null,
+            campagneId: null,
+            huilerieId: defaultHuilerieId,
+            fournisseurNom: '',
+            fournisseurCIN: '',
+        });
+        this.savedReception = null;
+        this.errorMessage = '';
+    }
     private clearEditState(): void {
         this.editingId = null;
         this.errorMessage = '';
@@ -368,7 +467,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
         const defaultHuilerieId = this.huileries[0]?.idHuilerie ?? 1;
         this.form.reset({
-            datePesee: this.getLocalDateTimeValue(),
+            // Vide — l'utilisateur doit saisir la date
+            datePesee: null,
             poidsBrut: null,
             poidsTare: 0,
             poidsNet: 0,
@@ -395,18 +495,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         });
     }
 
-    private getLocalDateTimeValue(): string {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    }
-
-
-
     private generateReceptionPdf(): void {
         const lotId = this.savedReception?.lotId || this.savedReception?.idLotArrivage;
         if (!lotId) {
@@ -417,12 +505,10 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             next: blob => {
                 const pdfUrl = window.URL.createObjectURL(blob);
                 const popup = window.open(pdfUrl, '_blank');
-
                 if (!popup) {
                     window.URL.revokeObjectURL(pdfUrl);
                     return;
                 }
-
                 popup.addEventListener('load', () => {
                     popup.focus();
                     popup.print();
@@ -453,10 +539,16 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                 control?.clearValidators();
                 control?.updateValueAndValidity({ emitEvent: false });
             });
+            // Appliquer quand même le validator de date même en mode existing (optionnel)
+            this.form.get('dateRecolte')?.setValidators([this.createDateRecolteValidator()]);
+            this.form.get('dateRecolte')?.updateValueAndValidity({ emitEvent: false });
         } else {
             existingLotControl?.clearValidators();
             this.form.get('maturite')?.setValidators([Validators.required]);
-            this.form.get('dateRecolte')?.setValidators([Validators.required]);
+            this.form.get('dateRecolte')?.setValidators([
+                Validators.required,
+                this.createDateRecolteValidator(),
+            ]);
             this.form.get('dateReception')?.setValidators([Validators.required]);
             const matiereControl = this.form.get('matierePremiereId');
             const campagneControl = this.form.get('campagneId');
@@ -483,23 +575,16 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
         Object.entries(validatorsByControl).forEach(([controlName, validators]) => {
             const control = this.form.get(controlName);
-            if (!control) {
-                return;
-            }
-
+            if (!control) return;
             control.setValidators(validators);
             control.updateValueAndValidity({ emitEvent: false });
         });
     }
 
     private patchLotIdentityFromSelection(lotId: number): void {
-        if (this.isNewLotMode()) {
-            return;
-        }
+        if (this.isNewLotMode()) return;
         const lot = this.lots.find(item => item.idLot === lotId);
-        if (!lot) {
-            return;
-        }
+        if (!lot) return;
         this.form.patchValue(
             {
                 origine: lot.origine,
@@ -507,7 +592,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                 region: lot.region,
                 methodeRecolte: lot.methodeRecolte,
                 typeSol: lot.typeSol,
-                tempsDepuisRecolteHeures: lot.tempsDepuisRecolteHeures,
                 humiditePourcent: lot.humiditePourcent ?? 0,
                 aciditeOlivesPourcent: lot.aciditeOlivesPourcent ?? 0,
                 tauxFeuillesPourcent: lot.tauxFeuillesPourcent ?? 0,
@@ -517,22 +601,18 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             },
             { emitEvent: false },
         );
+        // Recalculer le temps après patch (datePesee peut déjà être saisie)
+        this.recalculerTempsDepuisRecolte();
     }
 
     private syncHuilerieAndCampagneFromMatiere(matiereId: number): void {
-        if (!Number.isFinite(matiereId) || matiereId <= 0) {
-            return;
-        }
+        if (!Number.isFinite(matiereId) || matiereId <= 0) return;
 
         const matiere = this.matieresPremieres.find((item) => Number(item.idMatierePremiere) === matiereId);
-        if (!matiere) {
-            return;
-        }
+        if (!matiere) return;
 
         const resolvedHuilerieId = this.resolveHuilerieIdFromMatiere(matiere);
-        if (!resolvedHuilerieId) {
-            return;
-        }
+        if (!resolvedHuilerieId) return;
 
         const currentHuilerieId = Number(this.form.get('huilerieId')?.value ?? 0);
         if (currentHuilerieId === resolvedHuilerieId) {
@@ -540,22 +620,16 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             return;
         }
 
-        // Disable event emission to prevent race condition with huilerieId value change listener
         this.form.patchValue({ huilerieId: resolvedHuilerieId }, { emitEvent: false });
-        // Explicitly load campaigns for the new huilerie
         this.loadCampagnesForHuilerie(resolvedHuilerieId);
     }
 
     private resolveHuilerieIdFromMatiere(matiere: MatierePremiere): number | null {
         const directHuilerieId = Number(matiere.huilerieId ?? 0);
-        if (directHuilerieId > 0) {
-            return directHuilerieId;
-        }
+        if (directHuilerieId > 0) return directHuilerieId;
 
         const huilerieNom = String(matiere.huilerieNom ?? '').trim().toLowerCase();
-        if (!huilerieNom) {
-            return null;
-        }
+        if (!huilerieNom) return null;
 
         const match = this.huileries.find((h) => String(h.nom ?? '').trim().toLowerCase() === huilerieNom);
         return match?.idHuilerie ?? null;
@@ -563,9 +637,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
     private applyEditPesee(pesee: Pesee): void {
         const idLot = Number(pesee?.lotId ?? 0);
-        if (!idLot) {
-            return;
-        }
+        if (!idLot) return;
 
         this.editingId = idLot;
 
@@ -586,7 +658,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             region: String(lot?.region ?? this.form.get('region')?.value ?? ''),
             methodeRecolte: String(lot?.methodeRecolte ?? this.form.get('methodeRecolte')?.value ?? ''),
             typeSol: String(lot?.typeSol ?? this.form.get('typeSol')?.value ?? ''),
-            tempsDepuisRecolteHeures: Number(lot?.tempsDepuisRecolteHeures ?? this.form.get('tempsDepuisRecolteHeures')?.value ?? 0),
             humiditePourcent: Number(lot?.humiditePourcent ?? this.form.get('humiditePourcent')?.value ?? 0),
             aciditeOlivesPourcent: Number(lot?.aciditeOlivesPourcent ?? this.form.get('aciditeOlivesPourcent')?.value ?? 0),
             tauxFeuillesPourcent: Number(lot?.tauxFeuillesPourcent ?? this.form.get('tauxFeuillesPourcent')?.value ?? 0),
@@ -598,8 +669,29 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             huilerieId,
         } as any);
 
+        // Recalculer le temps après avoir patchné toutes les dates
+        this.recalculerTempsDepuisRecolte();
         this.loadCampagnesForHuilerie(huilerieId, campagneReference);
         this.focusFirstEditableField();
+    }
+
+    /**
+     * Recalcule tempsDepuisRecolteHeures manuellement (hors valueChanges).
+     * Utile après un patchValue avec emitEvent: false.
+     */
+    private recalculerTempsDepuisRecolte(): void {
+        const datePeseeStr = this.form.get('datePesee')?.value as string | null;
+        const dateRecolteStr = this.form.get('dateRecolte')?.value as string | null;
+        if (datePeseeStr && dateRecolteStr) {
+            const dp = new Date(datePeseeStr);
+            const dr = new Date(dateRecolteStr);
+            if (!isNaN(dp.getTime()) && !isNaN(dr.getTime())) {
+                const diffH = Math.max(0, Math.round((dp.getTime() - dr.getTime()) / 3_600_000));
+                this.form.get('tempsDepuisRecolteHeures')?.setValue(diffH, { emitEvent: false });
+                return;
+            }
+        }
+        this.form.get('tempsDepuisRecolteHeures')?.setValue(0, { emitEvent: false });
     }
 
     private focusFirstEditableField(): void {
@@ -610,21 +702,16 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
     private resolveMatiereIdFromReference(reference: string | null | undefined): number | null {
         const normalizedReference = String(reference ?? '').trim().toLowerCase();
-        if (!normalizedReference) {
-            return null;
-        }
+        if (!normalizedReference) return null;
 
         const match = this.matieresPremieres.find((item) =>
             String(item.reference ?? '').trim().toLowerCase() === normalizedReference,
         );
-
         return match?.idMatierePremiere ?? null;
     }
 
     private selectDefaultLot(): void {
-        if (this.isNewLotMode()) {
-            return;
-        }
+        if (this.isNewLotMode()) return;
 
         if (this.availableLotsForReception.length === 0) {
             this.form.patchValue({ lotMode: 'new', existingLotId: null }, { emitEvent: false });
@@ -641,7 +728,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                     region: availableLot.region,
                     methodeRecolte: availableLot.methodeRecolte,
                     typeSol: availableLot.typeSol,
-                    tempsDepuisRecolteHeures: availableLot.tempsDepuisRecolteHeures,
                     humiditePourcent: availableLot.humiditePourcent ?? 0,
                     aciditeOlivesPourcent: availableLot.aciditeOlivesPourcent ?? 0,
                     tauxFeuillesPourcent: availableLot.tauxFeuillesPourcent ?? 0,
@@ -689,4 +775,3 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         return Number.isFinite(month) && month >= 9 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
     }
 }
-

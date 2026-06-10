@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { StockMovement } from '../../models/stock.models';
 import { StockManagementService } from '../../services/stock-management.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-stock-list',
@@ -26,11 +27,12 @@ export class StockListComponent implements OnInit {
   movements: StockMovement[] = [];
   selectedHuilerieNom = '';
   lotIdFilter = '';
-  filterMessage = '';
+  private filterFeedbackPending = false;
 
   constructor(
     private stockManagementService: StockManagementService,
     private permissionService: PermissionService,
+    private toastService: ToastService,
   ) { }
 
   get isAdmin(): boolean {
@@ -46,6 +48,8 @@ export class StockListComponent implements OnInit {
   }
 
   applyFilters(): void {
+    this.filterFeedbackPending = true;
+
     if (this.isAdmin) {
       this.reloadMovements();
       return;
@@ -57,7 +61,7 @@ export class StockListComponent implements OnInit {
   resetFilters(): void {
     this.selectedHuilerieNom = '';
     this.lotIdFilter = '';
-    this.filterMessage = '';
+    this.filterFeedbackPending = false;
 
     if (this.isAdmin) {
       this.reloadMovements();
@@ -102,22 +106,43 @@ export class StockListComponent implements OnInit {
 
   private applyLotFilter(): void {
     const search = String(this.lotIdFilter ?? '').trim();
-    this.filterMessage = '';
+    const huilerieValue = String(this.selectedHuilerieNom ?? '').trim();
 
+    let filtered: StockMovement[];
     if (!search) {
-      this.movements = this.allMovements;
+      filtered = this.allMovements;
+    } else {
+      const searchLower = search.toLowerCase();
+      filtered = this.allMovements.filter((movement) => {
+        const lotRef = this.lotReference(movement).toLowerCase();
+        return lotRef.includes(searchLower) || String(movement.lotId).includes(searchLower);
+      });
+    }
+    this.movements = filtered;
+
+    if (this.filterFeedbackPending) {
+      this.filterFeedbackPending = false;
+      this.notifyFilterResult(huilerieValue, search, filtered.length);
+    }
+  }
+
+  private notifyFilterResult(huilerieValue: string, search: string, resultCount: number): void {
+    if (resultCount > 0) {
       return;
     }
 
-    const searchLower = search.toLowerCase();
-    const filtered = this.allMovements.filter((movement) => {
-      const lotRef = this.lotReference(movement).toLowerCase();
-      return lotRef.includes(searchLower) || String(movement.lotId).includes(searchLower);
-    });
-    this.movements = filtered;
+    if (this.isAdmin && huilerieValue && this.allMovements.length === 0) {
+      this.toastService.warning(`Aucun mouvement trouve pour l'huilerie « ${huilerieValue} ».`);
+      return;
+    }
 
-    if (filtered.length === 0) {
-      this.filterMessage = 'Aucun mouvement trouve pour cette reference de lot.';
+    if (search) {
+      this.toastService.warning(`Aucun mouvement trouve pour la reference de lot « ${search} ».`);
+      return;
+    }
+
+    if (huilerieValue) {
+      this.toastService.warning(`Aucun mouvement trouve pour l'huilerie « ${huilerieValue} ».`);
     }
   }
 

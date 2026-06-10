@@ -36,7 +36,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngIf="filteredLots().length === 0">
+            <tr *ngIf="filteredLots().length === 0 && !lotSearch && !selectedHuilerieNom">
               <td colspan="7" class="empty-state">Aucun lot trouve pour cette recherche.</td>
             </tr>
             <tr *ngFor="let lot of filteredLots()" class="row-hover">

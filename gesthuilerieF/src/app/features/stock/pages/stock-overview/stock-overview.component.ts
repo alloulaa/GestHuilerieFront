@@ -6,6 +6,7 @@ import { StockService } from '../../services/stock.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
     selector: 'app-stock-overview',
@@ -21,6 +22,7 @@ export class StockOverviewComponent implements OnInit {
     constructor(
         private stockService: StockService,
         private permissionService: PermissionService,
+        private toastService: ToastService,
     ) { }
 
     get isAdmin(): boolean {
@@ -32,7 +34,22 @@ export class StockOverviewComponent implements OnInit {
     }
 
     applyAdminHuilerieFilter(): void {
-        this.reloadStocks();
+        const huilerieNom = this.isAdmin ? this.selectedHuilerieNom : undefined;
+        if (huilerieNom) {
+            this.stockService.getAll(huilerieNom).subscribe({
+                next: data => {
+                    this.stocks = data;
+                    if (data.length === 0) {
+                        this.toastService.warning(`Aucune donnée de stock trouvée pour l'huilerie "${huilerieNom}".`);
+                    }
+                },
+                error: () => {
+                    this.stocks = [];
+                },
+            });
+        } else {
+            this.reloadStocks();
+        }
     }
 
     resetAdminHuilerieFilter(): void {

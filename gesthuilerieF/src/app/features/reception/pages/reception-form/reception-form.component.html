@@ -6,6 +6,18 @@
   </mat-card-header>
 
   <mat-card-content>
+    <!-- ── Toast erreur date récolte hors campagne ── -->
+    <div class="date-recolte-toast"
+      *ngIf="form.get('dateRecolte')?.hasError('dateRecolteHorsCampagne') && form.get('dateRecolte')?.dirty && form.get('dateRecolte')?.value"
+      role="alert">
+      <span class="date-recolte-toast__icon">⚠️</span>
+      <span class="date-recolte-toast__msg">
+        {{ form.get('dateRecolte')?.getError('dateRecolteHorsCampagne')?.message }}
+      </span>
+      <button class="date-recolte-toast__close" type="button"
+        (click)="form.get('dateRecolte')?.setValue(null)">✕</button>
+    </div>
+
     <!-- Stats strip -->
     <div class="stats-strip">
       <article class="stat-pill">
@@ -51,9 +63,13 @@
           </div>
         </div>
         <div class="section-body">
+
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Date pesée</mat-label>
             <input #datePeseeInput matInput type="datetime-local" formControlName="datePesee" />
+            <mat-error *ngIf="form.get('datePesee')?.hasError('required')">
+              La date de pesée est obligatoire.
+            </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="form-field">
@@ -122,9 +138,14 @@
           </div>
         </div>
         <div class="section-body">
+
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Date récolte</mat-label>
-            <input matInput type="date" formControlName="dateRecolte" />
+            <input matInput type="datetime-local" formControlName="dateRecolte"
+              (change)="form.get('dateRecolte')?.markAsTouched()" />
+            <mat-error *ngIf="form.get('dateRecolte')?.hasError('required')">
+              La date de récolte est obligatoire.
+            </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="form-field">
@@ -150,7 +171,7 @@
 
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Temps depuis récolte (h)</mat-label>
-            <input matInput type="number" min="0" formControlName="tempsDepuisRecolteHeures" />
+            <input matInput type="number" formControlName="tempsDepuisRecolteHeures" readonly />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="form-field">

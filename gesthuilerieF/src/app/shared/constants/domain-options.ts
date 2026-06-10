@@ -349,13 +349,6 @@ export const buildGuideStepTemplates = (typeMachine: string): GuideStepTemplate[
                         description: 'Pression du pressage hydraulique',
                         valeur: '2.5',
                     },
-                    {
-                        codeParametre: 'presence_presse',
-                        nom: 'Presence presse',
-                        uniteMesure: '',
-                        description: '1 = pressage actif',
-                        valeur: '1',
-                    },
                 ],
             },
             {

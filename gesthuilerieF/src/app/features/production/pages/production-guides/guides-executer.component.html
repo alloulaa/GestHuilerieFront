@@ -34,8 +34,6 @@
           <input nbInput fullWidth type="date" formControlName="dateFinPrevue" />
         </label>
 
-       
-
         <label class="field" [class.field-invalid]="isExecutionFieldInvalid('statut')">
           <span>Statut *</span>
           <nb-select fullWidth formControlName="statut">
@@ -48,12 +46,26 @@
 
         <label class="field" [class.field-invalid]="isExecutionFieldInvalid('controleTemperature')">
           <span>Contrôle température *</span>
-          <div class="radio-group">
-            <label class="radio-label">
-              <input type="radio" [value]="true" formControlName="controleTemperature" /> Oui
+          <div class="bool-radio-group">
+            <label class="bool-radio-btn"
+              [class.bool-radio-btn--oui]="executionForm.get('controleTemperature')?.value === true"
+              (click)="executionForm.get('controleTemperature')?.setValue(true)">
+              <span class="bool-radio-dot"
+                [class.bool-radio-dot--oui]="executionForm.get('controleTemperature')?.value === true">
+                <span class="bool-radio-dot__inner"
+                  *ngIf="executionForm.get('controleTemperature')?.value === true"></span>
+              </span>
+              Oui
             </label>
-            <label class="radio-label">
-              <input type="radio" [value]="false" formControlName="controleTemperature" /> Non
+            <label class="bool-radio-btn"
+              [class.bool-radio-btn--non]="executionForm.get('controleTemperature')?.value === false"
+              (click)="executionForm.get('controleTemperature')?.setValue(false)">
+              <span class="bool-radio-dot"
+                [class.bool-radio-dot--non]="executionForm.get('controleTemperature')?.value === false">
+                <span class="bool-radio-dot__inner"
+                  *ngIf="executionForm.get('controleTemperature')?.value === false"></span>
+              </span>
+              Non
             </label>
           </div>
         </label>
@@ -94,11 +106,42 @@
             <strong>{{ row.stepName }}</strong>
             <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
           </div>
-          <div class="value-item__input value-item__input--dual" [formGroupName]="valueIndex"
-            [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
-            <input nbInput fullWidth [value]="row.estimatedValue || '-'" readonly placeholder="Valeur estimée" />
-            <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
-          </div>
+
+          <ng-container *ngIf="isBooleanParam(row); else numericInputMain">
+            <div class="value-item__input" [formGroupName]="valueIndex"
+              [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
+              <div class="bool-radio-group">
+                <label class="bool-radio-btn"
+                  [class.bool-radio-btn--oui]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 1"
+                  (click)="valeursReelles.at(valueIndex).get('valeurReelle')?.setValue(1)">
+                  <span class="bool-radio-dot"
+                    [class.bool-radio-dot--oui]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 1">
+                    <span class="bool-radio-dot__inner"
+                      *ngIf="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 1"></span>
+                  </span>
+                  Oui
+                </label>
+                <label class="bool-radio-btn"
+                  [class.bool-radio-btn--non]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 0"
+                  (click)="valeursReelles.at(valueIndex).get('valeurReelle')?.setValue(0)">
+                  <span class="bool-radio-dot"
+                    [class.bool-radio-dot--non]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 0">
+                    <span class="bool-radio-dot__inner"
+                      *ngIf="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 0"></span>
+                  </span>
+                  Non
+                </label>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-template #numericInputMain>
+            <div class="value-item__input value-item__input--dual" [formGroupName]="valueIndex"
+              [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
+              <input nbInput fullWidth [value]="row.estimatedValue || '-'" readonly placeholder="Valeur estimée" />
+              <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
+            </div>
+          </ng-template>
         </div>
       </div>
 
@@ -142,8 +185,11 @@
               <h4>{{ execution.reference }}</h4>
               <p>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</p>
             </div>
-            <span class="execution-card__status">{{ getExecutionStatusLabel(execution) }}</span>
-          </header>
+<span class="execution-card__status"
+  [class.status--en-cours]="execution.statut?.toUpperCase() === 'EN_COURS'"
+  [class.status--terminee]="execution.statut?.toUpperCase() === 'TERMINEE'">
+  {{ getExecutionStatusLabel(execution) }}
+</span>         </header>
 
           <div class="execution-card__meta">
             <p><strong>Date fin prévue:</strong> {{ formatExecutionDate(execution.dateFinPrevue) }}</p>
@@ -159,10 +205,6 @@
                 <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" />
               </svg>
             </button>
-            <button type="button" class="btn-finish" (click)="finishExecution(execution)"
-              [disabled]="isExecutionTerminated(execution)">
-              Terminer
-            </button>
           </div>
         </article>
       </div>
@@ -171,7 +213,6 @@
         <p class="empty-state">Aucune exécution enregistrée.</p>
       </ng-template>
 
-      <!-- ↓ id ajouté pour le scroll automatique -->
       <article class="execution-detail-card" id="execution-detail-section" *ngIf="selectedExecution as execution">
         <div class="execution-detail-card__header">
           <div>
@@ -180,27 +221,50 @@
           </div>
           <span class="execution-card__status">{{ execution.statut }}</span>
         </div>
+
         <div class="execution-detail-grid">
-          <div class="execution-detail-item"><span>Guide</span><strong>{{ execution.guideProductionReference || ('#' +
-              execution.guideProductionId) }}</strong></div>
-          <div class="execution-detail-item"><span>Lot</span><strong>{{ execution.lotReference || '-' }}</strong></div>
-          <div class="execution-detail-item"><span>Date fin prévue</span><strong>{{
-              formatExecutionDate(execution.dateFinPrevue) }}</strong></div>
-          <div class="execution-detail-item"><span>Date fin réelle</span><strong>{{
-              formatExecutionDate(execution.dateFinReelle) || '-' }}</strong></div>
-          <div class="execution-detail-item"><span>Produit final</span><strong>{{ execution.produitFinalReference || '-'
-              }}</strong></div>
-          <div class="execution-detail-item"><span>Contrôle température</span><strong>{{ execution.controleTemperature ?
-              'Oui' : 'Non' }}</strong></div>
-          <div class="execution-detail-item"><span>Date début</span><strong>{{ execution.dateDebut || '-' }}</strong>
+          <div class="execution-detail-item">
+            <span>Guide</span>
+            <strong>{{ execution.guideProductionReference || ('#' + execution.guideProductionId) }}</strong>
+          </div>
+          <div class="execution-detail-item">
+            <span>Lot</span>
+            <strong>{{ execution.lotReference || '-' }}</strong>
+          </div>
+          <div class="execution-detail-item">
+            <span>Date fin prévue</span>
+            <strong>{{ formatExecutionDate(execution.dateFinPrevue) }}</strong>
+          </div>
+          <div class="execution-detail-item">
+            <span>Date fin réelle</span>
+            <strong>{{ formatExecutionDate(execution.dateFinReelle) || '-' }}</strong>
+          </div>
+          <div class="execution-detail-item">
+            <span>Produit final</span>
+            <strong>{{ execution.produitFinalReference || '-' }}</strong>
+          </div>
+          <div class="execution-detail-item">
+            <span>Contrôle température</span>
+            <strong>
+              <span class="bool-badge"
+                [class.bool-badge--oui]="execution.controleTemperature"
+                [class.bool-badge--non]="!execution.controleTemperature">
+                {{ execution.controleTemperature ? 'Oui' : 'Non' }}
+              </span>
+            </strong>
+          </div>
+          <div class="execution-detail-item">
+            <span>Date début</span>
+            <strong>{{ execution.dateDebut || '-' }}</strong>
           </div>
           <div class="execution-detail-item">
             <span>Qualité produite</span>
             <div [formGroup]="executionForm">
               <input *ngIf="!isExecutionTerminated(execution)" nbInput fullWidth formControlName="produitFinalQualite"
                 placeholder="Ex: Extra Vierge, Vierge, Lampante" />
-              <strong *ngIf="isExecutionTerminated(execution)">{{ normalizeQualityLabel(execution.produitFinalQualite)
-                || '-' }}</strong>
+              <strong *ngIf="isExecutionTerminated(execution)">
+                {{ normalizeQualityLabel(execution.produitFinalQualite) || '-' }}
+              </strong>
             </div>
           </div>
           <div class="execution-detail-item">
@@ -208,8 +272,9 @@
             <div [formGroup]="executionForm">
               <input *ngIf="!isExecutionTerminated(execution)" nbInput fullWidth type="number" min="0" step="0.01"
                 formControlName="produitFinalQuantiteProduite" placeholder="0" />
-              <strong *ngIf="isExecutionTerminated(execution)">{{ execution.produitFinalQuantiteProduite ?? '-'
-                }}</strong>
+              <strong *ngIf="isExecutionTerminated(execution)">
+                {{ execution.produitFinalQuantiteProduite ?? '-' }}
+              </strong>
             </div>
           </div>
           <div class="execution-detail-item">
@@ -219,12 +284,12 @@
             </div>
           </div>
         </div>
+
         <div class="execution-detail-observations-card">
           <h4>Observations</h4>
           <p>{{ execution.observations || '-' }}</p>
         </div>
 
-        <!-- Bloc d'affichage des valeurs réelles enregistrées -->
         <div class="execution-detail-observations-card" *ngIf="hasRecordedRealValues(execution)">
           <h4>Valeurs réelles enregistrées</h4>
           <div class="real-values-list">
@@ -251,8 +316,7 @@
             </div>
             <div class="prediction-metric">
               <span>Quantité d'huile (L)</span>
-              <strong>{{ formatPredictionMetric(getLatestPrediction(execution)?.quantiteHuileRecalculeeLitres)
-                }}</strong>
+              <strong>{{ formatPredictionMetric(getLatestPrediction(execution)?.quantiteHuileRecalculeeLitres) }}</strong>
             </div>
           </div>
         </div>
@@ -266,25 +330,74 @@
                 <p>Complétez les valeurs réelles avant ou après la clôture de l'exécution.</p>
               </div>
             </div>
+
             <div class="value-item value-item--execution" formArrayName="valeursReelles"
               *ngFor="let row of executionValueRows; let valueIndex = index">
               <div class="value-item__meta">
                 <strong>{{ row.stepName }}</strong>
                 <span>{{ row.parameterName }} · {{ row.uniteMesure }}</span>
               </div>
-              <div class="value-item__input value-item__input--dual" [formGroupName]="valueIndex"
-                [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
-                <input nbInput fullWidth [value]="row.estimatedValue || '-'" readonly placeholder="Valeur estimée" />
-                <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" />
-              </div>
+
+              <ng-container *ngIf="isBooleanParam(row); else numericInputDetail">
+                <div class="value-item__input" [formGroupName]="valueIndex"
+                  [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
+                  <div class="bool-radio-group">
+                    <label class="bool-radio-btn"
+                      [class.bool-radio-btn--oui]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 1"
+                      (click)="valeursReelles.at(valueIndex).get('valeurReelle')?.setValue(1)">
+                      <span class="bool-radio-dot"
+                        [class.bool-radio-dot--oui]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 1">
+                        <span class="bool-radio-dot__inner"
+                          *ngIf="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 1"></span>
+                      </span>
+                      Oui
+                    </label>
+                    <label class="bool-radio-btn"
+                      [class.bool-radio-btn--non]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 0"
+                      (click)="valeursReelles.at(valueIndex).get('valeurReelle')?.setValue(0)">
+                      <span class="bool-radio-dot"
+                        [class.bool-radio-dot--non]="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 0">
+                        <span class="bool-radio-dot__inner"
+                          *ngIf="valeursReelles.at(valueIndex).get('valeurReelle')?.value == 0"></span>
+                      </span>
+                      Non
+                    </label>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-template #numericInputDetail>
+                <div class="value-item__input value-item__input--dual" [formGroupName]="valueIndex"
+  [class.field-invalid]="isValeurReelleInvalid(valueIndex)">
+  <input nbInput fullWidth [value]="row.estimatedValue || '-'" readonly placeholder="Valeur estimée" />
+
+  <!-- Champ booléen → radio Oui/Non -->
+  <ng-container *ngIf="isBooleanParam(row.parameterName); else numericInput">
+    <div class="radio-group radio-group--real-value">
+      <label class="radio-label">
+        <input type="radio" formControlName="valeurReelle" [value]="1" /> Oui
+      </label>
+      <label class="radio-label">
+        <input type="radio" formControlName="valeurReelle" [value]="0" /> Non
+      </label>
+    </div>
+  </ng-container>
+  <ng-template #numericInput>
+    <input nbInput fullWidth formControlName="valeurReelle" placeholder="Valeur réelle" type="number" />
+  </ng-template>
+</div>
+              </ng-template>
             </div>
           </div>
         </form>
 
-        <!-- ↓ Bouton Terminer en bas du panneau de détails -->
         <div class="detail-finish-row" *ngIf="!isExecutionTerminated(execution)">
           <button type="button" class="btn-finish-detail" (click)="finishExecution(execution)">
-            ✓ Terminer l'exécution
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Terminer l'exécution
           </button>
         </div>
 

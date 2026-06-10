@@ -35,7 +35,6 @@
                 <option *ngFor="let h of huileries" [value]="h.idHuilerie">{{ h.nom }}</option>
               </select>
             </div>
-
             <div class="form-group">
               <label>Type de machine *</label>
               <select class="form-select" formControlName="typeMachine"
@@ -114,7 +113,8 @@
                 </div>
 
                 <div *ngFor="let param of getParametres(i).controls; let j = index" class="param-item"
-                  [formGroupName]="j">
+                  [class.param-item--boolean]="isBooleanParam(i, j)" [formGroupName]="j">
+
                   <select class="form-select param-input" formControlName="codeParametre"
                     (change)="onParametreCodeChange(i, j)">
                     <option value="">-- Parametre --</option>
@@ -122,12 +122,36 @@
                     </option>
                     <option [value]="customParametreCode">Autre</option>
                   </select>
+
                   <input *ngIf="isCustomParamSelected(i, j)" class="form-input param-input" type="text"
                     formControlName="nomPersonnalise" placeholder="Nom personnalise" />
-                  <input class="form-input param-input" type="text" formControlName="uniteMesure" placeholder="Unité" />
-                  <input class="form-input param-input" type="text" formControlName="valeur" placeholder="Valeur" />
+
+                  <input *ngIf="!isBooleanParam(i, j)" class="form-input param-input" type="text"
+                    formControlName="uniteMesure" placeholder="Unité" />
+
+
+                  <ng-container *ngIf="isBooleanParam(i, j) && getParametres(i).at(j).get('codeParametre')?.value !== 'presence_presse'; else numericValeur">
+                    <div class="param-boolean-group">
+
+                      <button type="button" class="param-bool-btn"
+                        [class.param-bool-btn--yes]="getParametres(i).at(j).get('valeur')?.value === '1' || getParametres(i).at(j).get('valeur')?.value === 1"
+                        (click)="setBooleanParamValue(i, j, '1')">
+                        Oui
+                      </button>
+                      <button type="button" class="param-bool-btn"
+                        [class.param-bool-btn--no]="getParametres(i).at(j).get('valeur')?.value === '0' || getParametres(i).at(j).get('valeur')?.value === 0"
+                        (click)="setBooleanParamValue(i, j, '0')">
+                        Non
+                      </button>
+                    </div>
+                  </ng-container>
+                  <ng-template #numericValeur>
+                    <input class="form-input param-input" type="text" formControlName="valeur" placeholder="Valeur" />
+                  </ng-template>
+
                   <input class="form-input param-input" type="text" formControlName="description"
                     placeholder="Description" />
+
                   <button *ngIf="getParametres(i).length > 1" class="remove-param-btn" type="button"
                     (click)="removeParametre(i, j)">×</button>
                 </div>
@@ -147,9 +171,8 @@
                 <em>{{ rule.min }} à {{ rule.max }}{{ rule.unite ? ' ' + rule.unite : '' }}</em>
               </span>
             </div>
-            <!-- Debug: show counts -->
             <small class="interval-help-panel__description">
-              {{guideParameterHelp.length||0}} guide params
+              {{ guideParameterHelp.length || 0 }} guide params
             </small>
           </div>
 

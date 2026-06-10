@@ -1,6 +1,3 @@
-// ...existing code...
-
-// ...existing code...
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, forwardRef } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -56,7 +53,6 @@ export class GuidesExecuterComponent implements OnInit {
   guides: GuideProduction[] = [];
   machines: Machine[] = [];
   lots: LotOlives[] = [];
-  // Full list of lots returned by the API (not filtered by availability)
   allLots: LotOlives[] = [];
   filteredMachines: Machine[] = [];
   filteredLots: LotOlives[] = [];
@@ -71,6 +67,9 @@ export class GuidesExecuterComponent implements OnInit {
   selectedExecution: ExecutionProduction | null = null;
 
   readonly typeMachineOptions = TYPE_MACHINE_OPTIONS;
+
+  /** Codes de paramètres à valeur booléenne (0/1) */
+  readonly booleanParamCodes = new Set(['presence_eau', 'presence_separateur', 'presence_ajout_eau', 'presence_presse']);
 
   readonly executionForm;
 
@@ -137,6 +136,8 @@ export class GuidesExecuterComponent implements OnInit {
     this.loadExecutions();
   }
 
+  // ─── Getters ─────────────────────────────────────────────────────────────
+
   get valeursReelles(): FormArray {
     return this.executionForm.get('valeursReelles') as FormArray;
   }
@@ -147,34 +148,19 @@ export class GuidesExecuterComponent implements OnInit {
 
   get selectedGuideHuilerieLabel(): string {
     const guideId = Number(this.executionForm.get('guideProductionId')?.value ?? 0);
-    if (!guideId) {
-      return '-';
-    }
-
+    if (!guideId) return '-';
     const guide = this.guides.find((item) => item.idGuideProduction === guideId);
-    if (!guide) {
-      return '-';
-    }
-
+    if (!guide) return '-';
     const huilerieNom = String(guide.huilerieNom ?? '').trim();
-    if (huilerieNom) {
-      return huilerieNom;
-    }
-
+    if (huilerieNom) return huilerieNom;
     return guide.huilerieId ? `#${guide.huilerieId}` : '-';
   }
 
   get selectedLotMatierePremiereNom(): string {
     const lotId = Number(this.executionForm.get('lotId')?.value ?? 0);
-    if (!lotId) {
-      return '-';
-    }
-
+    if (!lotId) return '-';
     const lot = this.lots.find((item) => item.idLot === lotId);
-    if (!lot?.matierePremiereId) {
-      return '-';
-    }
-
+    if (!lot?.matierePremiereId) return '-';
     const matiere = this.matieresPremieres.find((item) => Number(item.idMatierePremiere ?? item.id ?? 0) === Number(lot.matierePremiereId));
     return String(matiere?.reference ?? '').trim() || String(matiere?.nom ?? '').trim() || `#${lot.matierePremiereId}`;
   }
@@ -182,6 +168,13 @@ export class GuidesExecuterComponent implements OnInit {
   get executionCount(): number {
     return this.executions.length;
   }
+
+  get selectedLotStorageDurationLabel(): string {
+    const duration = Number(this.executionForm.get('dureeStockageAvantBroyage')?.value ?? 0);
+    return Number.isFinite(duration) ? String(duration) : '-';
+  }
+
+  // ─── Méthodes publiques template ─────────────────────────────────────────
 
   executionDisplayLabel(execution: ExecutionProduction): string {
     const lot = this.lots.find((item) => item.idLot === execution.lotId);
@@ -194,10 +187,7 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   formatExecutionDate(dateValue: string | null | undefined): string {
-    if (!dateValue) {
-      return '-';
-    }
-
+    if (!dateValue) return '-';
     return String(dateValue).split('T')[0] || '-';
   }
 
@@ -206,7 +196,8 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   hasRecordedRealValues(execution: ExecutionProduction): boolean {
-    return (execution.valeursReelles ?? []).length > 0 && (execution.valeursReelles ?? []).some((v) => v?.valeurReelle != null);
+    return (execution.valeursReelles ?? []).length > 0
+      && (execution.valeursReelles ?? []).some((v) => v?.valeurReelle != null);
   }
 
   hasPrediction(execution: ExecutionProduction | null | undefined): boolean {
@@ -214,8 +205,7 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   getLatestPrediction(execution: ExecutionProduction | null | undefined): Prediction | null {
-    const prediction = execution?.predictions?.[0];
-    return prediction ?? null;
+    return execution?.predictions?.[0] ?? null;
   }
 
   formatPredictionProbability(value: number | null | undefined): string {
@@ -243,7 +233,6 @@ export class GuidesExecuterComponent implements OnInit {
       ?? valeur?.parametreId
       ?? 0,
     );
-
     const guide = this.guides.find((g) => Number(g?.idGuideProduction ?? 0) === Number(execution?.guideProductionId ?? 0));
     if (guide && paramId > 0) {
       for (const etape of (guide.etapes ?? [])) {
@@ -255,7 +244,6 @@ export class GuidesExecuterComponent implements OnInit {
         }
       }
     }
-
     return this.getParameterLabel(valeur?.parametreEtapeNom ?? valeur?.parametreNom ?? valeur?.parametre);
   }
 
@@ -264,14 +252,57 @@ export class GuidesExecuterComponent implements OnInit {
     return `${lotWithReference.reference ?? `LOT-${lot.idLot}`} - ${lot.varieteOlive}`;
   }
 
-  get selectedLotStorageDurationLabel(): string {
-    const duration = Number(this.executionForm.get('dureeStockageAvantBroyage')?.value ?? 0);
-    return Number.isFinite(duration) ? String(duration) : '-';
+  isExecutionFieldInvalid(controlName: string): boolean {
+    const control = this.executionForm.get(controlName);
+    return !!control && control.invalid && (control.touched || control.dirty);
   }
+
+  isValeurReelleInvalid(index: number): boolean {
+    const control = this.valeursReelles.at(index)?.get('valeurReelle');
+    return !!control && control.invalid && (control.touched || control.dirty);
+  }
+
+  isSelectedMachine(machineId: number): boolean {
+    return Number(this.executionForm.get('machineId')?.value ?? 0) === Number(machineId);
+  }
+
+  // ─── Méthodes booléennes (nouvelles) ─────────────────────────────────────
+
+  getBooleanValeurReelle(index: number): number {
+    return Number(this.valeursReelles.at(index)?.get('valeurReelle')?.value ?? 0);
+  }
+
+  setBooleanValeurReelle(index: number, value: number): void {
+    this.valeursReelles.at(index)?.get('valeurReelle')?.setValue(value);
+    this.valeursReelles.at(index)?.get('valeurReelle')?.markAsDirty();
+  }
+
+  getExecutionStatusClass(execution: ExecutionProduction): Record<string, boolean> {
+  const statut = String(execution.statut ?? '').trim().toUpperCase();
+  return {
+    'status--en-cours':  statut === 'EN_COURS',
+    'status--terminee':  statut === 'TERMINEE',
+    'status--annulee':   statut === 'ANNULEE',
+    'status--planifiee': statut === 'PLANIFIEE',
+  };
+}
+isBooleanParameter(parameterName: string): boolean {
+  const name = String(parameterName ?? '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return name.includes('presence') || name.includes('separateur') && name.includes('presence');
+}
+
+isBooleanParam(row: any): boolean {
+  const name = String(row?.parameterName ?? row?.nom ?? row ?? '').trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return name.includes('presence');
+}
+  // ─── Événements formulaire ────────────────────────────────────────────────
 
   onGuideSelectionChange(guideId: number | string | null): void {
     const numericGuideId = guideId === null ? null : Number(guideId);
-
     if (numericGuideId === null) {
       this.executionForm.patchValue({ guideProductionId: null });
       this.executionValueRows = [];
@@ -281,11 +312,7 @@ export class GuidesExecuterComponent implements OnInit {
       this.refreshFilteredDataForSelectedGuide();
       return;
     }
-
-    this.executionForm.patchValue({
-      guideProductionId: numericGuideId,
-      machineId: null,
-    });
+    this.executionForm.patchValue({ guideProductionId: numericGuideId, machineId: null });
     this.filteredMachines = [];
     this.refreshFilteredDataForSelectedGuide();
     this.updateComputedStorageDuration();
@@ -299,13 +326,12 @@ export class GuidesExecuterComponent implements OnInit {
       this.executionForm.patchValue({ machineId: null });
       return;
     }
-
     this.machineService.getAll(undefined, normalizedTypeMachine).subscribe({
       next: (items) => {
         const normalizedSelectedType = this.normalizeMachineType(normalizedTypeMachine);
-        this.machines = (items ?? []).filter((machine) => {
-          return this.normalizeMachineType(machine?.typeMachine) === normalizedSelectedType && this.isMachineActive(machine);
-        });
+        this.machines = (items ?? []).filter((machine) =>
+          this.normalizeMachineType(machine?.typeMachine) === normalizedSelectedType && this.isMachineActive(machine),
+        );
         this.refreshFilteredDataForSelectedGuide();
       },
       error: () => {
@@ -321,120 +347,21 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionForm.patchValue({ machineId: Number(machineId) });
   }
 
-  isSelectedMachine(machineId: number): boolean {
-    return Number(this.executionForm.get('machineId')?.value ?? 0) === Number(machineId);
-  }
+  // ─── Actions principales ──────────────────────────────────────────────────
 
-  private refreshFilteredDataForSelectedGuide(): void {
-    const guideId = Number(this.executionForm.get('guideProductionId')?.value ?? 0);
-    if (!guideId) {
-      this.filteredLots = [];
-      this.refreshFilteredMachines();
-      return;
-    }
-
-    const guide = this.guides.find((item) => item.idGuideProduction === guideId);
-    if (guide) {
-      this.filteredLots = this.filterLotsByGuideHuilerie(guide);
-      this.refreshFilteredMachines(guide);
-
-      if (!this.filteredLots.some((l) => l.idLot === this.executionForm.get('lotId')?.value)) {
-        this.executionForm.patchValue({ lotId: null });
-      }
-    }
-  }
-
-  private refreshFilteredMachines(guide?: GuideProduction): void {
-    const selectedType = this.normalizeMachineType(this.executionForm.get('typeMachine')?.value);
-    if (!guide) {
-      this.filteredMachines = [];
-      this.executionForm.patchValue({ machineId: null });
-      return;
-    }
-
-    const guideMachines = this.machines.filter((machine) =>
-      this.isMachineActive(machine)
-      && this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, machine.huilerieId, machine.huilerieNom),
-    );
-    this.filteredMachines = selectedType
-      ? guideMachines.filter((machine) => this.normalizeMachineType(machine?.typeMachine) === selectedType)
-      : guideMachines;
-
-    console.debug('[guides-executer] refreshFilteredMachines', {
-      guideHuilerieId: guide.huilerieId,
-      guideHuilerieNom: guide.huilerieNom,
-      selectedType,
-      guideMachinesCount: guideMachines.length,
-      filteredMachinesCount: this.filteredMachines.length,
-      machineTypes: guideMachines.map((machine) => machine.typeMachine),
-      machineHuileries: guideMachines.map((machine) => ({
-        idMachine: machine.idMachine,
-        huilerieId: machine.huilerieId,
-        huilerieNom: machine.huilerieNom,
-      })),
-    });
-
-    if (this.filteredMachines.length === 1) {
-      this.executionForm.patchValue({ machineId: this.filteredMachines[0].idMachine });
-      return;
-    }
-
-    if (!this.filteredMachines.some((machine) => machine.idMachine === this.executionForm.get('machineId')?.value)) {
-      this.executionForm.patchValue({ machineId: null });
-    }
-  }
-
-  private isMachineActive(machine: Machine): boolean {
-    const normalizedStatus = String(machine?.etatMachine ?? '')
-      .trim()
-      .toUpperCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^A-Z0-9]+/g, '_');
-    if (!normalizedStatus) {
-      return true;
-    }
-
-    return !(
-      normalizedStatus.includes('DESACT')
-      || normalizedStatus.includes('INACTIVE')
-      || normalizedStatus.includes('OFFLINE')
-      || normalizedStatus.includes('HORS_SERVICE')
-    );
-  }
-
-  private normalizeMachineType(value: string | null | undefined): string {
-    return String(value ?? '')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-  }
-
-  private normalizeHuilerieName(value: string | null | undefined): string {
-    return String(value ?? '')
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '');
-  }
-
-  private isSameHuilerie(
-    leftId: number | null | undefined,
-    leftNom: string | null | undefined,
-    rightId: number | null | undefined,
-    rightNom: string | null | undefined,
-  ): boolean {
-    const normalizedLeftId = Number(leftId ?? 0);
-    const normalizedRightId = Number(rightId ?? 0);
-    if (normalizedLeftId > 0 && normalizedRightId > 0 && normalizedLeftId === normalizedRightId) {
-      return true;
-    }
-
-    const normalizedLeftNom = this.normalizeHuilerieName(leftNom);
-    const normalizedRightNom = this.normalizeHuilerieName(rightNom);
-    return normalizedLeftNom.length > 0 && normalizedRightNom.length > 0 && normalizedLeftNom === normalizedRightNom;
+  selectExecution(execution: ExecutionProduction): void {
+    const enriched = this.enrichExecutionWithLotInfo(execution);
+    this.selectedExecution = enriched;
+    this.executionForm.patchValue({
+  produitFinalQualite: enriched.produitFinalQualite ?? '',
+  produitFinalQuantiteProduite: enriched.produitFinalQuantiteProduite ?? null,
+  produitFinalRendement: enriched.produitFinalRendement ?? 0,
+  lotId: enriched.lotId ?? null,
+  controleTemperature: enriched.controleTemperature ?? false,
+})
+    this.populateExecutionValuesFromGuideOrExecution(enriched);
+    this.updateComputedRendement();
+    this.scrollToDetailSection();
   }
 
   submitExecution(): void {
@@ -443,18 +370,13 @@ export class GuidesExecuterComponent implements OnInit {
       this.executionMessage = '';
       return;
     }
-
     const raw = this.executionForm.getRawValue();
     const selectedLotId = Number(raw.lotId ?? 0);
     const selectedLot = this.lots.find((lot) => lot.idLot === selectedLotId);
     const selectedGuideId = Number(raw.guideProductionId ?? 0);
     const selectedMachineId = this.resolveMachineIdForExecution(selectedGuideId, raw.machineId);
 
-    if (!selectedLot) {
-      this.executionError = 'Le lot sélectionné est invalide.';
-      return;
-    }
-
+    if (!selectedLot) { this.executionError = 'Le lot sélectionné est invalide.'; return; }
     if (!selectedMachineId) {
       this.executionError = 'Aucune machine exploitable trouvée pour ce guide. Vérifiez les machines configurées sur le guide.';
       return;
@@ -464,12 +386,7 @@ export class GuidesExecuterComponent implements OnInit {
     this.executionError = '';
     this.executionMessage = '';
 
-    const executionReference = this.buildExecutionReference(
-      selectedLot,
-      Number(raw.guideProductionId ?? 0),
-      selectedMachineId,
-    );
-
+    const executionReference = this.buildExecutionReference(selectedLot, Number(raw.guideProductionId ?? 0), selectedMachineId);
     const payload: ExecutionProductionCreate = {
       reference: executionReference,
       dateDebut: String(raw.dateDebut ?? this.today()),
@@ -482,102 +399,37 @@ export class GuidesExecuterComponent implements OnInit {
       machineId: selectedMachineId,
       lotId: Number(raw.lotId),
     };
-    this.executionProductionService.create(payload)
-      .subscribe({
-        next: (createdExecution) => {
-          this.submittingExecution = false;
-          this.executionMessage = 'Exécution de production créée avec succès.';
-          this.toastService.success('Exécution de production créée avec succès.');
-          const enriched = this.enrichExecutionWithLotInfo({ ...createdExecution, lotId: payload.lotId, guideProductionId: payload.guideProductionId });
-          this.executions = [enriched, ...this.executions];
-          this.saveExecutionCache(this.executions);
-          this.selectedExecution = enriched;
-          this.lotOlivesService.getAll().subscribe((items) => {
-            this.refreshAvailableLots(items);
-            this.refreshFilteredLotsForSelectedGuide();
-          });
-          this.resetExecutionForm(false);
 
-          this.executionProductionService.predictOnStart(createdExecution.idExecutionProduction).subscribe({
-            next: (prediction) => {
-              this.attachPredictionToExecution(createdExecution.idExecutionProduction, prediction);
-              void this.showPredictionPopup(prediction);
-            },
-            error: (error) => {
-              const predictionError = this.readHttpError(
-                error,
-                'Exécution créée, mais la prédiction IA n\'a pas pu être calculée.',
-              );
-              this.toastService.error(predictionError);
-            },
-          });
-        },
-        error: (error) => {
-          this.submittingExecution = false;
-          this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécution de production.');
-          this.toastService.error(this.executionError);
-        },
-      });
-  }
-
-  private resolveMachineIdForExecution(guideId: number, formMachineId: unknown): number {
-    const explicitMachineId = Number(formMachineId ?? 0);
-    if (explicitMachineId > 0) {
-      return explicitMachineId;
-    }
-
-    const guide = this.guides.find((item) => item.idGuideProduction === guideId);
-    if (!guide) {
-      return 0;
-    }
-
-    const stepMachineIds = [...(guide.etapes ?? [])]
-      .sort((a, b) => Number(a?.ordre ?? 0) - Number(b?.ordre ?? 0))
-      .map((step) => Number(step.machineId ?? 0))
-      .filter((id) => id > 0);
-    if (stepMachineIds.length > 0) {
-      return stepMachineIds[0];
-    }
-
-    if (this.filteredMachines.length > 0) {
-      return Number(this.filteredMachines[0].idMachine ?? 0);
-    }
-
-    const sameHuilerieMachine = this.machines.find((machine) =>
-      this.isMachineActive(machine)
-      && this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, machine.huilerieId, machine.huilerieNom),
-    );
-    if (sameHuilerieMachine) {
-      return Number(sameHuilerieMachine.idMachine ?? 0);
-    }
-
-    return 0;
-  }
-
-  // ─── Scroll automatique vers la section de détails ───────────────────────
-  private scrollToDetailSection(): void {
-    // Utilise setTimeout pour laisser Angular finir le rendu du DOM
-    setTimeout(() => {
-      const el = document.getElementById('execution-detail-section');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
-  }
-
-  selectExecution(execution: ExecutionProduction): void {
-    const enriched = this.enrichExecutionWithLotInfo(execution);
-    this.selectedExecution = enriched;
-    this.executionForm.patchValue({
-      produitFinalQualite: enriched.produitFinalQualite ?? '',
-      produitFinalQuantiteProduite: enriched.produitFinalQuantiteProduite ?? null,
-      produitFinalRendement: enriched.produitFinalRendement ?? 0,
-      lotId: enriched.lotId ?? null,
+    this.executionProductionService.create(payload).subscribe({
+      next: (createdExecution) => {
+        this.submittingExecution = false;
+        this.executionMessage = 'Exécution de production créée avec succès.';
+        this.toastService.success('Exécution de production créée avec succès.');
+        const enriched = this.enrichExecutionWithLotInfo({ ...createdExecution, lotId: payload.lotId, guideProductionId: payload.guideProductionId });
+        this.executions = [enriched, ...this.executions];
+        this.saveExecutionCache(this.executions);
+        this.selectedExecution = enriched;
+        this.lotOlivesService.getAll().subscribe((items) => {
+          this.refreshAvailableLots(items);
+          this.refreshFilteredLotsForSelectedGuide();
+        });
+        this.resetExecutionForm(false);
+        this.executionProductionService.predictOnStart(createdExecution.idExecutionProduction).subscribe({
+          next: (prediction) => {
+            this.attachPredictionToExecution(createdExecution.idExecutionProduction, prediction);
+            void this.showPredictionPopup(prediction);
+          },
+          error: (error) => {
+            this.toastService.error(this.readHttpError(error, 'Exécution créée, mais la prédiction IA n\'a pas pu être calculée.'));
+          },
+        });
+      },
+      error: (error) => {
+        this.submittingExecution = false;
+        this.executionError = this.readHttpError(error, 'Impossible de créer l\'exécution de production.');
+        this.toastService.error(this.executionError);
+      },
     });
-    this.populateExecutionValuesFromGuideOrExecution(enriched);
-    this.updateComputedRendement();
-    // ─── Scroll automatique vers les détails ───
-    this.scrollToDetailSection();
   }
 
   saveValeursReelles(): void {
@@ -586,22 +438,15 @@ export class GuidesExecuterComponent implements OnInit {
       this.toastService.error('Veuillez remplir toutes les valeurs réelles.');
       return;
     }
-
     const valeursPayload = this.mapValeursReellesPayload(this.executionForm.get('valeursReelles')?.value || []);
-    this.executionProductionService.saveValeursReelles(this.selectedExecution.idExecutionProduction, valeursPayload)
-      .subscribe({
-        next: () => {
-          this.executionRealValuesCache.set(this.selectedExecution!.idExecutionProduction, valeursPayload);
-          this.selectedExecution = {
-            ...this.selectedExecution!,
-            valeursReelles: valeursPayload,
-          };
-          this.toastService.success('Valeurs réelles enregistrées avec succès.');
-        },
-        error: () => {
-          this.toastService.error('Erreur lors de l\'enregistrement des valeurs réelles.');
-        }
-      });
+    this.executionProductionService.saveValeursReelles(this.selectedExecution.idExecutionProduction, valeursPayload).subscribe({
+      next: () => {
+        this.executionRealValuesCache.set(this.selectedExecution!.idExecutionProduction, valeursPayload);
+        this.selectedExecution = { ...this.selectedExecution!, valeursReelles: valeursPayload };
+        this.toastService.success('Valeurs réelles enregistrées avec succès.');
+      },
+      error: () => { this.toastService.error('Erreur lors de l\'enregistrement des valeurs réelles.'); },
+    });
   }
 
   async finishExecution(execution: ExecutionProduction): Promise<void> {
@@ -610,21 +455,17 @@ export class GuidesExecuterComponent implements OnInit {
       this.populateExecutionValuesFromGuideOrExecution(execution);
       return;
     }
-
     const isCurrentSelection = this.selectedExecution?.idExecutionProduction === execution.idExecutionProduction;
     if (!isCurrentSelection) {
       this.selectedExecution = execution;
       this.populateExecutionValuesFromGuideOrExecution(execution);
-      // ─── Scroll automatique vers les détails ───
       this.scrollToDetailSection();
     }
-
     if (this.executionValueRows.length > 0 && (this.valeursReelles.invalid || this.valeursReelles.length === 0)) {
       this.valeursReelles.markAllAsTouched();
       this.toastService.error('Veuillez corriger les valeurs réelles avant de terminer l\'exécution.');
       return;
     }
-
     const produitFinalQualite = String(this.executionForm.get('produitFinalQualite')?.value ?? '').trim();
     const produitFinalQuantiteProduite = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
     if (!produitFinalQualite || !Number.isFinite(produitFinalQuantiteProduite) || produitFinalQuantiteProduite <= 0) {
@@ -632,33 +473,19 @@ export class GuidesExecuterComponent implements OnInit {
       return;
     }
 
-    console.log('📝 finishExecution() - execution.lotId:', execution.lotId, 'produitFinalQuantiteProduite:', produitFinalQuantiteProduite);
-
     let lotFound = this.filteredLots.find((l) => l.idLot === execution.lotId)
       || this.lots.find((l) => l.idLot === execution.lotId)
       || this.allLots.find((l) => l.idLot === execution.lotId);
 
     if (!lotFound) {
-      console.log('⚠️  Lot', execution.lotId, 'not found locally. Fetching from backend...');
       try {
         const fetchedLot = await this.lotOlivesService.findById(execution.lotId).toPromise();
-        if (fetchedLot) {
-          console.log('✅ Lot fetched from backend:', fetchedLot);
-          this.allLots = [...this.allLots, fetchedLot];
-          lotFound = fetchedLot;
-        }
-      } catch (error) {
-        console.error('❌ Failed to fetch lot from backend:', error);
-      }
+        if (fetchedLot) { this.allLots = [...this.allLots, fetchedLot]; lotFound = fetchedLot; }
+      } catch (error) { console.error('❌ Failed to fetch lot from backend:', error); }
     }
 
     const produitFinalRendement = this.computeRendementForLot(execution.lotId, produitFinalQuantiteProduite);
-    console.log('📊 finishExecution() - Computed rendement:', produitFinalRendement);
-    console.log('🔍 finishExecution() - Is rendement finite?', Number.isFinite(produitFinalRendement));
-
     if (!Number.isFinite(produitFinalRendement)) {
-      console.log('❌ DEBUG: produitFinalRendement value:', produitFinalRendement);
-      console.log('❌ DEBUG: execution object:', execution);
       this.toastService.error('Le rendement n\'a pas pu être calculé. Vérifiez que le lot et la quantité produite sont corrects. [DEBUG: lotId=' + execution.lotId + ', qty=' + produitFinalQuantiteProduite + ']');
       return;
     }
@@ -670,75 +497,51 @@ export class GuidesExecuterComponent implements OnInit {
       cancelText: 'Annuler',
       intent: 'primary',
     });
-
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     const dateFinReelle = this.today();
-    console.log('📅 Captured dateFinReelle:', dateFinReelle);
-    console.log('📊 Rendement to persist:', produitFinalRendement);
     this.executionForm.patchValue({ dateFinReelle }, { emitEvent: false });
-
-    const executionToFinalize: ExecutionProduction = {
-      ...execution,
-      statut: 'TERMINEE',
-    };
-
-    const valeursPayload = this.mapValeursReellesPayload(this.executionForm.get('valeursReelles')?.value || []);
+const executionToFinalize: ExecutionProduction = {
+  ...execution,
+  statut: 'TERMINEE',
+  controleTemperature: execution.controleTemperature,  // ← valeur de l'exécution, pas du formulaire
+};    const valeursPayload = this.mapValeursReellesPayload(this.executionForm.get('valeursReelles')?.value || []);
     this.executionRealValuesCache.set(execution.idExecutionProduction, valeursPayload);
     const saveValeursReelles$ = this.executionValueRows.length > 0
       ? this.executionProductionService.saveValeursReelles(execution.idExecutionProduction, valeursPayload)
       : of(void 0);
 
-    console.log('📤 Sending to backend - rendement:', produitFinalRendement, 'dateFinReelle:', dateFinReelle);
     saveValeursReelles$.pipe(
-      switchMap(() => {
-        return this.executionProductionService.createProduitFinal(executionToFinalize, {
-          qualite: produitFinalQualite,
-          quantiteProduite: produitFinalQuantiteProduite,
-          rendement: produitFinalRendement,
-          dateFinReelle: dateFinReelle,
-        });
-      }),
-      // ✅ Ajout: persister rendement + dateFinReelle sur l'exécution
+      switchMap(() => this.executionProductionService.createProduitFinal(executionToFinalize, {
+        qualite: produitFinalQualite,
+        quantiteProduite: produitFinalQuantiteProduite,
+        rendement: produitFinalRendement,
+        dateFinReelle,
+      })),
       switchMap((executionWithProduct) =>
         this.executionProductionService.update(execution.idExecutionProduction, {
           statut: 'TERMINEE',
           rendement: produitFinalRendement ?? 0,
-          dateFinReelle: dateFinReelle,
+          dateFinReelle,
         }).pipe(map(() => executionWithProduct))
       ),
     ).subscribe({
       next: (executionWithProduct) => {
-        console.log('📥 Backend response:', executionWithProduct);
-        console.log('✅ Response has rendement?', executionWithProduct?.produitFinalRendement);
-        console.log('✅ Response has dateFinReelle?', executionWithProduct?.dateFinReelle);
         const mergedExecution: ExecutionProduction = {
           ...executionToFinalize,
-          ...(executionWithProduct ?? {}),
-          statut: executionWithProduct?.statut ?? executionToFinalize.statut,
-          dateFinReelle: executionWithProduct?.dateFinReelle ?? dateFinReelle,
-          produitFinalQualite: produitFinalQualite,
-          produitFinalQuantiteProduite: produitFinalQuantiteProduite,
-          produitFinalRendement: produitFinalRendement,
-          valeursReelles: (executionWithProduct?.valeursReelles && executionWithProduct.valeursReelles.length > 0)
-            ? executionWithProduct.valeursReelles
-            : valeursPayload,
-        };
-
-        console.log('🔄 FINAL mergedExecution state:', {
-          dateFinReelle: mergedExecution.dateFinReelle,
-          produitFinalRendement: mergedExecution.produitFinalRendement,
-          produitFinalQuantiteProduite: mergedExecution.produitFinalQuantiteProduite,
-        });
+  ...(executionWithProduct ?? {}),
+  statut: executionWithProduct?.statut ?? executionToFinalize.statut,
+  dateFinReelle: executionWithProduct?.dateFinReelle ?? dateFinReelle,
+  produitFinalQualite,
+  produitFinalQuantiteProduite,
+  produitFinalRendement,
+  controleTemperature: execution.controleTemperature,  // ← protège contre l'écrasement du backend
+  valeursReelles: (executionWithProduct?.valeursReelles && executionWithProduct.valeursReelles.length > 0)
+    ? executionWithProduct.valeursReelles : valeursPayload,
+};
         this.executionMessage = 'Valeurs réelles enregistrées, produit final créé et exécution terminée.';
         this.selectedExecution = mergedExecution;
-        this.executionForm.patchValue({
-          produitFinalQualite,
-          produitFinalQuantiteProduite,
-          produitFinalRendement: produitFinalRendement ?? 0,
-        });
+        this.executionForm.patchValue({ produitFinalQualite, produitFinalQuantiteProduite, produitFinalRendement: produitFinalRendement ?? 0 });
         this.populateExecutionValuesFromGuideOrExecution(mergedExecution);
         this.executions = this.executions.map((item) =>
           item.idExecutionProduction === mergedExecution.idExecutionProduction ? mergedExecution : item,
@@ -751,9 +554,7 @@ export class GuidesExecuterComponent implements OnInit {
           if (dateIso && Number.isFinite(qty) && qty > 0) {
             this.productionDashboardService.notifyProductionAdded(dateIso, qty);
           }
-        } catch (e) {
-          // ignore notification errors
-        }
+        } catch (e) { /* ignore */ }
       },
       error: (error) => {
         this.executionError = this.readHttpError(error, 'Impossible de terminer l\'exécution.');
@@ -762,11 +563,95 @@ export class GuidesExecuterComponent implements OnInit {
     });
   }
 
+  validateExecutionParameter(paramName: string, value: number | null | undefined): void {
+    const message = this.parameterValidationService.validateExecutionParameter(paramName, value);
+    if (message) this.toastService.warning(message);
+  }
+
+  validateAnalysisParameter(paramName: string, value: number | null | undefined): void {
+    const message = this.parameterValidationService.validateAnalysisParameter(paramName, value);
+    if (message) this.toastService.warning(message);
+  }
+
+  // ─── Méthodes privées ─────────────────────────────────────────────────────
+
+  private scrollToDetailSection(): void {
+    setTimeout(() => {
+      const el = document.getElementById('execution-detail-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
+  private refreshFilteredDataForSelectedGuide(): void {
+    const guideId = Number(this.executionForm.get('guideProductionId')?.value ?? 0);
+    if (!guideId) { this.filteredLots = []; this.refreshFilteredMachines(); return; }
+    const guide = this.guides.find((item) => item.idGuideProduction === guideId);
+    if (guide) {
+      this.filteredLots = this.filterLotsByGuideHuilerie(guide);
+      this.refreshFilteredMachines(guide);
+      if (!this.filteredLots.some((l) => l.idLot === this.executionForm.get('lotId')?.value)) {
+        this.executionForm.patchValue({ lotId: null });
+      }
+    }
+  }
+
+  private refreshFilteredMachines(guide?: GuideProduction): void {
+    const selectedType = this.normalizeMachineType(this.executionForm.get('typeMachine')?.value);
+    if (!guide) { this.filteredMachines = []; this.executionForm.patchValue({ machineId: null }); return; }
+    const guideMachines = this.machines.filter((machine) =>
+      this.isMachineActive(machine) && this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, machine.huilerieId, machine.huilerieNom),
+    );
+    this.filteredMachines = selectedType
+      ? guideMachines.filter((machine) => this.normalizeMachineType(machine?.typeMachine) === selectedType)
+      : guideMachines;
+    if (this.filteredMachines.length === 1) { this.executionForm.patchValue({ machineId: this.filteredMachines[0].idMachine }); return; }
+    if (!this.filteredMachines.some((machine) => machine.idMachine === this.executionForm.get('machineId')?.value)) {
+      this.executionForm.patchValue({ machineId: null });
+    }
+  }
+
+  private isMachineActive(machine: Machine): boolean {
+    const normalizedStatus = String(machine?.etatMachine ?? '').trim().toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]+/g, '_');
+    if (!normalizedStatus) return true;
+    return !(normalizedStatus.includes('DESACT') || normalizedStatus.includes('INACTIVE')
+      || normalizedStatus.includes('OFFLINE') || normalizedStatus.includes('HORS_SERVICE'));
+  }
+
+  private normalizeMachineType(value: string | null | undefined): string {
+    return String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  }
+
+  private normalizeHuilerieName(value: string | null | undefined): string {
+    return String(value ?? '').trim().toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+  }
+
+  private isSameHuilerie(leftId: number | null | undefined, leftNom: string | null | undefined, rightId: number | null | undefined, rightNom: string | null | undefined): boolean {
+    const nLeftId = Number(leftId ?? 0); const nRightId = Number(rightId ?? 0);
+    if (nLeftId > 0 && nRightId > 0 && nLeftId === nRightId) return true;
+    const nLeftNom = this.normalizeHuilerieName(leftNom); const nRightNom = this.normalizeHuilerieName(rightNom);
+    return nLeftNom.length > 0 && nRightNom.length > 0 && nLeftNom === nRightNom;
+  }
+
+  private resolveMachineIdForExecution(guideId: number, formMachineId: unknown): number {
+    const explicitMachineId = Number(formMachineId ?? 0);
+    if (explicitMachineId > 0) return explicitMachineId;
+    const guide = this.guides.find((item) => item.idGuideProduction === guideId);
+    if (!guide) return 0;
+    const stepMachineIds = [...(guide.etapes ?? [])].sort((a, b) => Number(a?.ordre ?? 0) - Number(b?.ordre ?? 0))
+      .map((step) => Number(step.machineId ?? 0)).filter((id) => id > 0);
+    if (stepMachineIds.length > 0) return stepMachineIds[0];
+    if (this.filteredMachines.length > 0) return Number(this.filteredMachines[0].idMachine ?? 0);
+    const sameHuilerieMachine = this.machines.find((machine) =>
+      this.isMachineActive(machine) && this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, machine.huilerieId, machine.huilerieNom),
+    );
+    return sameHuilerieMachine ? Number(sameHuilerieMachine.idMachine ?? 0) : 0;
+  }
+
   private loadReferenceData(): void {
     this.guideProductionService.getAll().subscribe((items) => (this.guides = items));
-    this.machines = [];
-    this.filteredMachines = [];
-
+    this.machines = []; this.filteredMachines = [];
     forkJoin({
       lots: this.lotOlivesService.getAll(),
       stocks: this.stockService.getAll(),
@@ -780,11 +665,7 @@ export class GuidesExecuterComponent implements OnInit {
         this.refreshAvailableLots(lots ?? []);
         this.refreshFilteredLotsForSelectedGuide();
       },
-      error: () => {
-        this.matieresPremieres = [];
-        this.lots = [];
-        this.filteredLots = [];
-      },
+      error: () => { this.matieresPremieres = []; this.lots = []; this.filteredLots = []; },
     });
   }
 
@@ -797,46 +678,27 @@ export class GuidesExecuterComponent implements OnInit {
       if (this.selectedExecution) {
         const refreshed = this.executions.find((item) => item.idExecutionProduction === this.selectedExecution?.idExecutionProduction);
         this.selectedExecution = refreshed
-          ? {
-            ...refreshed,
-            valeursReelles: (refreshed.valeursReelles && refreshed.valeursReelles.length > 0)
-              ? refreshed.valeursReelles
-              : this.selectedExecution.valeursReelles,
-          }
+          ? { ...refreshed, valeursReelles: (refreshed.valeursReelles && refreshed.valeursReelles.length > 0) ? refreshed.valeursReelles : this.selectedExecution.valeursReelles }
           : this.selectedExecution;
       }
     }, (error: HttpErrorResponse) => {
       const cachedExecutions = this.readExecutionCache();
-      if (cachedExecutions.length > 0) {
-        this.executions = this.filterExecutionsByCurrentHuilerie(cachedExecutions);
-        this.executionError = '';
-        return;
-      }
-
+      if (cachedExecutions.length > 0) { this.executions = this.filterExecutionsByCurrentHuilerie(cachedExecutions); return; }
       this.executionError = this.readHttpError(error, 'Impossible de charger les exécutions enregistrées.');
     });
   }
 
   private saveExecutionCache(executions: ExecutionProduction[]): void {
-    try {
-      localStorage.setItem(this.executionCacheKey, JSON.stringify(executions ?? []));
-    } catch {
-      // Ignore localStorage write errors.
-    }
+    try { localStorage.setItem(this.executionCacheKey, JSON.stringify(executions ?? [])); } catch { /* ignore */ }
   }
 
   private readExecutionCache(): ExecutionProduction[] {
     try {
       const raw = localStorage.getItem(this.executionCacheKey);
-      if (!raw) {
-        return [];
-      }
-
+      if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed as ExecutionProduction[] : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }
 
   private restoreCachedExecutions(): void {
@@ -844,28 +706,12 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private refreshAvailableLots(items: LotOlives[]): void {
-    const usedLotIds = new Set(
-      this.executions
-        .map((execution) => Number(execution?.lotId ?? 0))
-        .filter((id) => Number.isFinite(id) && id > 0),
-    );
-
-    this.allLots = (items ?? []);
-
+    const usedLotIds = new Set(this.executions.map((e) => Number(e?.lotId ?? 0)).filter((id) => Number.isFinite(id) && id > 0));
+    this.allLots = items ?? [];
     this.lots = this.allLots.filter((lot) => {
       const lotId = Number(lot?.idLot ?? 0);
-      if (!lotId || usedLotIds.has(lotId)) {
-        return false;
-      }
-
-      if (this.blockedLotIds.has(lotId)) {
-        return false;
-      }
-
-      if (this.availableLotIds.size === 0) {
-        return true;
-      }
-
+      if (!lotId || usedLotIds.has(lotId) || this.blockedLotIds.has(lotId)) return false;
+      if (this.availableLotIds.size === 0) return true;
       return this.availableLotIds.has(lotId);
     });
     this.updateComputedStorageDuration();
@@ -873,49 +719,29 @@ export class GuidesExecuterComponent implements OnInit {
 
   private updateAvailableLotIds(stocks: Array<{ referenceId?: number; quantiteDisponible?: number }>): void {
     const nextIds = new Set<number>();
-
     (stocks ?? []).forEach((stock) => {
-      const lotId = Number(stock?.referenceId ?? 0);
-      const quantity = Number(stock?.quantiteDisponible ?? 0);
-      if (lotId > 0 && quantity > 0) {
-        nextIds.add(lotId);
-      }
+      const lotId = Number(stock?.referenceId ?? 0); const quantity = Number(stock?.quantiteDisponible ?? 0);
+      if (lotId > 0 && quantity > 0) nextIds.add(lotId);
     });
-
     this.availableLotIds = nextIds;
   }
 
   private updateBlockedLotIds(movements: StockMovement[]): void {
     const nextIds = new Set<number>();
-
-    (movements ?? [])
-      .filter((movement) => movement.typeMouvement === 'TRANSFERT' || movement.typeMouvement === 'AJUSTEMENT')
-      .forEach((movement) => {
-        const lotId = Number(movement?.lotId ?? 0);
-        if (lotId > 0) {
-          nextIds.add(lotId);
-        }
-      });
-
+    (movements ?? []).filter((m) => m.typeMouvement === 'TRANSFERT' || m.typeMouvement === 'AJUSTEMENT')
+      .forEach((m) => { const lotId = Number(m?.lotId ?? 0); if (lotId > 0) nextIds.add(lotId); });
     this.blockedLotIds = nextIds;
   }
 
   private filterLotsByGuideHuilerie(guide: GuideProduction): LotOlives[] {
-    return this.lots.filter((lot) =>
-      this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, lot.huilerieId, lot.huilerieNom),
-    );
+    return this.lots.filter((lot) => this.isSameHuilerie(guide.huilerieId, guide.huilerieNom, lot.huilerieId, lot.huilerieNom));
   }
 
   private refreshFilteredLotsForSelectedGuide(): void {
     const guideId = Number(this.executionForm.get('guideProductionId')?.value ?? 0);
-    if (!guideId) {
-      this.filteredLots = [];
-      return;
-    }
-
+    if (!guideId) { this.filteredLots = []; return; }
     const guide = this.guides.find((item) => item.idGuideProduction === guideId);
     this.filteredLots = guide ? this.filterLotsByGuideHuilerie(guide) : [];
-
     const selectedLotId = Number(this.executionForm.get('lotId')?.value ?? 0);
     if (selectedLotId && !this.filteredLots.some((lot) => Number(lot?.idLot ?? 0) === selectedLotId)) {
       this.executionForm.patchValue({ lotId: null });
@@ -923,31 +749,17 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private filterExecutionsByCurrentHuilerie(executions: ExecutionProduction[]): ExecutionProduction[] {
-    if (this.authService.isCurrentUserAdmin()) {
-      return executions;
-    }
-
+    if (this.authService.isCurrentUserAdmin()) return executions;
     const currentHuilerieId = this.authService.getCurrentUserHuilerieId();
-    if (!currentHuilerieId) {
-      return executions;
-    }
-
-    return executions.filter((execution) => Number(execution?.huilerieId ?? 0) === currentHuilerieId);
-  }
-
-  private populateExecutionValuesFromGuide(guide: GuideProduction): void {
-    this.executionForm.patchValue({ guideProductionId: guide.idGuideProduction });
+    if (!currentHuilerieId) return executions;
+    return executions.filter((e) => Number(e?.huilerieId ?? 0) === currentHuilerieId);
   }
 
   private enrichExecutionWithLotInfo(execution: ExecutionProduction): ExecutionProduction {
-    if (!execution) {
-      return execution;
-    }
-
+    if (!execution) return execution;
     const lotId = Number(execution.lotId ?? 0);
     const lot = this.lots.find((l) => Number(l?.idLot ?? 0) === lotId);
     const guide = this.guides.find((g) => Number(g?.idGuideProduction ?? 0) === Number(execution.guideProductionId ?? 0));
-
     return {
       ...execution,
       lotReference: String(lot?.reference ?? execution.lotReference ?? (lotId ? `LOT-${lotId}` : '')).trim() || execution.lotReference,
@@ -955,64 +767,33 @@ export class GuidesExecuterComponent implements OnInit {
     } as ExecutionProduction;
   }
 
-  private populateExecutionValuesFromGuideOrExecution(
-    execution: ExecutionProduction,
-    guideOverride?: GuideProduction,
-  ): void {
+  private populateExecutionValuesFromGuideOrExecution(execution: ExecutionProduction, guideOverride?: GuideProduction): void {
     const guide = guideOverride ?? this.guides.find((item) => item.idGuideProduction === execution.guideProductionId);
-    if (!guide) {
-      return;
-    }
+    if (!guide) return;
 
     this.executionValueRows = [];
     this.valeursReelles.clear();
 
     const realValuesByParamId = new Map<number, number>();
     const cachedValues = this.executionRealValuesCache.get(execution.idExecutionProduction) ?? [];
-    const sourceValues = (execution.valeursReelles && execution.valeursReelles.length > 0)
-      ? execution.valeursReelles
-      : cachedValues;
-
-    sourceValues.forEach((value) => {
-      realValuesByParamId.set(Number(value.parametreEtapeId), Number(value.valeurReelle ?? 0));
-    });
+    const sourceValues = (execution.valeursReelles && execution.valeursReelles.length > 0) ? execution.valeursReelles : cachedValues;
+    sourceValues.forEach((value) => realValuesByParamId.set(Number(value.parametreEtapeId), Number(value.valeurReelle ?? 0)));
     const executionParamIds = new Set(Array.from(realValuesByParamId.keys()).filter((id) => id > 0));
 
     (guide.etapes ?? []).forEach((etape) => {
       const uniqueParamsByKey = new Map<string, any>();
-
       (etape.parametres ?? []).forEach((parametre: any) => {
         const parametreEtapeId = Number(parametre?.idParametreEtape ?? 0);
-        const paramExecutionId = Number(
-          parametre?.executionProduction?.idExecutionProduction
-          ?? parametre?.executionProductionId
-          ?? 0,
-        );
-
+        const paramExecutionId = Number(parametre?.executionProduction?.idExecutionProduction ?? parametre?.executionProductionId ?? 0);
         const isBaseParam = paramExecutionId <= 0;
         const isCurrentExecutionParam = executionParamIds.has(parametreEtapeId);
-        if (!isBaseParam && !isCurrentExecutionParam) {
-          return;
-        }
-
-        const key = [
-          String(etape?.nom ?? '').trim().toLowerCase(),
-          String(parametre?.nom ?? '').trim().toLowerCase(),
-          String(parametre?.uniteMesure ?? '').trim().toLowerCase(),
-          String(parametre?.valeur ?? '').trim(),
-        ].join('|');
-
+        if (!isBaseParam && !isCurrentExecutionParam) return;
+        const key = [String(etape?.nom ?? '').trim().toLowerCase(), String(parametre?.nom ?? '').trim().toLowerCase(),
+          String(parametre?.uniteMesure ?? '').trim().toLowerCase(), String(parametre?.valeur ?? '').trim()].join('|');
         const existing = uniqueParamsByKey.get(key);
-        if (!existing) {
-          uniqueParamsByKey.set(key, parametre);
-          return;
-        }
-
+        if (!existing) { uniqueParamsByKey.set(key, parametre); return; }
         const existingId = Number(existing?.idParametreEtape ?? 0);
-        const currentIsExecutionParam = executionParamIds.has(parametreEtapeId);
-        const existingIsExecutionParam = executionParamIds.has(existingId);
-
-        if (currentIsExecutionParam && !existingIsExecutionParam) {
+        if (executionParamIds.has(parametreEtapeId) && !executionParamIds.has(existingId)) {
           uniqueParamsByKey.set(key, parametre);
         }
       });
@@ -1023,37 +804,16 @@ export class GuidesExecuterComponent implements OnInit {
         const realValue = realValuesByParamId.get(parametreEtapeId) ?? Number(parametre.valeurReelle ?? 0);
         const parameterName = String(parametre.nom ?? '').trim();
 
-        this.executionValueRows.push({
-          parametreEtapeId,
-          stepName: etape.nom,
-          parameterName: parameterName,
-          uniteMesure: parametre.uniteMesure,
-          estimatedValue,
-        });
+        this.executionValueRows.push({ parametreEtapeId, stepName: etape.nom, parameterName, uniteMesure: parametre.uniteMesure, estimatedValue });
 
         const executionRange = this.parameterValidationService.getExecutionParameterRange(parameterName);
         if (executionRange) {
-          this.executionIntervalHelpRows.push({
-            parameterName,
-            label: executionRange.name,
-            min: executionRange.min,
-            max: executionRange.max,
-            unit: String(parametre.uniteMesure ?? '').trim(),
-          });
+          this.executionIntervalHelpRows.push({ parameterName, label: executionRange.name, min: executionRange.min, max: executionRange.max, unit: String(parametre.uniteMesure ?? '').trim() });
         }
 
-        const formGroup = this.fb.group({
-          parametreEtapeId: [parametreEtapeId, [Validators.required]],
-          valeurReelle: [realValue, [Validators.required]],
-        });
-
-        const valeurReelleControl = formGroup.get('valeurReelle');
-        if (valeurReelleControl) {
-          valeurReelleControl.valueChanges.subscribe((value) => {
-            this.validateExecutionParameter(parameterName, value);
-          });
-        }
-
+        const formGroup = this.fb.group({ parametreEtapeId: [parametreEtapeId, [Validators.required]], valeurReelle: [realValue, [Validators.required]]  , uniteMesure: [String(parametre.uniteMesure ?? '')],  // ← ADD
+ });
+        formGroup.get('valeurReelle')?.valueChanges.subscribe((value) => this.validateExecutionParameter(parameterName, value));
         this.valeursReelles.push(formGroup);
       });
     });
@@ -1063,30 +823,18 @@ export class GuidesExecuterComponent implements OnInit {
     return (valeursReelles as Array<Record<string, unknown>>).map((valeur) => ({
       parametreEtapeId: Number(valeur['parametreEtapeId'] ?? 0),
       valeurReelle: Number(String(valeur['valeurReelle'] ?? '').trim()),
+          uniteMesure: String(valeur['uniteMesure'] ?? ''),  // ← ADD
     }));
   }
 
   private resetExecutionForm(keepGuideSelection: boolean): void {
     const guideProductionId = keepGuideSelection ? this.executionForm.get('guideProductionId')?.value : null;
-
     this.executionForm.reset({
-      dateDebut: this.today(),
-      dureeStockageAvantBroyage: 0,
-      dateFinPrevue: this.tomorrow(),
-      dateFinReelle: null,
-      statut: 'EN_COURS',
-      rendement: 0,
-      observations: '',
-      controleTemperature: false,
-      produitFinalQualite: '',
-      produitFinalQuantiteProduite: null,
-      produitFinalRendement: 0,
-      guideProductionId,
-      typeMachine: null,
-      machineId: null,
-      lotId: null,
+      dateDebut: this.today(), dureeStockageAvantBroyage: 0, dateFinPrevue: this.tomorrow(),
+      dateFinReelle: null, statut: 'EN_COURS', rendement: 0, observations: '', controleTemperature: false,
+      produitFinalQualite: '', produitFinalQuantiteProduite: null, produitFinalRendement: 0,
+      guideProductionId, typeMachine: null, machineId: null, lotId: null,
     });
-
     this.valeursReelles.clear();
     this.executionValueRows = [];
     this.executionIntervalHelpRows = [];
@@ -1094,121 +842,57 @@ export class GuidesExecuterComponent implements OnInit {
   }
 
   private updateComputedStorageDuration(): void {
-    const duration = this.computeStorageDurationDays();
-    this.executionForm.get('dureeStockageAvantBroyage')?.setValue(duration ?? 0, { emitEvent: false });
+    this.executionForm.get('dureeStockageAvantBroyage')?.setValue(this.computeStorageDurationDays() ?? 0, { emitEvent: false });
   }
 
   private updateComputedRendement(): void {
-    const rendement = this.computeRendement();
-    this.executionForm.get('produitFinalRendement')?.setValue(rendement ?? 0, { emitEvent: false });
+    this.executionForm.get('produitFinalRendement')?.setValue(this.computeRendement() ?? 0, { emitEvent: false });
   }
 
   private computeRendement(): number | null {
     const quantiteHuileLitres = Number(this.executionForm.get('produitFinalQuantiteProduite')?.value ?? 0);
-
-    if (!Number.isFinite(quantiteHuileLitres) || quantiteHuileLitres <= 0) {
-      return null;
-    }
-
+    if (!Number.isFinite(quantiteHuileLitres) || quantiteHuileLitres <= 0) return null;
     const lotId = Number(this.executionForm.get('lotId')?.value ?? 0);
-    if (lotId <= 0) {
-      return null;
-    }
-
+    if (lotId <= 0) return null;
     return this.computeRendementForLot(lotId, quantiteHuileLitres);
   }
 
   private computeRendementForLot(lotId: number, quantiteHuileLitres: number): number | null {
-    console.log('🔹 computeRendementForLot() called with lotId:', lotId, 'quantiteHuileLitres:', quantiteHuileLitres);
-
-    if (lotId <= 0 || !Number.isFinite(quantiteHuileLitres) || quantiteHuileLitres <= 0) {
-      console.log('❌ Early return: lotId invalid or quantity not finite/positive');
-      return null;
-    }
-
-    console.log('🔎 Searching for lot in filteredLots:', this.filteredLots.length, 'lots');
-    console.log('🔎 Searching for lot in lots:', this.lots.length, 'lots');
-    console.log('🔎 Searching for lot in allLots:', this.allLots.length, 'lots');
-
+    if (lotId <= 0 || !Number.isFinite(quantiteHuileLitres) || quantiteHuileLitres <= 0) return null;
     const selectedLot = this.filteredLots.find((l) => l.idLot === lotId)
-      || this.lots.find((l) => l.idLot === lotId)
-      || this.allLots.find((l) => l.idLot === lotId);
-    if (!selectedLot) {
-      console.log('❌ Lot not found with lotId:', lotId);
-      console.log('📋 Available lot IDs in filteredLots:', this.filteredLots.map(l => l.idLot));
-      console.log('📋 Available lot IDs in lots:', this.lots.map(l => l.idLot));
-      console.log('📋 Available lot IDs in allLots:', this.allLots.map(l => l.idLot));
-      return null;
-    }
-
-    console.log('✅ Lot found:', selectedLot);
-
+      || this.lots.find((l) => l.idLot === lotId) || this.allLots.find((l) => l.idLot === lotId);
+    if (!selectedLot) return null;
     const poidsOlivesKg = Number(selectedLot.quantiteInitiale ?? 0);
-    console.log('⚖️  poidsOlivesKg:', poidsOlivesKg);
-
-    if (!Number.isFinite(poidsOlivesKg) || poidsOlivesKg <= 0) {
-      console.log('❌ poidsOlivesKg is not finite or <= 0');
-      return null;
-    }
-
-    const poidsHuileKg = quantiteHuileLitres * 0.916;
-    console.log('⚖️  poidsHuileKg:', poidsHuileKg);
-
-    const rendement = (poidsHuileKg / poidsOlivesKg) * 100;
-    console.log('📊 Calculated rendement:', rendement);
-    const roundedRendement = Math.round(rendement * 100) / 100;
-    console.log('✅ Final rounded rendement:', roundedRendement);
-    return roundedRendement;
+    if (!Number.isFinite(poidsOlivesKg) || poidsOlivesKg <= 0) return null;
+    return Math.round((quantiteHuileLitres * 0.916 / poidsOlivesKg) * 10000) / 100;
   }
 
   private computeStorageDurationDays(): number | null {
     const lotId = Number(this.executionForm.get('lotId')?.value ?? 0);
     const dateDebut = String(this.executionForm.get('dateDebut')?.value ?? '').trim();
-    if (!lotId || !dateDebut) {
-      return null;
-    }
-
+    if (!lotId || !dateDebut) return null;
     const lot = this.lots.find((item) => item.idLot === lotId);
     const dateReception = String(lot?.dateReception ?? '').trim();
-    if (!dateReception) {
-      return null;
-    }
-
+    if (!dateReception) return null;
     const receptionTime = this.parseDateOnly(dateReception);
     const debutTime = this.parseDateOnly(dateDebut);
-    if (receptionTime === null || debutTime === null) {
-      return null;
-    }
-
+    if (receptionTime === null || debutTime === null) return null;
     return Math.max(0, Math.floor((debutTime - receptionTime) / MS_PER_DAY));
   }
 
   private parseDateOnly(value: string): number | null {
     const normalized = String(value ?? '').trim();
-    if (!normalized) {
-      return null;
-    }
-
+    if (!normalized) return null;
     const parts = normalized.slice(0, 10).split('-').map((part) => Number(part));
-    if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) {
-      return null;
-    }
-
+    if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return null;
     const [year, month, day] = parts;
     return Date.UTC(year, month - 1, day);
   }
 
   private attachPredictionToExecution(executionId: number, prediction: Prediction): void {
     this.executions = this.executions.map((execution) => {
-      if (execution.idExecutionProduction !== executionId) {
-        return execution;
-      }
-
-      const updatedPredictions = [prediction, ...(execution.predictions ?? [])];
-      return {
-        ...execution,
-        predictions: updatedPredictions,
-      };
+      if (execution.idExecutionProduction !== executionId) return execution;
+      return { ...execution, predictions: [prediction, ...(execution.predictions ?? [])] };
     });
     this.saveExecutionCache(this.executions);
   }
@@ -1220,95 +904,29 @@ export class GuidesExecuterComponent implements OnInit {
       `Rendement prédit (%): ${prediction.rendementPreditPourcent != null ? Number(prediction.rendementPreditPourcent).toFixed(2) : '-'}`,
       `Quantité d'huile (L): ${prediction.quantiteHuileRecalculeeLitres != null ? Number(prediction.quantiteHuileRecalculeeLitres).toFixed(2) : '-'}`,
     ];
-
-    await this.confirmDialogService.confirm({
-      title: 'Prédiction IA',
-      message: lines.join('\n'),
-      confirmText: 'Fermer',
-      cancelText: '',
-      intent: 'info',
-    });
+    await this.confirmDialogService.confirm({ title: 'Prédiction IA', message: lines.join('\n'), confirmText: 'Fermer', cancelText: '', intent: 'info' });
   }
 
-  private today(): string {
-    return new Date().toISOString().split('T')[0];
-  }
-
-  private nowDateTimeLocal(): string {
-    const now = new Date();
-    const yyyy = String(now.getFullYear());
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
-  }
-
-  private tomorrow(): string {
-    const date = new Date();
-    date.setDate(date.getDate() + 1);
-    return date.toISOString().split('T')[0];
-  }
+  private today(): string { return new Date().toISOString().split('T')[0]; }
+  private tomorrow(): string { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; }
 
   private buildExecutionReference(lot: LotOlives, guideId: number, machineId: number): string {
-    const lotRef = String(lot.reference ?? `LOT-${lot.idLot}`)
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
+    const lotRef = String(lot.reference ?? `LOT-${lot.idLot}`).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const now = new Date();
-    const yyyy = String(now.getFullYear());
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    const ms = String(now.getMilliseconds()).padStart(3, '0');
-
-    return `EXE-${lotRef || `LOT-${lot.idLot}`}-G${guideId || 0}-M${machineId || 0}-${yyyy}${mm}${dd}${hh}${min}${ss}${ms}`;
+    const pad = (n: number, l = 2) => String(n).padStart(l, '0');
+    return `EXE-${lotRef || `LOT-${lot.idLot}`}-G${guideId || 0}-M${machineId || 0}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${pad(now.getMilliseconds(), 3)}`;
   }
 
   private readHttpError(error: unknown, fallbackMessage: string): string {
-    const possibleMessage = (error as { error?: { message?: string; errors?: string[] }; message?: string })?.error?.message
-      ?? (error as { message?: string })?.message;
-
+    const possibleMessage = (error as { error?: { message?: string; errors?: string[] }; message?: string })?.error?.message ?? (error as { message?: string })?.message;
     const firstApiError = (error as { error?: { errors?: string[] } })?.error?.errors?.[0];
     const backendMessage = String(firstApiError ?? possibleMessage ?? '').trim();
-
     if (backendMessage.includes('No row with the given identifier exists for entity [Models.GuideProduction')) {
       return 'Le guide sélectionné est introuvable côté serveur. Veuillez choisir un autre guide.';
     }
-
     if (backendMessage.includes('Une contrainte d\'unicite a ete violee')) {
       return 'Conflit de données détecté. Vérifiez le code lot puis réessayez.';
     }
-
     return backendMessage || fallbackMessage;
-  }
-
-  isExecutionFieldInvalid(controlName: string): boolean {
-    const control = this.executionForm.get(controlName);
-    return !!control && control.invalid && (control.touched || control.dirty);
-  }
-
-  validateExecutionParameter(paramName: string, value: number | null | undefined): void {
-    const message = this.parameterValidationService.validateExecutionParameter(paramName, value);
-    if (message) {
-      this.toastService.warning(message);
-    }
-  }
-
-  validateAnalysisParameter(paramName: string, value: number | null | undefined): void {
-    const message = this.parameterValidationService.validateAnalysisParameter(paramName, value);
-    if (message) {
-      this.toastService.warning(message);
-    }
-  }
-
-  isValeurReelleInvalid(index: number): boolean {
-    const control = this.valeursReelles.at(index)?.get('valeurReelle');
-    return !!control && control.invalid && (control.touched || control.dirty);
   }
 }

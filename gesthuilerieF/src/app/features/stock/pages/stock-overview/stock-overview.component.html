@@ -30,7 +30,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngIf="stocks.length === 0">
+          <tr *ngIf="stocks.length === 0 && !selectedHuilerieNom">
             <td colspan="5" class="empty-row">Aucune donnée de stock à afficher.</td>
           </tr>
           <tr *ngFor="let stock of stocks" class="row-hover">

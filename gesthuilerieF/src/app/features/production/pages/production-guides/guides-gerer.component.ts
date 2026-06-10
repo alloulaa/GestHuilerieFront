@@ -75,15 +75,15 @@ export class GuidesGererComponent implements OnInit {
       valeur: '40',
     },
     {
-      code: 'presence_eau',
-      unite: '',
-      description: 'Présence eau',
-      valeur: '1',
-    },
-    {
       code: 'presence_separateur',
       unite: '',
       description: 'Présence séparateur',
+      valeur: '1',
+    },
+    {
+      code: 'presence_ajout_eau',
+      unite: '',
+      description: 'Présence ajout eau',
       valeur: '1',
     },
   ];
@@ -118,7 +118,7 @@ export class GuidesGererComponent implements OnInit {
       nom: ['', [Validators.required]],
       description: ['', [Validators.required]],
       dateCreation: [this.today(), [Validators.required]],
-      huilerieId: [0, [Validators.required, Validators.min(1)]],
+      huilerieId: [0, [Validators.required]],
       typeMachine: ['', [Validators.required]],
       etapes: this.fb.array([
       ]),
@@ -254,7 +254,7 @@ export class GuidesGererComponent implements OnInit {
       description: ['', [Validators.required]],
       codeEtape: [''],
       machineId: [null],
-      parametres: this.fb.array([this.createParametreGroup()]),
+      parametres: this.fb.array([]),
     });
   }
 
@@ -271,19 +271,28 @@ export class GuidesGererComponent implements OnInit {
   }
 
   createParametreGroup() {
-    return this.fb.group({
-      idParametreEtape: [null as number | null],
-      codeParametre: ['', [Validators.required]],
-      nom: [''],
-      nomPersonnalise: [''],
-      uniteMesure: ['', [Validators.required]],
-      valeur: ['', [Validators.required]],
-      description: ['', [Validators.required]],
-    });
-  }
+  return this.fb.group({
+    idParametreEtape: [null as number | null],
+    codeParametre: ['', [Validators.required]],
+    nom: [''],
+    nomPersonnalise: [''],
+    uniteMesure: [''],
+    valeur: [''],
+    description: [''],
+  });
+}
 
   addEtape(): void {
-    this.etapes.push(this.createEtapeGroup(this.etapes.length + 1));
+    const group = this.fb.group({
+      idEtapeProduction: [null as number | null],
+      nom: ['', [Validators.required]],
+      ordre: [this.etapes.length + 1, [Validators.required]],
+      description: ['', [Validators.required]],
+      codeEtape: [''],
+      machineId: [null],
+      parametres: this.fb.array([this.createParametreGroup()]),
+    });
+    this.etapes.push(group);
   }
 
   removeEtape(index: number): void {
@@ -338,6 +347,29 @@ export class GuidesGererComponent implements OnInit {
     const selectedCode = this.getParametres(etapeIndex).at(parametreIndex).get('codeParametre')?.value;
     return String(selectedCode ?? '') === this.customParametreCode;
   }
+
+  /**
+   * Certains paramètres (présence) sont gérés comme booléens (Oui/Non) dans le template.
+   * On considère booléens uniquement les codes explicitement listés.
+   */
+  isBooleanParam(etapeIndex: number, parametreIndex: number): boolean {
+    const code = this.getParametres(etapeIndex).at(parametreIndex).get('codeParametre')?.value;
+    const normalized = String(code ?? '').trim();
+
+    // NOTE: présence_eau et présence_presse supprimés du dropdown,
+    // mais on garde la détection pour la compatibilité éventuelle de données existantes.
+    return (
+
+      normalized === 'presence_separateur' ||
+      normalized === 'presence_ajout_eau'
+    );
+  }
+
+  setBooleanParamValue(etapeIndex: number, parametreIndex: number, value: '1' | '0' | string): void {
+    const paramCtrl = this.getParametres(etapeIndex).at(parametreIndex);
+    paramCtrl.patchValue({ valeur: String(value) }, { emitEvent: false });
+  }
+
 
   /**
    * Map step code to machine category
@@ -821,9 +853,9 @@ export class GuidesGererComponent implements OnInit {
       codeParametre: [parametre.codeParametre, [Validators.required]],
       nom: [parametre.nom],
       nomPersonnalise: [''],
-      uniteMesure: [parametre.uniteMesure, [Validators.required]],
-      valeur: [parametre.valeur, [Validators.required]],
-      description: [parametre.description, [Validators.required]],
+      uniteMesure: [parametre.uniteMesure],
+    valeur: [parametre.valeur],
+    description: [parametre.description],
     });
   }
 
@@ -854,9 +886,9 @@ export class GuidesGererComponent implements OnInit {
       codeParametre: [codeParametre, [Validators.required]],
       nom: [isFixedParam ? String(parametre.nom ?? '').trim() : ''],
       nomPersonnalise: [isFixedParam ? '' : String(parametre.nom ?? '').trim()],
-      uniteMesure: [String(parametre.uniteMesure ?? '').trim(), [Validators.required]],
-      valeur: [String(parametre.valeur ?? '').trim(), [Validators.required]],
-      description: [String(parametre.description ?? '').trim(), [Validators.required]],
+      uniteMesure: [String(parametre.uniteMesure ?? '').trim()],
+    valeur: [String(parametre.valeur ?? '').trim()],
+    description: [String(parametre.description ?? '').trim()],
     });
 
     if (!isFixedParam) {
@@ -932,9 +964,8 @@ export class GuidesGererComponent implements OnInit {
     while (etapesArray.length > 0) {
       etapesArray.removeAt(0);
     }
-
-
   }
+
 
   private focusGuideForm(): void {
     window.requestAnimationFrame(() => {

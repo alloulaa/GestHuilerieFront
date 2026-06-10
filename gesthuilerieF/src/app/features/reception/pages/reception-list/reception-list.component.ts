@@ -51,7 +51,7 @@ export class ReceptionListComponent implements OnInit {
   lotSearchValue = '';
   fournisseurSearchValue = '';
   selectedHuilerieNom = '';
-  filterMessage = '';
+  private filterFeedbackPending = false;
   selectedPeseeForAnalysis: Pesee | null = null;
   analysisSaveError = '';
   analysisDraft: AnalysisDraft = this.createDefaultAnalysisDraft();
@@ -101,6 +101,7 @@ export class ReceptionListComponent implements OnInit {
   }
 
   applyFilters(): void {
+    this.filterFeedbackPending = true;
     this.reloadPesees();
   }
 
@@ -108,7 +109,7 @@ export class ReceptionListComponent implements OnInit {
     this.selectedHuilerieNom = '';
     this.lotSearchValue = '';
     this.fournisseurSearchValue = '';
-    this.filterMessage = '';
+    this.filterFeedbackPending = false;
     this.reloadPesees();
   }
 
@@ -117,11 +118,12 @@ export class ReceptionListComponent implements OnInit {
   }
 
   private applyCombinedFilter(): void {
+    const huilerieValue = String(this.selectedHuilerieNom ?? '').trim();
     const searchValue = String(this.lotSearchValue ?? '').trim();
     const fournisseurValue = String(this.fournisseurSearchValue ?? '').trim().toLowerCase();
-    this.filterMessage = '';
 
-let filtered = [...this.allPesees].reverse();
+    let filtered = [...this.allPesees].reverse();
+    let invalidLot = false;
 
     if (fournisseurValue) {
       filtered = filtered.filter((pesee) => {
@@ -137,7 +139,8 @@ let filtered = [...this.allPesees].reverse();
     if (searchValue) {
       const lotId = Number(searchValue);
       if (Number.isNaN(lotId) || lotId <= 0) {
-        this.filterMessage = 'Veuillez saisir un identifiant de lot valide.';
+        invalidLot = true;
+        filtered = [];
       } else {
         filtered = filtered.filter((pesee) => Number(pesee.lotId) === lotId);
       }
@@ -145,8 +148,45 @@ let filtered = [...this.allPesees].reverse();
 
     this.pesees = filtered;
 
-    if (filtered.length === 0 && (searchValue || fournisseurValue)) {
-      this.filterMessage = 'Aucune reception trouvee pour les filtres saisis.';
+    if (this.filterFeedbackPending) {
+      this.filterFeedbackPending = false;
+      this.notifyFilterResult(huilerieValue, searchValue, fournisseurValue, invalidLot, filtered.length);
+    }
+  }
+
+  private notifyFilterResult(
+    huilerieValue: string,
+    searchValue: string,
+    fournisseurValue: string,
+    invalidLot: boolean,
+    resultCount: number,
+  ): void {
+    if (invalidLot) {
+      this.toastService.warning('Veuillez saisir un identifiant de lot valide.');
+      return;
+    }
+
+    if (resultCount > 0) {
+      return;
+    }
+
+    if (this.isAdmin && huilerieValue && this.allPesees.length === 0) {
+      this.toastService.warning(`Aucune reception trouvee pour l'huilerie « ${huilerieValue} ».`);
+      return;
+    }
+
+    if (searchValue) {
+      this.toastService.warning(`Aucune reception trouvee pour le lot « ${searchValue} ».`);
+      return;
+    }
+
+    if (fournisseurValue) {
+      this.toastService.warning(`Aucune reception trouvee pour le fournisseur « ${String(this.fournisseurSearchValue).trim()} ».`);
+      return;
+    }
+
+    if (huilerieValue) {
+      this.toastService.warning(`Aucune reception trouvee pour l'huilerie « ${huilerieValue} ».`);
     }
   }
 

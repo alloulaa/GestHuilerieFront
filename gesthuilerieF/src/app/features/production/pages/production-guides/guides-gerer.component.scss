@@ -22,8 +22,6 @@
 }
 
 .guides-gerer-container {
-  /* Make the container flush with the host padding so the title
-     and the adjacent form block are aligned to the left background */
   max-width: none;
   margin: 0;
   width: 100%;
@@ -176,6 +174,48 @@
   }
 }
 
+// ---- Paramètre booléen (Oui / Non) ----
+.param-item--boolean {
+  grid-template-columns: 2fr auto auto 2fr auto;
+}
+
+.param-boolean-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.param-bool-btn {
+  height: 32px;
+  min-width: 48px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border-md);
+  background: #fff;
+  color: var(--text-3);
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--primary-lt);
+    color: var(--primary);
+  }
+
+  &--yes {
+    background: rgba(94, 114, 40, 0.12);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  &--no {
+    background: rgba(192, 57, 43, 0.1);
+    border-color: rgba(192, 57, 43, 0.5);
+    color: var(--danger);
+  }
+}
+
 .add-etape-btn {
   display: inline-flex;
   align-items: center;
@@ -300,6 +340,7 @@
   border-radius: 7px;
   background: #fff;
   border: 1px solid var(--border);
+  align-items: center;
 
   .param-input {
     font-size: 0.78rem;
@@ -337,6 +378,67 @@
 
   &:hover {
     background: rgba(192, 57, 43, 0.12);
+  }
+}
+
+// ---- Radio boutons pour paramètres booléens ----
+.param-radio-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.param-radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+
+  // Masquer l'input natif mais garder l'accessibilité
+  .param-radio-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  // Bouton stylisé
+  .param-radio-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-md);
+    background: var(--olive-50);
+    color: var(--text-3);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    user-select: none;
+
+    &:hover {
+      border-color: var(--primary-lt);
+      color: var(--primary);
+      background: var(--olive-100);
+    }
+  }
+
+  // État sélectionné : input:checked + span frère
+  .param-radio-input:checked + .param-radio-btn {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(94, 114, 40, 0.3);
+  }
+
+  // Focus accessible
+  .param-radio-input:focus-visible + .param-radio-btn {
+    outline: 2px solid var(--primary-lt);
+    outline-offset: 2px;
   }
 }
 

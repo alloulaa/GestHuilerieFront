@@ -34,6 +34,9 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
   private huilerieSubscription?: Subscription;
   private currentTypeMachine: string | null = null;
 
+  /** Codes de paramètres à valeur booléenne (0/1) */
+  readonly booleanParamCodes = new Set(['presence_eau', 'presence_separateur', 'presence_ajout_eau', 'presence_presse']);
+
   readonly fixedParametreOptions: Array<{
     code: string;
     unite: string;
@@ -104,6 +107,26 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
         step: '1',
         inputType: 'number',
       },
+      {
+        code: 'presence_ajout_eau',
+        unite: '',
+        description: 'Présence ajout eau',
+        valeur: '1',
+        min: 0,
+        max: 1,
+        step: '1',
+        inputType: 'number',
+      },
+      {
+        code: 'presence_presse',
+        unite: '',
+        description: 'Présence presse',
+        valeur: '1',
+        min: 0,
+        max: 1,
+        step: '1',
+        inputType: 'number',
+      },
     ];
   readonly customParametreCode = 'autre';
 
@@ -156,7 +179,6 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
     try {
       const dict = this.parameterValidationService.getExecutionParameters();
       if (dict && typeof dict === 'object') {
-        // Only keep the four parameters we want (in specified order)
         const allowedKeys = ['vitesse.*décanteur', 'pression', 'température', 'durée.*malaxage'];
         const ranges = allowedKeys
           .filter((k) => Object.prototype.hasOwnProperty.call(dict, k))
@@ -186,6 +208,29 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       this.huilerieSubscription.unsubscribe();
     }
   }
+
+  // ─── Helpers pour les paramètres booléens ───────────────────────────────
+
+  /**
+   * Retourne true si le paramètre à l'index donné est de type booléen (0/1).
+   * Utilisé dans le template pour afficher des radio buttons au lieu d'un input.
+   */
+  isBooleanParam(etapeIndex: number, parametreIndex: number): boolean {
+    const code = String(
+      this.getParametres(etapeIndex).at(parametreIndex).get('codeParametre')?.value ?? ''
+    ).trim();
+    return this.booleanParamCodes.has(code);
+  }
+
+  /**
+   * Retourne la valeur brute du champ `valeur` d'un paramètre.
+   * Utilisé dans le template pour activer la bonne option radio.
+   */
+  getParamRawValue(etapeIndex: number, parametreIndex: number): string | number {
+    return this.getParametres(etapeIndex).at(parametreIndex).get('valeur')?.value ?? '';
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
 
   /**
    * Map step code to machine category
@@ -223,7 +268,6 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       return [];
     }
 
-    // Map step category to expected typeMachine keywords (covers cases where categorieMachine may be missing)
     const expectedTypesByCategory: Record<string, string[]> = {
       broyage: ['marteaux', 'disques', 'meules'],
       malaxage: ['horizontal', 'vertical', 'malaxeur double cuve (optionnel)', 'malaxeur double cuve'],
@@ -244,26 +288,23 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[\s-]+/g, '_');
 
-    // guides-creer.component.ts — getMachinesForStep()
-return this.allMachines.filter((m) => {
-  // ← ADD THIS: only EN_SERVICE machines
-  if (String(m?.etatMachine ?? '').trim().toUpperCase() !== 'EN_SERVICE') return false;
+    return this.allMachines.filter((m) => {
+      if (String(m?.etatMachine ?? '').trim().toUpperCase() !== 'EN_SERVICE') return false;
 
-  if (selectedHuilerieId && Number(m.huilerieId) !== selectedHuilerieId) {
-    return false;
-  }
-  if (normalize(m.categorieMachine) === normalize(category)) return true;
-  const tm = normalize(m.typeMachine);
-  for (const expected of expectedTypes) {
-    if (tm.includes(normalize(expected))) return true;
-  }
-  return false;
-});
+      if (selectedHuilerieId && Number(m.huilerieId) !== selectedHuilerieId) {
+        return false;
+      }
+      if (normalize(m.categorieMachine) === normalize(category)) return true;
+      const tm = normalize(m.typeMachine);
+      for (const expected of expectedTypes) {
+        if (tm.includes(normalize(expected))) return true;
+      }
+      return false;
+    });
   }
 
   /**
    * Get machines for a step by its index in the FormArray (safe for templates)
-   * Implements lazy-loading with caching per step code
    */
   getMachinesForStepByIndex(index: number): Machine[] {
     try {
@@ -357,11 +398,16 @@ return this.allMachines.filter((m) => {
       return;
     }
 
+    // Pour les params booléens, on s'assure que la valeur est '1' ou '0' (string pour les radio)
+    const valeur = this.booleanParamCodes.has(selectedCode)
+      ? String(selectedOption.valeur)
+      : selectedOption.valeur;
+
     group.patchValue({
       nom: selectedOption.code,
       uniteMesure: selectedOption.unite,
       description: selectedOption.description,
-      valeur: selectedOption.valeur,
+      valeur,
     });
 
     this.applyParametreValueValidators(group, selectedOption);
@@ -387,6 +433,11 @@ return this.allMachines.filter((m) => {
     const valueControl = parametreGroup.get('valeur');
     const selectedCode = String(parametreGroup.get('codeParametre')?.value ?? '').trim();
     const help = this.getParametreHelp(selectedCode);
+
+    // Pas d'erreur à afficher pour les params booléens
+    if (this.booleanParamCodes.has(selectedCode)) {
+      return null;
+    }
 
     if (!valueControl || !valueControl.errors || !(valueControl.dirty || valueControl.touched)) {
       return null;
@@ -462,12 +513,10 @@ return this.allMachines.filter((m) => {
         const currentStillValid = currentMachineId > 0
           && machines.some((machine) => Number(machine.idMachine ?? 0) === currentMachineId);
 
-        // Drop previously selected machine if it no longer belongs to current huilerie/step filter
         if (currentMachineId > 0 && !currentStillValid) {
           machineControl?.setValue(null, { emitEvent: false });
         }
 
-        // Auto-assign only if exactly one valid machine remains
         if (!currentStillValid && machines && machines.length === 1) {
           machineControl?.setValue(machines[0].idMachine, { emitEvent: false });
         }
@@ -480,13 +529,10 @@ return this.allMachines.filter((m) => {
   private loadReferenceData(): void {
     this.huilerieService.getAll().subscribe((items) => (this.huileries = items));
 
-    // Lazy-load machines: load them once and keep in memory for filtering
     this.machineService.getAll().subscribe((items) => {
       this.allMachines = items;
       console.log(`[guides-creer] Loaded ${items.length} machines globally`);
-      // Clear cache when machines are reloaded
       this.machinesCacheByStep.clear();
-      // Attempt to auto-assign machines to any existing étapes
       this.autoAssignMachinesToEtapes();
     });
   }
@@ -542,30 +588,27 @@ return this.allMachines.filter((m) => {
 
     const etapesArray = this.guideForm.get('etapes') as FormArray;
 
-    // 🔍 Find extraction step index
     const extractionStepIndex = etapesArray.controls.findIndex(
       (etape) => {
         const codeEtape = (etape as any).get('codeEtape')?.value;
         return codeEtape?.includes('3_phases') ||
           codeEtape?.includes('2_phases') ||
           codeEtape?.includes('extraction_decantation') ||
-          codeEtape === 'ajout_eau'; // For 3_phase, extraction is after "Ajout d'eau"
+          codeEtape === 'ajout_eau';
       }
     );
 
     if (extractionStepIndex === -1) {
-      return; // No extraction step found
+      return;
     }
 
     const extractionEtape = etapesArray.at(extractionStepIndex);
     const parametresArray = extractionEtape.get('parametres') as FormArray;
 
-    // Watch for changes in extraction step parameters
     this.etapesSubscription = parametresArray.statusChanges.subscribe(() => {
       this.updateSeparationStepForCurrentExtraction();
     });
 
-    // Also watch for value changes to catch immediate changes
     parametresArray.valueChanges.subscribe(() => {
       this.updateSeparationStepForCurrentExtraction();
     });
@@ -580,11 +623,9 @@ return this.allMachines.filter((m) => {
     } else if (typeMachine === '2_phase') {
       this.updateSeparationStepFor2Phase(etapesArray);
     }
-    // For 'presse', extraction and separation are merged, so no dynamic update needed
   }
 
   private updateSeparationStepFor3Phase(etapesArray: FormArray): void {
-    // For 3_phase: find the extraction step (after "Ajout d'eau")
     const ajoutEauIndex = etapesArray.controls.findIndex(
       (etape) => (etape as any).get('codeEtape')?.value === 'ajout_eau'
     );
@@ -595,9 +636,7 @@ return this.allMachines.filter((m) => {
     if (separationStepIndex >= etapesArray.length) return;
 
     const separationEtape = etapesArray.at(separationStepIndex);
-    const parametresArray = separationEtape.get('parametres') as FormArray;
 
-    // The extraction type for 3_phase is fixed to centrifugation_3_phases
     const newSeparationStep = buildSeparationStepForExtractionType('centrifugation_3_phases');
     if (newSeparationStep) {
       this.updateStepWithTemplate(separationEtape, newSeparationStep);
@@ -605,7 +644,6 @@ return this.allMachines.filter((m) => {
   }
 
   private updateSeparationStepFor2Phase(etapesArray: FormArray): void {
-    // For 2_phase: find the extraction step (it's the separation merged step)
     const separationStepIndex = etapesArray.controls.findIndex(
       (etape) => (etape as any).get('codeEtape')?.value === 'decanteur_2_phases_separateur'
     );
@@ -614,7 +652,6 @@ return this.allMachines.filter((m) => {
 
     const separationEtape = etapesArray.at(separationStepIndex);
 
-    // The extraction type for 2_phase is fixed to centrifugation_2_phases
     const newSeparationStep = buildSeparationStepForExtractionType('centrifugation_2_phases');
     if (newSeparationStep) {
       this.updateStepWithTemplate(separationEtape, newSeparationStep);
@@ -644,7 +681,6 @@ return this.allMachines.filter((m) => {
     const templates = buildGuideStepTemplates(typeMachine);
     this.currentTypeMachine = typeMachine;
 
-    // 🔍 LOG DE DEBUG pour vérifier les étapes chargées
     console.log(`[Guide Template] Type Machine: ${typeMachine}`);
     console.log(`[Guide Template] Étapes chargées:`, templates.map(t => ({
       ordre: t.ordre,
@@ -662,10 +698,8 @@ return this.allMachines.filter((m) => {
       etapesArray.push(this.createEtapeGroupFromTemplate(template.nom, template.ordre, template.description, template.codeEtape, template.parametres));
     });
 
-    // ✅ Setup watchers for dynamic separation step updates
     setTimeout(() => {
       this.setupExtractionWatcher();
-      // Try auto-assigning machines now that steps exist
       this.autoAssignMachinesToEtapes();
     }, 100);
   }
@@ -702,17 +736,25 @@ return this.allMachines.filter((m) => {
   }
 
   private createParametreGroupFromTemplate(parametre: { codeParametre: string; nom: string; uniteMesure: string; description: string; valeur: string }): ReturnType<FormBuilder['group']> {
+    // Pour les params booléens, on force la valeur en string ('0' ou '1') pour que les radios fonctionnent
+    const valeur = this.booleanParamCodes.has(parametre.codeParametre)
+      ? String(parametre.valeur)
+      : parametre.valeur;
+
     const group = this.fb.group({
       codeParametre: [parametre.codeParametre, [Validators.required]],
       nom: [parametre.nom],
       nomPersonnalise: [''],
       uniteMesure: [parametre.uniteMesure, [Validators.required]],
       description: [parametre.description, [Validators.required]],
-      valeur: [parametre.valeur, [Validators.required]],
+      valeur: [valeur, [Validators.required]],
     });
 
     const selectedOption = this.fixedParametreOptions.find((option) => option.code === parametre.codeParametre) ?? null;
-    this.applyParametreValueValidators(group, selectedOption);
+    // Pas de validateur de plage pour les params booléens (radio garantit 0 ou 1)
+    if (!this.booleanParamCodes.has(parametre.codeParametre)) {
+      this.applyParametreValueValidators(group, selectedOption);
+    }
     return group;
   }
 
