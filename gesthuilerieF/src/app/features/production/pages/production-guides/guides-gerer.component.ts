@@ -519,11 +519,17 @@ export class GuidesGererComponent implements OnInit {
       }),
     };
 
-    const etapeSansMachine = payload.etapes.find((etape: any) => this.isMachineRequiredForCodeEtape(etape.codeEtape) && Number(etape.machineId ?? 0) <= 0);
-    if (etapeSansMachine) {
-      this.toastService.error(`Aucune machine valide trouvée pour l'étape "${String(etapeSansMachine.nom ?? '').trim() || 'sans nom'}".`);
-      return;
-    }
+    // APRÈS — même logique, message plus explicite pour l'utilisateur
+const etapeSansMachine = payload.etapes.find((etape: any) =>
+  this.isMachineRequiredForCodeEtape(etape.codeEtape) && Number(etape.machineId ?? 0) <= 0
+);
+if (etapeSansMachine) {
+  this.toastService.error(
+    `Veuillez sélectionner les machines .`
+  );
+  this.guideForm.markAllAsTouched();   // ← déclenche l'affichage des erreurs inline
+  return;
+}
 
     if (this.guideEditingId) {
       const existingGuide = this.guides.find((g) => g.idGuideProduction === this.guideEditingId);
@@ -571,33 +577,43 @@ export class GuidesGererComponent implements OnInit {
     }
   }
 
-  private resolveEtapeMachineId(etape: Record<string, unknown>): number {
-    const codeEtape = String(etape['codeEtape'] ?? '').trim() || null;
-    if (!this.isMachineRequiredForCodeEtape(codeEtape)) {
-      return 0;
-    }
+  hasUnassignedRequiredMachines(): boolean {
+  return this.etapes.controls.some((etapeControl, i) => {
+    const codeEtape = String(etapeControl.get('codeEtape')?.value ?? '').trim() || null;
+    if (!this.isMachineRequiredForCodeEtape(codeEtape)) return false;
+    return Number(etapeControl.get('machineId')?.value ?? 0) <= 0;
+  });
+}
 
-    const explicitMachineId = Number(etape['machineId'] ?? 0);
-    if (explicitMachineId > 0) {
-      return explicitMachineId;
-    }
-
-    const stepMachines = this.getMachinesForStep(codeEtape);
-    if (stepMachines.length > 0) {
-      return Number(stepMachines[0].idMachine ?? 0);
-    }
-
-    const selectedHuilerieId = Number(this.guideForm.get('huilerieId')?.value ?? 0);
-    const fallbackMachine = this.allMachines.find((machine) => {
-      return selectedHuilerieId <= 0 || Number(machine.huilerieId ?? 0) === selectedHuilerieId;
-    });
-
-    return Number(fallbackMachine?.idMachine ?? 0);
+  // APRÈS
+private resolveEtapeMachineId(etape: Record<string, unknown>): number {
+  const codeEtape = String(etape['codeEtape'] ?? '').trim() || null;
+  if (!this.isMachineRequiredForCodeEtape(codeEtape)) {
+    return 0;
   }
+  // Uniquement la sélection explicite de l'utilisateur — aucun fallback automatique
+  return Number(etape['machineId'] ?? 0);
+}
 
   private isMachineRequiredForCodeEtape(codeEtape: string | null | undefined): boolean {
     return this.getStepMachineCategory(String(codeEtape ?? '').trim() || null) !== null;
   }
+
+  // À ajouter après isMachineRequiredForCodeEtape()
+isMachineInvalidForStep(index: number): boolean {
+  const etapeControl = this.etapes.at(index);
+  if (!etapeControl) return false;
+
+  const codeEtape = String(etapeControl.get('codeEtape')?.value ?? '').trim() || null;
+  if (!this.isMachineRequiredForCodeEtape(codeEtape)) return false;
+
+  const machineControl = etapeControl.get('machineId');
+  if (!machineControl) return false;
+
+  // Afficher l'erreur si le champ est touché OU si le formulaire entier a été soumis
+  const isTouched = machineControl.touched || this.guideForm.touched;
+  return isTouched && Number(machineControl.value ?? 0) <= 0;
+}
 
   editGuide(guide: GuideProduction): void {
     const sourceEtapes = Array.isArray(guide.etapes) ? guide.etapes : [];

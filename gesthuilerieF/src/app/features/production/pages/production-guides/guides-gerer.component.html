@@ -92,18 +92,25 @@
                   placeholder="Description de l'étape"></textarea>
               </div>
 
-              <div class="form-group">
-                <label>Machine assignée</label>
-                <select class="form-select" formControlName="machineId">
-                  <option [ngValue]="null">-- Aucune sélection --</option>
-                  <option *ngFor="let m of getMachinesForStepByIndex(i)" [ngValue]="m.idMachine">
-                    {{ m.nomMachine }} <span *ngIf="m.huilerieNom">({{ m.huilerieNom }})</span> - {{ m.typeMachine }}
-                  </option>
-                </select>
-                <small *ngIf="getMachinesForStepByIndex(i).length === 0" class="hint">
-                  Aucune machine disponible pour cette étape
-                </small>
-              </div>
+              <!-- APRÈS -->
+<div class="form-group">
+  <label>Machine assignée</label>
+  <select
+    class="form-select"
+    formControlName="machineId"
+    [class.ng-invalid]="isMachineInvalidForStep(i)">
+    <option [ngValue]="null">-- Aucune sélection --</option>
+    <option *ngFor="let m of getMachinesForStepByIndex(i)" [ngValue]="m.idMachine">
+      {{ m.nomMachine }} <span *ngIf="m.huilerieNom">({{ m.huilerieNom }})</span> - {{ m.typeMachine }}
+    </option>
+  </select>
+  <small *ngIf="getMachinesForStepByIndex(i).length === 0" class="hint">
+    Aucune machine disponible pour cette étape
+  </small>
+  <small *ngIf="isMachineInvalidForStep(i)" class="hint hint--error">
+    Une machine est requise pour cette étape
+  </small>
+</div>
 
               <!-- PARAMETRES SUB-ARRAY -->
               <div class="parametres-list" formArrayName="parametres">
@@ -178,9 +185,10 @@
 
           <!-- Form Actions -->
           <div class="form-actions">
-            <button class="btn-primary" type="submit" [disabled]="!guideForm.valid">
-              {{ guideEditingId ? '✓ Mettre à jour' : '✓ Créer le guide' }}
-            </button>
+            <!-- APRÈS -->
+<button class="btn-primary" type="submit" [disabled]="!guideForm.valid || hasUnassignedRequiredMachines()">
+  {{ guideEditingId ? '✓ Mettre à jour' : '✓ Créer le guide' }}
+</button>
             <button class="btn-secondary app-cancel-btn" type="button" *ngIf="guideEditingId"
               (click)="resetGuideForm()">Annuler</button>
           </div>

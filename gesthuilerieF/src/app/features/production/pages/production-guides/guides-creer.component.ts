@@ -9,6 +9,7 @@ import { HuilerieService } from '../../../machines/services/huilerie.service';
 import { MachineService } from '../../../machines/services/machine.service';
 import { EtapeProduction, ParametreEtape } from '../../models/production.models';
 import { GuideProductionService } from '../../services/guide-production.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { TYPE_MACHINE_OPTIONS, buildGuideStepTemplates, buildSeparationStepForExtractionType } from '../../../../shared/constants/domain-options';
 
 @Component({
@@ -151,6 +152,7 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
     @Inject(forwardRef(() => MachineService))
     private machineService: MachineService,
     private parameterValidationService: ParameterValidationService,
+    private toastService: ToastService,
   ) {
     this.guideForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -470,12 +472,17 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
       etapes: this.mapEtapesPayload(raw.etapes ?? []),
     };
 
-    const etapeSansMachine = payload.etapes.find((etape) => this.isMachineRequiredForCodeEtape(etape.codeEtape) && Number(etape.machineId ?? 0) <= 0);
-    if (etapeSansMachine) {
-      this.guideError = `Aucune machine valide trouvée pour l'étape "${etapeSansMachine.nom}".`;
-      this.guideMessage = '';
-      return;
-    }
+    // APRÈS — même logique, message plus explicite pour l'utilisateur
+const etapeSansMachine = payload.etapes.find((etape: any) =>
+  this.isMachineRequiredForCodeEtape(etape.codeEtape) && Number(etape.machineId ?? 0) <= 0
+);
+if (etapeSansMachine) {
+  this.toastService.error(
+    `Veuillez sélectionner une machine pour l'étape "${String(etapeSansMachine.nom ?? '').trim() || 'sans nom'}".`
+  );
+  this.guideForm.markAllAsTouched();   // ← déclenche l'affichage des erreurs inline
+  return;
+}
 
     this.submittingGuide = true;
     this.guideError = '';
@@ -826,33 +833,34 @@ export class GuidesCreerComponent implements OnInit, OnDestroy {
     });
   }
 
-  private resolveEtapeMachineId(etape: Record<string, unknown>): number {
-    const codeEtape = String(etape['codeEtape'] ?? '').trim() || null;
-    if (!this.isMachineRequiredForCodeEtape(codeEtape)) {
-      return 0;
-    }
-
-    const explicitMachineId = Number(etape['machineId'] ?? 0);
-    if (explicitMachineId > 0) {
-      return explicitMachineId;
-    }
-
-    const stepMachines = this.getMachinesForStep(codeEtape);
-    if (stepMachines.length > 0) {
-      return Number(stepMachines[0].idMachine ?? 0);
-    }
-
-    const selectedHuilerieId = Number(this.guideForm.get('huilerieId')?.value ?? 0);
-    const fallbackMachine = this.allMachines.find((machine) => {
-      return selectedHuilerieId <= 0 || Number(machine.huilerieId ?? 0) === selectedHuilerieId;
-    });
-
-    return Number(fallbackMachine?.idMachine ?? 0);
+  // APRÈS
+private resolveEtapeMachineId(etape: Record<string, unknown>): number {
+  const codeEtape = String(etape['codeEtape'] ?? '').trim() || null;
+  if (!this.isMachineRequiredForCodeEtape(codeEtape)) {
+    return 0;
   }
-
+  // Uniquement la sélection explicite de l'utilisateur — aucun fallback automatique
+  return Number(etape['machineId'] ?? 0);
+}
   private isMachineRequiredForCodeEtape(codeEtape: string | null | undefined): boolean {
     return this.getStepMachineCategory(String(codeEtape ?? '').trim() || null) !== null;
   }
+
+  // À ajouter après isMachineRequiredForCodeEtape()
+isMachineInvalidForStep(index: number): boolean {
+  const etapeControl = this.etapes.at(index);
+  if (!etapeControl) return false;
+
+  const codeEtape = String(etapeControl.get('codeEtape')?.value ?? '').trim() || null;
+  if (!this.isMachineRequiredForCodeEtape(codeEtape)) return false;
+
+  const machineControl = etapeControl.get('machineId');
+  if (!machineControl) return false;
+
+  // Afficher l'erreur si le champ est touché OU si le formulaire entier a été soumis
+  const isTouched = machineControl.touched || this.guideForm.touched;
+  return isTouched && Number(machineControl.value ?? 0) <= 0;
+}
 
   private mapParametresPayload(parametres: unknown[]): ParametreEtape[] {
     return (parametres as Array<Record<string, unknown>>).map((parametre) => ({

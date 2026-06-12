@@ -216,6 +216,10 @@
   }
 }
 
+/* À ajouter à la suite de .hint */
+.hint--error {
+  color: var(--danger);
+}
 .add-etape-btn {
   display: inline-flex;
   align-items: center;
