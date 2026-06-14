@@ -97,8 +97,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             origine: ['', [Validators.required]],
             varieteOlive: ['', [Validators.required]],
             maturite: ['', [Validators.required, this.createRangeValidator(1, 5)]],
-            dateRecolte: [new Date().toISOString().slice(0, 10), [Validators.required, this.createDateRecolteValidator()]],
-            dateReception: [new Date().toISOString().slice(0, 10), [Validators.required]],
+            dateRecolte: [null, [Validators.required, this.createDateRecolteValidator()]], dateReception: [new Date().toISOString().slice(0, 10), [Validators.required]],
             region: [''],
             methodeRecolte: [''],
             typeSol: [''],
@@ -124,9 +123,11 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             this.form.get('poidsNet')?.setValue(net, { emitEvent: false });
 
             // Temps depuis récolte = (datePesee - dateRecolte) * 24
+            const dateRecolteControl = this.form.get('dateRecolte');
             const datePeseeVal = values.datePesee ? new Date(values.datePesee) : null;
             const dateRecolteVal = values.dateRecolte ? new Date(values.dateRecolte) : null;
             if (
+                dateRecolteControl?.dirty &&
                 datePeseeVal && dateRecolteVal &&
                 !isNaN(datePeseeVal.getTime()) && !isNaN(dateRecolteVal.getTime())
             ) {
@@ -134,7 +135,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
                     (datePeseeVal.getTime() - dateRecolteVal.getTime()) / 3_600_000
                 ));
                 this.form.get('tempsDepuisRecolteHeures')?.setValue(diffHeures, { emitEvent: false });
-            } else {
+            } else if (!dateRecolteControl?.dirty) {
                 this.form.get('tempsDepuisRecolteHeures')?.setValue(0, { emitEvent: false });
             }
         });
@@ -407,7 +408,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             origine: '',
             varieteOlive: '',
             maturite: '',
-            dateRecolte: new Date().toISOString().slice(0, 10),
+            dateRecolte: null,
             dateReception: new Date().toISOString().slice(0, 10),
             region: '',
             methodeRecolte: '',
@@ -442,7 +443,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             origine: '',
             varieteOlive: '',
             maturite: '',
-            dateRecolte: new Date().toISOString().slice(0, 10),
+            dateRecolte: null,
             dateReception: new Date().toISOString().slice(0, 10),
             region: '',
             methodeRecolte: '',
