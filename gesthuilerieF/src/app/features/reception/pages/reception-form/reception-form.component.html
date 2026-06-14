@@ -68,7 +68,6 @@
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Date pesée</mat-label>
             <input #datePeseeInput matInput type="datetime-local" formControlName="datePesee" readonly />
-            <mat-hint>Remplie automatiquement depuis l'horloge système</mat-hint>
             <mat-error *ngIf="form.get('datePesee')?.hasError('required')">
               La date de pesée est obligatoire.
             </mat-error>
