@@ -71,6 +71,13 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
     readonly form;
 
+    // ─── Helper : date/heure système au format datetime-local ────────────────
+    private static getCurrentDateTime(): string {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+
     constructor(
         private formBuilder: FormBuilder,
         private lotManagementService: LotManagementService,
@@ -82,8 +89,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         private campagneService: CampagneService,
     ) {
         this.form = this.formBuilder.group({
-            // datePesee initialisé à null — l'utilisateur doit saisir lui-même
-            datePesee: [null as string | null, [Validators.required]],
+            // ✅ Date pesée initialisée automatiquement depuis l'horloge système
+            datePesee: [ReceptionFormComponent.getCurrentDateTime(), [Validators.required]],
             poidsBrut: [null, [Validators.required, Validators.min(1)]],
             poidsTare: [0, [Validators.required, Validators.min(0)]],
             poidsNet: [{ value: 0, disabled: true }, [Validators.required]],
@@ -95,7 +102,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             region: [''],
             methodeRecolte: [''],
             typeSol: [''],
-            // Calculé automatiquement — désactivé pour la saisie
             tempsDepuisRecolteHeures: [{ value: 0, disabled: true }],
             humiditePourcent: [0, [Validators.min(0), Validators.max(100), this.createRangeValidator(10, 30)]],
             aciditeOlivesPourcent: [0, [Validators.min(0), Validators.max(100), this.createRangeValidator(0.1, 2.5)]],
@@ -137,17 +143,14 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             this.syncHuilerieAndCampagneFromMatiere(Number(id));
         });
 
-        // Chargement dynamique des campagnes selon la huilerie sélectionnée
         this.form.get('huilerieId')?.valueChanges.subscribe(huilerieId => {
             this.loadCampagnesForHuilerie(Number(huilerieId));
         });
 
-        // Revalider dateRecolte quand la campagne change
         this.form.get('campagneId')?.valueChanges.subscribe(() => {
             this.form.get('dateRecolte')?.updateValueAndValidity({ emitEvent: false });
         });
 
-        // Initialiser la liste au démarrage
         this.loadCampagnesForHuilerie(Number(this.form.get('huilerieId')?.value) || 0);
     }
 
@@ -177,7 +180,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             } else if (!currentCampagne || !campagneRefs.includes(currentCampagne)) {
                 this.form.patchValue({ campagneId: this.campagnes[0]?.reference ?? null });
             }
-            // Revalider dateRecolte avec la nouvelle campagne chargée
             this.form.get('dateRecolte')?.updateValueAndValidity({ emitEvent: false });
         });
     }
@@ -231,10 +233,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         };
     }
 
-    /**
-     * Validateur : dateRecolte doit être comprise entre dateDebut et dateFin
-     * de la campagne sélectionnée.
-     */
     private createDateRecolteValidator(): ValidatorFn {
         return (control: AbstractControl): ValidationErrors | null => {
             const dateRecolteStr = control.value as string | null;
@@ -246,7 +244,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
             const dateRecolte = new Date(dateRecolteStr);
 
-            // Adapter les noms de propriétés selon votre modèle CampagneOlives
             const dateDebut = (campagne as any).dateDebut
                 ? new Date((campagne as any).dateDebut)
                 : null;
@@ -329,7 +326,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         const campagne = this.campagnes.find(c => c.reference === raw.campagneId);
 
         const payload: CreatePeseeInput = {
-            // Chaque réception crée systématiquement un nouveau lot
             lotId: undefined,
             datePesee: raw.datePesee ?? '',
             pesee: Number(raw.poidsBrut),
@@ -347,7 +343,6 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             region: String(raw.region ?? ''),
             methodeRecolte: String(raw.methodeRecolte ?? ''),
             typeSol: String(raw.typeSol ?? ''),
-            // On envoie la valeur calculée (getRawValue() retourne aussi les champs disabled)
             tempsDepuisRecolteHeures: Number(raw.tempsDepuisRecolteHeures ?? 0),
             humiditePourcent: Number(raw.humiditePourcent ?? 0),
             aciditeOlivesPourcent: Number(raw.aciditeOlivesPourcent ?? 0),
@@ -400,10 +395,12 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         this.showSaveSuccessPopup = false;
         this.resetForm();
     }
+
     resetForm(): void {
         const defaultHuilerieId = this.huileries[0]?.idHuilerie ?? 1;
         this.form.reset({
-            datePesee: null,
+            // ✅ Date pesée rechargée depuis l'horloge système à chaque reset
+            datePesee: ReceptionFormComponent.getCurrentDateTime(),
             poidsBrut: null,
             poidsTare: 0,
             poidsNet: 0,
@@ -429,6 +426,7 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
         this.savedReception = null;
         this.errorMessage = '';
     }
+
     private clearEditState(): void {
         this.editingId = null;
         this.errorMessage = '';
@@ -436,8 +434,8 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
 
         const defaultHuilerieId = this.huileries[0]?.idHuilerie ?? 1;
         this.form.reset({
-            // Vide — l'utilisateur doit saisir la date
-            datePesee: null,
+            // ✅ Date pesée rechargée depuis l'horloge système après annulation édition
+            datePesee: ReceptionFormComponent.getCurrentDateTime(),
             poidsBrut: null,
             poidsTare: 0,
             poidsNet: 0,
@@ -553,16 +551,11 @@ export class ReceptionFormComponent implements OnInit, OnChanges {
             huilerieId,
         } as any);
 
-        // Recalculer le temps après avoir patchné toutes les dates
         this.recalculerTempsDepuisRecolte();
         this.loadCampagnesForHuilerie(huilerieId, campagneReference);
         this.focusFirstEditableField();
     }
 
-    /**
-     * Recalcule tempsDepuisRecolteHeures manuellement (hors valueChanges).
-     * Utile après un patchValue avec emitEvent: false.
-     */
     private recalculerTempsDepuisRecolte(): void {
         const datePeseeStr = this.form.get('datePesee')?.value as string | null;
         const dateRecolteStr = this.form.get('dateRecolte')?.value as string | null;

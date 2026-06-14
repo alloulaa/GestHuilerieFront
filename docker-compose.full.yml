@@ -78,7 +78,7 @@ services:
       JWT_SECRET: mySuperSecretKeyThatIsVeryLongAndSecureForJWTTokenGeneration2026ForOilProductionSystemSecurity
       SPRING_MAIL_HOST: smtp.gmail.com
       SPRING_MAIL_PORT: 587
-      SPRING_MAIL_USERNAME: "Huileria"
+      SPRING_MAIL_USERNAME: "huileria1@gmail.com"
       SPRING_MAIL_PASSWORD: "crwa aody lsyd tacp"
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
