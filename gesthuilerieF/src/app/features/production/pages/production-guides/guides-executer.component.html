@@ -280,7 +280,7 @@
           <div class="execution-detail-item">
             <span>Rendement réalisé (%)</span>
             <div [formGroup]="executionForm">
-              <strong>{{ executionForm.get('produitFinalRendement')?.value ?? 0 }} %</strong>
+              <strong>{{ isExecutionTerminated(execution) ? resolveStoredRendement(execution) : (executionForm.get('produitFinalRendement')?.value ?? 0) }} %</strong>
             </div>
           </div>
         </div>

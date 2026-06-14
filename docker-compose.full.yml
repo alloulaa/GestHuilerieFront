@@ -42,7 +42,7 @@ services:
       start_period: 20s
 
   chatbot:
-    image: takwa1409/chatbot_huilerie:latest
+    image: elachikhaoui/gesthuilerie-chatbot:latest
     container_name: huilerie-chatbot
     restart: unless-stopped
     ports:
@@ -50,6 +50,8 @@ services:
     depends_on:
       - backend
       - mysql
+    env_file:
+      - ./.env
     environment:
       JAVA_BACKEND_URL: http://backend:8000
       DB_HOST: mysql
@@ -57,9 +59,10 @@ services:
       DB_NAME: gestionhuilerie
       DB_USER: root
       DB_PASSWORD: verysecret
+      PREDICTION_API_URL: http://prediction:7500
 
   backend:
-    image: takwa1409/gestionhuilerie-backend:latest  # gestion not gest    
+    image: elachikhaoui/gestionhuilerie-backend:latest
     container_name: huilerie-backend
     restart: unless-stopped
     ports:
@@ -87,7 +90,7 @@ services:
 
 
   frontend:
-    image: takwa1409/gesthuilerie-frontend:latest
+    image: elachikhaoui/gesthuilerie-frontend:latest
     container_name: huilerie-frontend
     restart: unless-stopped
     depends_on:

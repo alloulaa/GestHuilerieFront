@@ -151,7 +151,7 @@ export interface PredictionPayload {
 }
 @Injectable({ providedIn: 'root' })
 export class ChatbotService {
-  private readonly apiUrl = 'http://127.0.0.1:8001/chat/ask';
+  private readonly apiUrl = '/chat/ask';
   private readonly sessionId = this.generateSessionId();
 
   constructor(

@@ -352,15 +352,11 @@ isBooleanParam(row: any): boolean {
   selectExecution(execution: ExecutionProduction): void {
     const enriched = this.enrichExecutionWithLotInfo(execution);
     this.selectedExecution = enriched;
-    this.executionForm.patchValue({
-  produitFinalQualite: enriched.produitFinalQualite ?? '',
-  produitFinalQuantiteProduite: enriched.produitFinalQuantiteProduite ?? null,
-  produitFinalRendement: enriched.produitFinalRendement ?? 0,
-  lotId: enriched.lotId ?? null,
-  controleTemperature: enriched.controleTemperature ?? false,
-})
+    this.syncExecutionDetailForm(enriched);
     this.populateExecutionValuesFromGuideOrExecution(enriched);
-    this.updateComputedRendement();
+    if (!this.isExecutionTerminated(enriched)) {
+      this.updateComputedRendement();
+    }
     this.scrollToDetailSection();
   }
 
@@ -677,9 +673,11 @@ const executionToFinalize: ExecutionProduction = {
       this.refreshFilteredLotsForSelectedGuide();
       if (this.selectedExecution) {
         const refreshed = this.executions.find((item) => item.idExecutionProduction === this.selectedExecution?.idExecutionProduction);
-        this.selectedExecution = refreshed
+        const mergedSelectedExecution = refreshed
           ? { ...refreshed, valeursReelles: (refreshed.valeursReelles && refreshed.valeursReelles.length > 0) ? refreshed.valeursReelles : this.selectedExecution.valeursReelles }
           : this.selectedExecution;
+        this.selectedExecution = mergedSelectedExecution;
+        this.syncExecutionDetailForm(mergedSelectedExecution);
       }
     }, (error: HttpErrorResponse) => {
       const cachedExecutions = this.readExecutionCache();
@@ -846,7 +844,29 @@ const executionToFinalize: ExecutionProduction = {
   }
 
   private updateComputedRendement(): void {
-    this.executionForm.get('produitFinalRendement')?.setValue(this.computeRendement() ?? 0, { emitEvent: false });
+    const computed = this.computeRendement();
+    const fallback = this.selectedExecution ? this.resolveStoredRendement(this.selectedExecution) : 0;
+    this.executionForm.get('produitFinalRendement')?.setValue(computed ?? fallback, { emitEvent: false });
+  }
+
+  resolveStoredRendement(execution: ExecutionProduction | null | undefined): number {
+    const produitFinalRendement = Number(execution?.produitFinalRendement);
+    if (Number.isFinite(produitFinalRendement) && produitFinalRendement > 0) {
+      return produitFinalRendement;
+    }
+
+    const executionRendement = Number(execution?.rendement);
+    return Number.isFinite(executionRendement) ? executionRendement : 0;
+  }
+
+  private syncExecutionDetailForm(execution: ExecutionProduction): void {
+    this.executionForm.patchValue({
+      produitFinalQualite: execution.produitFinalQualite ?? '',
+      produitFinalQuantiteProduite: execution.produitFinalQuantiteProduite ?? null,
+      produitFinalRendement: this.resolveStoredRendement(execution),
+      lotId: execution.lotId ?? null,
+      controleTemperature: execution.controleTemperature ?? false,
+    }, { emitEvent: false });
   }
 
   private computeRendement(): number | null {
